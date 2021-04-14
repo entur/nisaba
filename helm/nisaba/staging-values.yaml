@@ -1,0 +1,9 @@
+env: staging
+replicas: 2
+
+gcp:
+  blobstoreProjectId: entur-ror-test
+  pubsubProjectId: entur-ror-test
+  bucketName: marduk-test
+
+monitoringEnabled: true

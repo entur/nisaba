@@ -1,0 +1,9 @@
+env: production
+replicas: 2
+
+gcp:
+  blobstoreProjectId: entur-ror-prod
+  pubsubProjectId: entur-ror-prod
+  bucketName: marduk-production
+
+monitoringEnabled: false

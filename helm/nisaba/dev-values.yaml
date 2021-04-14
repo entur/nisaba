@@ -1,0 +1,9 @@
+env: dev
+replicas: 2
+
+gcp:
+  blobstoreProjectId: entur-ror-dev
+  pubsubProjectId: entur-ror-dev
+  bucketName: marduk-dev
+
+monitoringEnabled: true
