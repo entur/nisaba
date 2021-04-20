@@ -11,5 +11,5 @@ monitoringEnabled: true
 kafka:
   brokers: localhost:9092
   topic:
-    event: ror-netex-import-event-staging
-    idempotent: ror-netex-import-event-idempotent-repo-staging
+    event: rutedata-dataset-import-event-staging
+    idempotent: rutedata-dataset-import-event-idempotent-repo-staging

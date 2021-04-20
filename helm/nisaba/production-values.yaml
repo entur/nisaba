@@ -11,5 +11,5 @@ monitoringEnabled: false
 kafka:
   brokers: localhost:9092
   topic:
-    event: ror-netex-import-event-production
-    idempotent: ror-netex-import-event-idempotent-repo-production
+    event: rutedata-dataset-import-event-production
+    idempotent: rutedata-dataset-import-event-idempotent-repo-production
