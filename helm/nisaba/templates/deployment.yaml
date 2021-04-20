@@ -54,12 +54,12 @@ spec:
               valueFrom:
                 secretKeyRef:
                   key: kafka-username
-                  name: ror-nisaba-secrets
+                  name: ror-nisaba-secret
             - name: NISABA_KAFKA_SASL_PASSWORD
               valueFrom:
                 secretKeyRef:
                   key: kafka-password
-                  name: ror-nisaba-secrets
+                  name: ror-nisaba-secret
           ports:
             - containerPort: {{ .Values.service.http.internalPort }}
               name: http
