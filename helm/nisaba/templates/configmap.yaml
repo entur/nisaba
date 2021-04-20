@@ -13,8 +13,8 @@ data:
 
 
     # Kafka
-    nisaba.kafka.topic.dataset.import.event={{ .Values.kafka.topic.event }}
-    nisaba.kafka.topic.dataset.import.event.idempotent.repo={{ .Values.kafka.topic.idempotent }}
+    nisaba.kafka.topic.event={{ .Values.kafka.topic.event }}
+    nisaba.kafka.topic.idempotent={{ .Values.kafka.topic.idempotent }}
     camel.component.kafka.brokers={{ .Values.kafka.brokers }}
     camel.component.kafka.client-id=nisaba
     camel.component.kafka.sasl-mechanism=SCRAM-SHA-512
