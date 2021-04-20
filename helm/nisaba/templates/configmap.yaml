@@ -12,7 +12,7 @@ data:
     camel.dataformat.json-jackson.module-refs=jacksonJavaTimeModule
 
 
-  # Kafka
+    # Kafka
     nisaba.kafka.topic.dataset.import.event={{ .Values.kafka.topic.event }}
     nisaba.kafka.topic.dataset.import.event.idempotent.repo={{ .Values.kafka.topic.idempotent }}
     camel.component.kafka.brokers={{ .Values.kafka.brokers }}
