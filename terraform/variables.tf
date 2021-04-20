@@ -40,7 +40,7 @@ variable "service_account_bucket_role" {
   default = "roles/storage.objectViewer"
 }
 
-variable "bucket_nisaba_instance_name" {
+variable "bucket_marduk_instance_name" {
   description = "Main storage bucket name"
 }
 

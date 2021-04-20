@@ -20,7 +20,7 @@ resource "google_service_account" "nisaba_service_account" {
 
 # add service account as member to the main bucket
 resource "google_storage_bucket_iam_member" "storage_main_bucket_iam_member" {
-  bucket = var.bucket_nisaba_instance_name
+  bucket = var.bucket_marduk_instance_name
   role = var.service_account_bucket_role
   member = "serviceAccount:${google_service_account.nisaba_service_account.email}"
 }
