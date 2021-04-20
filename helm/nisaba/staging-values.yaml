@@ -7,3 +7,9 @@ gcp:
   bucketName: marduk-test
 
 monitoringEnabled: true
+
+kafka:
+  brokers: localhost:9092
+  topic:
+    event: ror-netex-import-event-staging
+    idempotent: ror-netex-import-event-idempotent-repo-staging

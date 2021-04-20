@@ -10,17 +10,19 @@ public class CreatedAttributeInCompositeFrameHandler extends DefaultHandler {
     private static final String NETEX_ELEMENT_COMPOSITE_FRAME = "CompositeFrame";
     private static final String NETEX_ATTRIBUTE_CREATED = "created";
 
-    public LocalDateTime getCreatedTimestamp() {
-        return createdTimestamp;
+    private LocalDateTime createdTime;
+
+    public LocalDateTime getCreatedTime() {
+        return createdTime;
     }
 
-    private LocalDateTime createdTimestamp;
 
     @Override
     public void startElement(String uri, String lName, String qName, Attributes attr) {
         if (NETEX_ELEMENT_COMPOSITE_FRAME.equals(qName)) {
             String created = attr.getValue(NETEX_ATTRIBUTE_CREATED);
-            createdTimestamp = LocalDateTime.parse(created);
+            createdTime = LocalDateTime.parse(created);
+
         }
     }
 

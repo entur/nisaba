@@ -17,14 +17,84 @@
 package no.entur.nisaba.config;
 
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import org.apache.camel.Exchange;
+import org.apache.camel.component.kafka.KafkaConfiguration;
+import org.apache.camel.processor.idempotent.kafka.KafkaIdempotentRepository;
+import org.apache.camel.spi.HeaderFilterStrategy;
+import org.apache.camel.spi.IdempotentRepository;
+import org.apache.kafka.clients.CommonClientConfigs;
+import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.config.SaslConfigs;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
+
+import java.util.Properties;
 
 @Configuration
 public class CamelConfig {
 
+
+    /**
+     * Store the key of previously imported datasets and detect duplicates.
+     *
+     * @param idempotentTopic
+     * @param brokers
+     * @return
+     */
+    @Bean("netexImportEventIdempotentRepo")
+    @Profile("!test")
+    IdempotentRepository kafkaIdempotentRepository(@Value("${nisaba.kafka.topic.idempotent}") String idempotentTopic,
+                                                   @Value("${camel.component.kafka.brokers}") String brokers,
+                                                   @Value("${camel.component.kafka.sasl-jaas-config}") String jaasConfig) {
+
+        KafkaConfiguration config = new KafkaConfiguration();
+
+        Properties commonProperties = new Properties();
+        commonProperties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, brokers);
+        commonProperties.put(ProducerConfig.CLIENT_ID_CONFIG, "nisaba-idempotent-repo");
+        commonProperties.put(ProducerConfig.RETRIES_CONFIG, "10");
+        commonProperties.put(ProducerConfig.RETRY_BACKOFF_MS_CONFIG, "100");
+        commonProperties.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, "SASL_SSL");
+        commonProperties.put(SaslConfigs.SASL_MECHANISM, "SCRAM-SHA-512");
+        commonProperties.put(SaslConfigs.SASL_JAAS_CONFIG, jaasConfig);
+
+        Properties producerProperties = config.createProducerProperties();
+        producerProperties.putAll(commonProperties);
+
+        Properties consumerProperties = config.createConsumerProperties();
+        consumerProperties.putAll(commonProperties);
+
+        return new KafkaIdempotentRepository(idempotentTopic, consumerProperties, commonProperties);
+    }
+
+
+    /**
+     * Filter out all headers before sending a message to Kafka.
+     *
+     * @return
+     */
+    @Bean("kafkaFilterAllHeadersFilterStrategy")
+    public HeaderFilterStrategy kafkaFilterAllHeaderFilterStrategy() {
+        return new HeaderFilterStrategy() {
+
+
+            @Override
+            public boolean applyFilterToCamelHeaders(String headerName, Object headerValue, Exchange exchange) {
+                return true;
+            }
+
+            @Override
+            public boolean applyFilterToExternalHeaders(String headerName, Object headerValue, Exchange exchange) {
+                return true;
+            }
+        };
+    }
+
     /**
      * Register Java Time Module for JSON serialization/deserialization of Java Time objects.
+     *
      * @return
      */
     @Bean("jacksonJavaTimeModule")

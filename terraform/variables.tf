@@ -45,4 +45,14 @@ variable "bucket_nisaba_instance_name" {
 }
 
 
+variable  ror-nisaba-kafka-username {
+  description = "Nisaba kafka user name"
+}
+
+variable ror-nisaba-kafka-password {
+  description = "Nisaba kafka user password"
+}
+
+
+
 

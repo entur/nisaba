@@ -32,14 +32,6 @@ public abstract class AbstractBlobStoreService {
         return repository.listBlobs(folders);
     }
 
-    public BlobStoreFiles listBlobs(@Header(value = Constants.CHOUETTE_REFERENTIAL) String referential, Exchange exchange) {
-        return repository.listBlobs(Constants.BLOBSTORE_PATH_INBOUND + referential + "/");
-    }
-
-    public BlobStoreFiles listBlobsFlat(@Header(value = Constants.CHOUETTE_REFERENTIAL) String referential, Exchange exchange) {
-        return repository.listBlobsFlat(Constants.BLOBSTORE_PATH_INBOUND + referential + "/");
-    }
-
     public BlobStoreFiles.File findBlob(@Header(value = Constants.FILE_PREFIX) String prefix, Exchange exchange) {
         BlobStoreFiles blobStoreFiles = repository.listBlobs(prefix);
         if(blobStoreFiles.getFiles().isEmpty()) {

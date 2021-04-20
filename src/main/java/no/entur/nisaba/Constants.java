@@ -25,13 +25,10 @@ public final class Constants {
 
 
     public static final String FILE_PARENT_COLLECTION = "RutebankenFileParentCollection";
-    public static final String PROVIDER_ID = "RutebankenProviderId";
     public static final String CORRELATION_ID = "RutebankenCorrelationId";
-    public static final String CHOUETTE_REFERENTIAL = "RutebankenChouetteReferential";
 
     public static final String CURRENT_AGGREGATED_NETEX_FILENAME = "aggregated-netex.zip";
 
-    public static final String BLOBSTORE_PATH_INBOUND = "inbound/received/";
     public static final String BLOBSTORE_PATH_OUTBOUND = "outbound/";
 
 
@@ -43,12 +40,9 @@ public final class Constants {
     public static final String CAMEL_ALL_HEADERS = "Camel*";
     public static final String CAMEL_ALL_HTTP_HEADERS = "CamelHttp*";
 
-    public static final String DATASET_NEW_CREATION_TIMESTAMP = "EnturDatasetCreationTimestamp";
-    public static final String DATASET_OLD_CREATION_TIMESTAMP = "EnturDatasetPreviousCreationTimestamp";
-
-
-
-
+    public static final String DATASET_CREATION_TIME = "EnturDatasetCreationTime";
+    public static final String DATASET_CODESPACE = "EnturDatasetCodespace";
+    public static final String DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
 
     private Constants() {
     }

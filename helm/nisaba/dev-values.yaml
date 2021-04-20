@@ -7,3 +7,10 @@ gcp:
   bucketName: marduk-dev
 
 monitoringEnabled: true
+
+kafka:
+  brokers: bootstrap.test-int.kafka.entur.io:9095
+  topic:
+    event: ror-netex-import-event-dev
+    idempotent: ror-netex-import-event-idempotent-repo-dev
+

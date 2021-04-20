@@ -101,20 +101,6 @@ public class BlobStoreRoute extends BaseRouteBuilder {
                 .log(LoggingLevel.INFO, correlation() + "Returning from looking up file with prefix ${header." + FILE_PREFIX + "} in the blob store.")
                 .routeId("blobstore-find");
 
-        from("direct:listBlobs")
-                .to(logDebugShowAll())
-                .bean(mardukBlobStoreService, "listBlobs")
-                .to(logDebugShowAll())
-                .log(LoggingLevel.INFO, correlation() + "Returning from fetching file list from blob store.")
-                .routeId("blobstore-list");
-
-        from("direct:listBlobsFlat")
-                .to(logDebugShowAll())
-                .bean(mardukBlobStoreService, "listBlobsFlat")
-                .to(logDebugShowAll())
-                .log(LoggingLevel.INFO, correlation() + "Returning from fetching flat file list from blob store.")
-                .routeId("blobstore-list-flat");
-
         from("direct:listBlobsInFolders")
                 .to(logDebugShowAll())
                 .bean(mardukBlobStoreService, "listBlobsInFolders")

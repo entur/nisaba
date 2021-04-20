@@ -21,10 +21,16 @@ import no.entur.nisaba.repository.InMemoryBlobStoreRepository;
 import org.apache.camel.EndpointInject;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.model.ModelCamelContext;
+import org.apache.camel.processor.idempotent.kafka.KafkaIdempotentRepository;
+import org.apache.camel.spi.IdempotentRepository;
+import org.apache.camel.support.processor.idempotent.MemoryIdempotentRepository;
 import org.apache.camel.test.spring.junit5.CamelSpringBootTest;
 import org.apache.camel.test.spring.junit5.UseAdviceWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Profile;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 
@@ -36,6 +42,17 @@ import java.io.InputStream;
 @ActiveProfiles({"test", "default", "in-memory-blobstore", "google-pubsub-emulator"})
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 public abstract class NisabaRouteBuilderIntegrationTestBase {
+
+    @TestConfiguration
+    static class TestConfig {
+
+        @Bean("netexImportEventIdempotentRepo")
+        IdempotentRepository testIdempotentRepository() {
+            return new MemoryIdempotentRepository();
+        }
+
+    }
+
 
     @Value("${blobstore.gcs.container.name}")
     private String nisabaContainerName;

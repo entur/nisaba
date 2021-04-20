@@ -56,10 +56,7 @@ resource "kubernetes_secret" "ror-nisaba-secret" {
   }
 
   data = {
-
+    "kafka-username"    = var.ror-nisaba-kafka-username
+    "kafka-password"    = var.ror-nisaba-kafka-password
   }
 }
-
-
-}
-

@@ -134,7 +134,7 @@ public abstract class BaseRouteBuilder extends RouteBuilder {
     }
 
     protected String correlation() {
-        return "[providerId=${header." + Constants.PROVIDER_ID + "} referential=${header." + Constants.CHOUETTE_REFERENTIAL + "} correlationId=${header." + Constants.CORRELATION_ID + "}] ";
+        return "[codespace=${header." + Constants.DATASET_CODESPACE + "} correlationId=${header." + Constants.CORRELATION_ID + "}] ";
     }
 
     protected void removeAllCamelHeaders(Exchange e) {
