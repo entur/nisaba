@@ -35,7 +35,8 @@ import static no.entur.nisaba.Constants.DATASET_CREATION_TIME;
 import static no.entur.nisaba.Constants.FILE_HANDLE;
 
 /**
- * Receive a notification when a new NeTEx import is available in the blob store.
+ * Receive a notification when a new NeTEx export is available in the blob store and send an event in a Kafka topic
+ * if this is the first time the dataset is published.
  */
 @Component
 public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
@@ -71,6 +72,9 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .to("direct:getBlob")
                 .routeId("download-netex-dataset");
 
+        // Iterate over every XML files in the NeTEx archive, parse the "created" attribute of the CompositeFrame,
+        // convert it to a DateTime object and accumulate it in a SortedSet.
+        // At the end of the iteration, the last element in the SortedSet contains the most recent of the creation dates.
         from("direct:retrieveDatasetCreationTime")
                 .log(LoggingLevel.INFO, correlation() + "Retrieving dataset creation time")
                 .split(new ZipSplitter()).aggregationStrategy(new FlexibleAggregationStrategy<LocalDateTime>()
@@ -89,6 +93,8 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .log(LoggingLevel.INFO, correlation() + "The dataset was created on ${header." + DATASET_CREATION_TIME + "}")
                 .routeId("retrieve-dataset-creation-time");
 
+        // Use an idempotent repository backed by a Kafka topic to identify duplicate import events.
+        // a dataset import is uniquely identified by the concatenation of its codespace and creation date.
         from("direct:notifyConsumersIfNew")
                 .idempotentConsumer(header(KafkaConstants.KEY)).messageIdRepositoryRef("netexImportEventIdempotentRepo").skipDuplicate(false)
                 .filter(exchangeProperty(Exchange.DUPLICATE_MESSAGE).isEqualTo(true))

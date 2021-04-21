@@ -55,7 +55,6 @@ data:
     nisaba.shutdown.timeout=25
 
     rutebanken.kubernetes.namespace={{ .Release.Namespace }}
-    camel.component.servlet.mapping.context-path=/services/*
 
     # Fix for Hazelcast exception message on shutdown
     entur.hazelcast.shutdownhook.enabled=false
