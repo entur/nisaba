@@ -24,9 +24,11 @@ import org.apache.camel.Produce;
 import org.apache.camel.ProducerTemplate;
 import org.apache.camel.builder.AdviceWith;
 import org.apache.camel.component.mock.MockEndpoint;
+import org.apache.commons.io.IOUtils;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 
 import static no.entur.nisaba.Constants.BLOBSTORE_PATH_OUTBOUND;
@@ -40,11 +42,18 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
     @Produce("entur-google-pubsub:NetexExportNotificationQueue")
     protected ProducerTemplate producerTemplate;
 
+    @Produce("direct:parseCreatedAttribute")
+    protected ProducerTemplate parseCreatedAttribute;
+
     @EndpointInject("mock:retrieveDatasetCreationTime")
     protected MockEndpoint retrieveDatasetCreationTime;
 
     @EndpointInject("mock:nisabaEventTopic")
     protected MockEndpoint nisabaEventTopic;
+
+
+    @EndpointInject("mock:checkCreatedAttribute")
+    protected MockEndpoint checkCreatedAttribute;
 
     @Test
     void testNotification() throws Exception {
@@ -64,6 +73,18 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
         nisabaEventTopic.assertIsSatisfied();
 
 
+    }
+
+    @Test
+    void testParseCreatedAttribute() throws Exception {
+
+        AdviceWith.adviceWith(context, "notify-consumers", a -> a.weaveByToUri("kafka:{{nisaba.kafka.topic.event}}?headerFilterStrategy=#kafkaFilterAllHeadersFilterStrategy").replace().to("mock:nisabaEventTopic"));
+        AdviceWith.adviceWith(context, "parse-created-attribute", a -> a.weaveAddLast().to("mock:checkCreatedAttribute"));
+        checkCreatedAttribute.expectedBodiesReceived(LocalDateTime.parse("2021-04-13T09:09:45.409"));
+
+        context.start();
+        parseCreatedAttribute.sendBody(IOUtils.toString(getClass().getResourceAsStream("/no/entur/nisaba/netex/import/_AVI_shared_data.xml"), StandardCharsets.UTF_8));
+        checkCreatedAttribute.assertIsSatisfied();
     }
 
 
