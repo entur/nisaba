@@ -30,8 +30,8 @@ public class NetexImportEvent {
 
     public static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern(Constants.DATE_TIME_FORMAT);
 
-    private  String codespace;
-    private  LocalDateTime importDateTime;
+    private String codespace;
+    private LocalDateTime importDateTime;
 
     public NetexImportEvent() {
     }
