@@ -39,9 +39,9 @@ public class CamelConfig {
     /**
      * Store the key of previously imported datasets and detect duplicates.
      *
-     * @param idempotentTopic
-     * @param brokers
-     * @return
+     * @param idempotentTopic the topic used to store the history of NeTEx import event.
+     * @param brokers the Kafka brokers.
+     * @return an idempotent repository that ientifies duplicate dataset import events.
      */
     @Bean("netexImportEventIdempotentRepo")
     @Profile("!test")
@@ -73,7 +73,7 @@ public class CamelConfig {
     /**
      * Filter out all headers before sending a message to Kafka.
      *
-     * @return
+     * @return a header filter strategy that filters out all headers in a Camel message.
      */
     @Bean("kafkaFilterAllHeadersFilterStrategy")
     public HeaderFilterStrategy kafkaFilterAllHeaderFilterStrategy() {
@@ -95,7 +95,7 @@ public class CamelConfig {
     /**
      * Register Java Time Module for JSON serialization/deserialization of Java Time objects.
      *
-     * @return
+     * @return a Jackson module for  JSON serialization/deserialization of Java Time objects.
      */
     @Bean("jacksonJavaTimeModule")
     JavaTimeModule jacksonJavaTimeModule() {
