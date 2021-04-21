@@ -62,7 +62,7 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .end()
                 .log(LoggingLevel.INFO, correlation() + "NeTEx export file downloaded")
                 .to("direct:retrieveDatasetCreationTime")
-                .process(new NetexImportEventProcessor())
+                .bean(NetexImportEventFactory.class, "createNetexImportEvent")
                 .setHeader(KafkaConstants.KEY, simple("${body.key}"))
                 .to("direct:notifyConsumersIfNew")
                 .routeId("netex-export-notification-queue");

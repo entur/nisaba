@@ -30,10 +30,11 @@ public class NetexImportEvent {
 
     public static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern(Constants.DATE_TIME_FORMAT);
 
-    private final String codespace;
+    private  String codespace;
+    private  LocalDateTime importDateTime;
 
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = Constants.DATE_TIME_FORMAT)
-    private final LocalDateTime importDateTime;
+    public NetexImportEvent() {
+    }
 
     public NetexImportEvent(String codespace, LocalDateTime importDateTime) {
         this.codespace = codespace;
@@ -45,6 +46,7 @@ public class NetexImportEvent {
         return codespace;
     }
 
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = Constants.DATE_TIME_FORMAT)
     public LocalDateTime getImportDateTime() {
         return importDateTime;
     }
