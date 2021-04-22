@@ -23,11 +23,11 @@ import org.springframework.stereotype.Service;
 @Service
 public final class NisabaKubernetesService extends KubernetesService {
 
-	public NisabaKubernetesService(@Value("${rutebanken.kubernetes.url:}") String kubernetesUrl,
-			                                @Value("${rutebanken.kubernetes.namespace:default}") String namespace,
-			                                @Value("${rutebanken.kubernetes.enabled:true}") boolean kubernetesEnabled) {
-		super(kubernetesUrl, namespace, kubernetesEnabled);
-	}
+    public NisabaKubernetesService(@Value("${rutebanken.kubernetes.url:}") String kubernetesUrl,
+                                   @Value("${rutebanken.kubernetes.namespace:default}") String namespace,
+                                   @Value("${rutebanken.kubernetes.enabled:true}") boolean kubernetesEnabled) {
+        super(kubernetesUrl, namespace, kubernetesEnabled);
+    }
 
 
 }

@@ -40,7 +40,7 @@ public class CamelConfig {
      * Store the key of previously imported datasets and detect duplicates.
      *
      * @param idempotentTopic the topic used to store the history of NeTEx import event.
-     * @param brokers the Kafka brokers.
+     * @param brokers         the Kafka brokers.
      * @return an idempotent repository that ientifies duplicate dataset import events.
      */
     @Bean("netexImportEventIdempotentRepo")
@@ -56,6 +56,7 @@ public class CamelConfig {
         commonProperties.put(ProducerConfig.CLIENT_ID_CONFIG, "nisaba-idempotent-repo");
         commonProperties.put(ProducerConfig.RETRIES_CONFIG, "10");
         commonProperties.put(ProducerConfig.RETRY_BACKOFF_MS_CONFIG, "100");
+
         commonProperties.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, "SASL_SSL");
         commonProperties.put(SaslConfigs.SASL_MECHANISM, "SCRAM-SHA-512");
         commonProperties.put(SaslConfigs.SASL_JAAS_CONFIG, jaasConfig);

@@ -98,7 +98,7 @@ public abstract class BaseRouteBuilder extends RouteBuilder {
 
         List<Message> messages = exchange.getIn().getBody(List.class);
         List<BasicAcknowledgeablePubsubMessage> ackList = messages.stream()
-                .map(m->m.getHeader(EnturGooglePubSubConstants.ACK_ID, BasicAcknowledgeablePubsubMessage.class))
+                .map(m -> m.getHeader(EnturGooglePubSubConstants.ACK_ID, BasicAcknowledgeablePubsubMessage.class))
                 .collect(Collectors.toList());
 
         exchange.adapt(ExtendedExchange.class).addOnCompletion(new AckSynchronization(ackList));
