@@ -21,11 +21,11 @@ import no.entur.nisaba.routes.BaseRouteBuilder;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.FlexibleAggregationStrategy;
-import org.apache.camel.builder.PredicateBuilder;
 import org.apache.camel.component.kafka.KafkaConstants;
 import org.apache.camel.dataformat.zipfile.ZipSplitter;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.camel.support.builder.Namespaces;
+import org.apache.camel.support.builder.PredicateBuilder;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
