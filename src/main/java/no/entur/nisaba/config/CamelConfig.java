@@ -58,7 +58,7 @@ public class CamelConfig {
         commonProperties.put(ProducerConfig.RETRIES_CONFIG, "10");
         commonProperties.put(ProducerConfig.RETRY_BACKOFF_MS_CONFIG, "100");
 
-        if(StringUtils.hasText(jaasConfig)) {
+        if (StringUtils.hasText(jaasConfig)) {
             commonProperties.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, "SASL_SSL");
             commonProperties.put(SaslConfigs.SASL_MECHANISM, "SCRAM-SHA-512");
             commonProperties.put(SaslConfigs.SASL_JAAS_CONFIG, jaasConfig);

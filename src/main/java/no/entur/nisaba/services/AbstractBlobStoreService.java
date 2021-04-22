@@ -34,9 +34,9 @@ public abstract class AbstractBlobStoreService {
 
     public BlobStoreFiles.File findBlob(@Header(value = Constants.FILE_PREFIX) String prefix, Exchange exchange) {
         BlobStoreFiles blobStoreFiles = repository.listBlobs(prefix);
-        if(blobStoreFiles.getFiles().isEmpty()) {
+        if (blobStoreFiles.getFiles().isEmpty()) {
             return null;
-        } else if(blobStoreFiles.getFiles().size() > 1) {
+        } else if (blobStoreFiles.getFiles().size() > 1) {
             throw new NisabaException("Found multiple files matching the prefix " + prefix);
         }
         return blobStoreFiles.getFiles().get(0);

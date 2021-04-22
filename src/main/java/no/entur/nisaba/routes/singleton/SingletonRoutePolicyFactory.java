@@ -63,7 +63,7 @@ public class SingletonRoutePolicyFactory extends HazelCastService implements Rou
 
     @Override
     public RoutePolicy createRoutePolicy(CamelContext camelContext, String routeId, NamedNode node) {
-        RouteDefinition routeDefinition = (RouteDefinition)node;
+        RouteDefinition routeDefinition = (RouteDefinition) node;
         try {
             if (!ignorePolicy && SINGLETON_ROUTE_DEFINITION_GROUP_NAME.equals(routeDefinition.getGroup())) {
                 return build(routeId);

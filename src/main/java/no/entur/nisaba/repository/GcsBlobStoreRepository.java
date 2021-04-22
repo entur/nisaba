@@ -49,7 +49,7 @@ public class GcsBlobStoreRepository implements BlobStoreRepository {
 
     private String containerName;
 
-   public void setContainerName(String containerName) {
+    public void setContainerName(String containerName) {
         this.containerName = containerName;
     }
 
@@ -106,7 +106,7 @@ public class GcsBlobStoreRepository implements BlobStoreRepository {
     public void copyBlob(String sourceContainerName, String sourceObjectName, String targetContainerName, String targetObjectName, boolean makePublic) {
 
         List<Storage.BlobTargetOption> blobTargetOptions = makePublic ? List.of(Storage.BlobTargetOption.predefinedAcl(Storage.PredefinedAcl.PUBLIC_READ))
-                                                                      : Collections.emptyList();
+                : Collections.emptyList();
         Storage.CopyRequest request =
                 Storage.CopyRequest.newBuilder()
                         .setSource(BlobId.of(sourceContainerName, sourceObjectName))
@@ -122,7 +122,7 @@ public class GcsBlobStoreRepository implements BlobStoreRepository {
             Blob blob = blobIterator.next();
 
             List<Storage.BlobTargetOption> blobTargetOptions = makePublic ? List.of(Storage.BlobTargetOption.predefinedAcl(Storage.PredefinedAcl.PUBLIC_READ))
-                                                                          : Collections.emptyList();
+                    : Collections.emptyList();
 
             BlobInfo.Builder targetBlobInfoBuilder = BlobInfo.newBuilder(targetContainerName, blob.getName().replace(prefix, targetPrefix));
             BlobId targetBlobId = targetBlobInfoBuilder.build().getBlobId();

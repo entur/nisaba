@@ -151,7 +151,7 @@ public class LocalDiskBlobStoreRepository implements BlobStoreRepository {
 
     @Override
     public void setContainerName(String containerName) {
-       this.containerName = containerName;
+        this.containerName = containerName;
     }
 
     @Override
