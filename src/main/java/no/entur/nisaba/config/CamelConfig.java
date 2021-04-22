@@ -29,6 +29,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
+import org.springframework.util.StringUtils;
 
 import java.util.Properties;
 
@@ -40,14 +41,14 @@ public class CamelConfig {
      * Store the key of previously imported datasets and detect duplicates.
      *
      * @param idempotentTopic the topic used to store the history of NeTEx import event.
-     * @param brokers the Kafka brokers.
+     * @param brokers         the Kafka brokers.
      * @return an idempotent repository that ientifies duplicate dataset import events.
      */
     @Bean("netexImportEventIdempotentRepo")
     @Profile("!test")
     IdempotentRepository kafkaIdempotentRepository(@Value("${nisaba.kafka.topic.idempotent}") String idempotentTopic,
                                                    @Value("${camel.component.kafka.brokers}") String brokers,
-                                                   @Value("${camel.component.kafka.sasl-jaas-config}") String jaasConfig) {
+                                                   @Value("${camel.component.kafka.sasl-jaas-config:}") String jaasConfig) {
 
         KafkaConfiguration config = new KafkaConfiguration();
 
@@ -56,9 +57,12 @@ public class CamelConfig {
         commonProperties.put(ProducerConfig.CLIENT_ID_CONFIG, "nisaba-idempotent-repo");
         commonProperties.put(ProducerConfig.RETRIES_CONFIG, "10");
         commonProperties.put(ProducerConfig.RETRY_BACKOFF_MS_CONFIG, "100");
-        commonProperties.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, "SASL_SSL");
-        commonProperties.put(SaslConfigs.SASL_MECHANISM, "SCRAM-SHA-512");
-        commonProperties.put(SaslConfigs.SASL_JAAS_CONFIG, jaasConfig);
+
+        if(StringUtils.hasText(jaasConfig)) {
+            commonProperties.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, "SASL_SSL");
+            commonProperties.put(SaslConfigs.SASL_MECHANISM, "SCRAM-SHA-512");
+            commonProperties.put(SaslConfigs.SASL_JAAS_CONFIG, jaasConfig);
+        }
 
         Properties producerProperties = config.createProducerProperties();
         producerProperties.putAll(commonProperties);
