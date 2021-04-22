@@ -19,8 +19,8 @@ package no.entur.nisaba.routes.netex.notification;
 import no.entur.nisaba.Constants;
 import no.entur.nisaba.NisabaRouteBuilderIntegrationTestBase;
 import no.entur.nisaba.TestApp;
-import no.entur.nisaba.domain.NetexImportEvent;
-import no.entur.nisaba.json.ObjectMapperFactory;
+import no.entur.nisaba.avro.NetexImportEvent;
+import no.entur.nisaba.avro.AvroDeserializer;
 import org.apache.camel.EndpointInject;
 import org.apache.camel.Produce;
 import org.apache.camel.ProducerTemplate;
@@ -78,10 +78,10 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
         context.start();
         producerTemplate.sendBody(CODESPACE);
         nisabaEventTopic.assertIsSatisfied();
-        String body = nisabaEventTopic.getReceivedExchanges().get(0).getIn().getBody(String.class);
-        NetexImportEvent netexImportEvent = ObjectMapperFactory.getSharedObjectMapper().readerFor(NetexImportEvent.class).readValue(body);
-        Assertions.assertEquals("avi", netexImportEvent.getCodespace());
-        Assertions.assertEquals(now.truncatedTo(ChronoUnit.SECONDS), netexImportEvent.getImportDateTime());
+        byte[] body = nisabaEventTopic.getReceivedExchanges().get(0).getIn().getBody(byte[].class);
+        NetexImportEvent netexImportEvent = AvroDeserializer.deSerializeAvroNetexImportEvent(body);
+        Assertions.assertEquals("avi", netexImportEvent.getCodespace().toString());
+        Assertions.assertEquals(now.truncatedTo(ChronoUnit.SECONDS), LocalDateTime.parse(netexImportEvent.getImportDateTime().toString()));
     }
 
     @Test

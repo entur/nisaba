@@ -1,0 +1,18 @@
+{
+   "type":"record",
+   "name":"NetexImportEvent",
+   "namespace":"no.entur.nisaba.avro",
+   "doc": "Event sent when a new NeTEx timetable dataset is available",
+   "fields": [
+      {
+         "name":"codespace",
+         "type":"string",
+         "doc" : "The dataset codespace."
+      },
+      {
+         "name":"importDateTime",
+         "type":"string",
+         "doc" : "The dataset initial import time. ISO-formatted local datetime"
+      }
+   ]
+}

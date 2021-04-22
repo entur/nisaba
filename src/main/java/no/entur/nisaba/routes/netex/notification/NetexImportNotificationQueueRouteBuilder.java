@@ -17,13 +17,14 @@
 package no.entur.nisaba.routes.netex.notification;
 
 import no.entur.nisaba.Constants;
+import no.entur.nisaba.event.NetexImportEventFactory;
+import no.entur.nisaba.event.NetexImportEventKeyFactory;
 import no.entur.nisaba.routes.BaseRouteBuilder;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.FlexibleAggregationStrategy;
 import org.apache.camel.component.kafka.KafkaConstants;
 import org.apache.camel.dataformat.zipfile.ZipSplitter;
-import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.camel.support.builder.Namespaces;
 import org.apache.camel.support.builder.PredicateBuilder;
 import org.springframework.stereotype.Component;
@@ -35,6 +36,7 @@ import static no.entur.nisaba.Constants.BLOBSTORE_PATH_OUTBOUND;
 import static no.entur.nisaba.Constants.DATASET_CODESPACE;
 import static no.entur.nisaba.Constants.DATASET_CREATION_TIME;
 import static no.entur.nisaba.Constants.FILE_HANDLE;
+import static org.apache.camel.builder.Builder.bean;
 
 /**
  * Receive a notification when a new NeTEx export is available in the blob store and send an event in a Kafka topic
@@ -63,7 +65,7 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .log(LoggingLevel.INFO, correlation() + "NeTEx export file downloaded")
                 .to("direct:retrieveDatasetCreationTime")
                 .bean(NetexImportEventFactory.class, "createNetexImportEvent")
-                .setHeader(KafkaConstants.KEY, simple("${body.key}"))
+                .setHeader(KafkaConstants.KEY, bean(NetexImportEventKeyFactory.class, "createNetexImportEventKey"))
                 .to("direct:notifyConsumersIfNew")
                 .routeId("netex-export-notification-queue");
 
@@ -118,7 +120,7 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
 
         from("direct:notifyConsumers")
                 .log(LoggingLevel.INFO, correlation() + "Notifying Kafka topic ${properties:nisaba.kafka.topic.event}")
-                .marshal().json(JsonLibrary.Jackson)
+                .marshal().avro("no.entur.nisaba.avro.NetexImportEvent")
                 .to("kafka:{{nisaba.kafka.topic.event}}?headerFilterStrategy=#kafkaFilterAllHeadersFilterStrategy")
                 .routeId("notify-consumers");
 
