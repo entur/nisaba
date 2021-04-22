@@ -21,9 +21,11 @@ import no.entur.nisaba.routes.BaseRouteBuilder;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.FlexibleAggregationStrategy;
+import org.apache.camel.builder.PredicateBuilder;
 import org.apache.camel.component.kafka.KafkaConstants;
 import org.apache.camel.dataformat.zipfile.ZipSplitter;
 import org.apache.camel.model.dataformat.JsonLibrary;
+import org.apache.camel.support.builder.Namespaces;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -42,7 +44,6 @@ import static no.entur.nisaba.Constants.FILE_HANDLE;
 public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
 
     private static final String EXPORT_FILE_NAME = "netex/rb_${body}-" + Constants.CURRENT_AGGREGATED_NETEX_FILENAME;
-    private static final String CREATED_ATTRIBUTE = "EnturCreatedAttribute";
 
     @Override
     public void configure() throws Exception {
@@ -80,18 +81,27 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .split(new ZipSplitter()).aggregationStrategy(new FlexibleAggregationStrategy<LocalDateTime>()
                 .storeInBody()
                 .accumulateInCollection(TreeSet.class)
-                .pick(exchangeProperty(CREATED_ATTRIBUTE)))
+                .pick(body()))
                 .streaming()
                 .filter(header(Exchange.FILE_NAME).not().endsWith(".xml"))
                 .log(LoggingLevel.INFO, correlation() + "Ignoring non-XML file ${header." + Exchange.FILE_NAME + "}")
                 .stop()
                 .end()
-                .to("stax:no.entur.nisaba.stax.CreatedAttributeInCompositeFrameHandler")
-                .setProperty(CREATED_ATTRIBUTE, simple("${body.createdTime}"))
+                .to("direct:parseCreatedAttribute")
                 .end()
                 .setHeader(DATASET_CREATION_TIME, simple("${body.last}"))
                 .log(LoggingLevel.INFO, correlation() + "The dataset was created on ${header." + DATASET_CREATION_TIME + "}")
                 .routeId("retrieve-dataset-creation-time");
+
+        from("direct:parseCreatedAttribute")
+                .setBody(xpath("/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/@created", String.class, new Namespaces("netex", "http://www.netex.org.uk/netex")))
+                .choice()
+                .when(PredicateBuilder.or(body().isNull(), body().isEqualTo("")))
+                .log(LoggingLevel.WARN, correlation() + "'created' attribute not found in file ${header." + Exchange.FILE_NAME + "}")
+                .stop()
+                .end()
+                .bean(LocalDateTime.class, "parse(${body})")
+                .routeId("parse-created-attribute");
 
         // Use an idempotent repository backed by a Kafka topic to identify duplicate import events.
         // a dataset import is uniquely identified by the concatenation of its codespace and creation date.
