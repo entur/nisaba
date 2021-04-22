@@ -111,7 +111,7 @@ public class InMemoryBlobStoreRepository implements BlobStoreRepository {
             ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
             IOUtils.copy(inputStream, byteArrayOutputStream);
             byte[] data = byteArrayOutputStream.toByteArray();
-            if(data.length == 0) {
+            if (data.length == 0) {
                 LOGGER.warn("The uploaded file {} is empty", objectName);
             }
             getBlobsForCurrentContainer().put(objectName, data);
