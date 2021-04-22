@@ -19,17 +19,21 @@ package no.entur.nisaba.routes.netex.notification;
 import no.entur.nisaba.Constants;
 import no.entur.nisaba.NisabaRouteBuilderIntegrationTestBase;
 import no.entur.nisaba.TestApp;
+import no.entur.nisaba.domain.NetexImportEvent;
+import no.entur.nisaba.json.ObjectMapperFactory;
 import org.apache.camel.EndpointInject;
 import org.apache.camel.Produce;
 import org.apache.camel.ProducerTemplate;
 import org.apache.camel.builder.AdviceWith;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.commons.io.IOUtils;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 
 import static no.entur.nisaba.Constants.BLOBSTORE_PATH_OUTBOUND;
 import static no.entur.nisaba.Constants.CURRENT_AGGREGATED_NETEX_FILENAME;
@@ -58,21 +62,26 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
     @Test
     void testNotification() throws Exception {
 
+        LocalDateTime now = LocalDateTime.now();
+
         nisabaInMemoryBlobStoreRepository.uploadBlob(BLOBSTORE_PATH_OUTBOUND + "netex/rb_" + CODESPACE + "-" + CURRENT_AGGREGATED_NETEX_FILENAME,
                 getClass().getResourceAsStream("/no/entur/nisaba/netex/import/rb_avi-aggregated-netex.zip"),
                 false);
 
         AdviceWith.adviceWith(context, "netex-export-notification-queue", a -> a.weaveByToUri("direct:retrieveDatasetCreationTime").replace().to("mock:retrieveDatasetCreationTime"));
-        retrieveDatasetCreationTime.whenAnyExchangeReceived(exchange -> exchange.getIn().setHeader(Constants.DATASET_CREATION_TIME, LocalDateTime.now()));
+        retrieveDatasetCreationTime.whenAnyExchangeReceived(exchange -> exchange.getIn().setHeader(Constants.DATASET_CREATION_TIME, now));
 
         AdviceWith.adviceWith(context, "notify-consumers", a -> a.weaveByToUri("kafka:{{nisaba.kafka.topic.event}}?headerFilterStrategy=#kafkaFilterAllHeadersFilterStrategy").replace().to("mock:nisabaEventTopic"));
 
         nisabaEventTopic.expectedMessageCount(1);
+
         context.start();
         producerTemplate.sendBody(CODESPACE);
         nisabaEventTopic.assertIsSatisfied();
-
-
+        String body = nisabaEventTopic.getReceivedExchanges().get(0).getIn().getBody(String.class);
+        NetexImportEvent netexImportEvent = ObjectMapperFactory.getSharedObjectMapper().readerFor(NetexImportEvent.class).readValue(body);
+        Assertions.assertEquals("avi", netexImportEvent.getCodespace());
+        Assertions.assertEquals(now.truncatedTo(ChronoUnit.SECONDS), netexImportEvent.getImportDateTime());
     }
 
     @Test
