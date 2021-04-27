@@ -14,18 +14,19 @@
  *
  */
 
-package no.entur.nisaba.routes.netex.notification;
+package no.entur.nisaba.event;
 
-import no.entur.nisaba.Constants;
-import no.entur.nisaba.domain.NetexImportEvent;
-import org.apache.camel.Header;
+import no.entur.nisaba.avro.NetexImportEvent;
+import org.apache.camel.Body;
 
-import java.time.LocalDateTime;
+public class NetexImportEventKeyFactory {
 
-public class NetexImportEventFactory {
+    private NetexImportEventKeyFactory() {
 
-    public NetexImportEvent createNetexImportEvent(@Header(value = Constants.DATASET_CODESPACE) String codespace,
-                                                   @Header(value = Constants.DATASET_CREATION_TIME) LocalDateTime creationDate) {
-        return new NetexImportEvent(codespace, creationDate);
     }
+
+    public static String createNetexImportEventKey(@Body NetexImportEvent netexImportEvent) {
+        return netexImportEvent.getCodespace().toString() + '_' + netexImportEvent.getImportDateTime().toString();
+    }
+
 }

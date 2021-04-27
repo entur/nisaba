@@ -40,6 +40,8 @@ public final class Constants {
     public static final String CAMEL_ALL_HEADERS = "Camel*";
     public static final String CAMEL_ALL_HTTP_HEADERS = "CamelHttp*";
 
+    public static final String DATASET_IMPORT_KEY ="EnturDatasetImportKey";
+
     public static final String DATASET_CREATION_TIME = "EnturDatasetCreationTime";
     public static final String DATASET_CODESPACE = "EnturDatasetCodespace";
     public static final String DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";

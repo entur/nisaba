@@ -14,46 +14,26 @@
  *
  */
 
-package no.entur.nisaba.domain;
+package no.entur.nisaba.event;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import no.entur.nisaba.Constants;
+import no.entur.nisaba.avro.NetexImportEvent;
+import org.apache.camel.Header;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
-/**
- * A NeTEx import event identified by the dataset codespace and its initial import date.
- */
-public class NetexImportEvent {
+public class NetexImportEventFactory {
 
     public static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern(Constants.DATE_TIME_FORMAT);
 
-    private String codespace;
-    private LocalDateTime importDateTime;
+    private NetexImportEventFactory() {
 
-    public NetexImportEvent() {
-    }
-
-    public NetexImportEvent(String codespace, LocalDateTime importDateTime) {
-        this.codespace = codespace;
-        this.importDateTime = importDateTime;
     }
 
 
-    public String getCodespace() {
-        return codespace;
+    public static NetexImportEvent createNetexImportEvent(@Header(value = Constants.DATASET_CODESPACE) String codespace,
+                                                              @Header(value = Constants.DATASET_CREATION_TIME) LocalDateTime creationDate) {
+        return new NetexImportEvent(codespace, DATE_TIME_FORMATTER.format(creationDate));
     }
-
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = Constants.DATE_TIME_FORMAT)
-    public LocalDateTime getImportDateTime() {
-        return importDateTime;
-    }
-
-    @JsonIgnore
-    public String getKey() {
-        return codespace + '_' + DATE_TIME_FORMATTER.format(importDateTime);
-    }
-
 }
