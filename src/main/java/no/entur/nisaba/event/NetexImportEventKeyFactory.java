@@ -21,6 +21,9 @@ import org.apache.camel.Body;
 
 public class NetexImportEventKeyFactory {
 
+    private NetexImportEventKeyFactory() {
+
+    }
 
     public static String createNetexImportEventKey(@Body NetexImportEvent netexImportEvent) {
         return netexImportEvent.getCodespace().toString() + '_' + netexImportEvent.getImportDateTime().toString();

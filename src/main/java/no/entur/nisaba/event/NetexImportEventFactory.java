@@ -27,6 +27,10 @@ public class NetexImportEventFactory {
 
     public static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern(Constants.DATE_TIME_FORMAT);
 
+    private NetexImportEventFactory() {
+
+    }
+
 
     public static NetexImportEvent createNetexImportEvent(@Header(value = Constants.DATASET_CODESPACE) String codespace,
                                                               @Header(value = Constants.DATASET_CREATION_TIME) LocalDateTime creationDate) {
