@@ -10,6 +10,7 @@ monitoringEnabled: false
 
 kafka:
   brokers: localhost:9092
+  registry: http://schema-registry.prod-int.kafka.entur.io:8001
   topic:
     event: rutedata-dataset-import-event-production
     idempotent: rutedata-dataset-import-event-idempotent-repo-production

@@ -10,6 +10,7 @@ monitoringEnabled: true
 
 kafka:
   brokers: bootstrap.test-int.kafka.entur.io:9095
+  registry: http://schema-registry.test-int.kafka.entur.io:8001
   topic:
     event: rutedata-dataset-import-event-dev
     idempotent: rutedata-dataset-import-event-idempotent-repo-dev

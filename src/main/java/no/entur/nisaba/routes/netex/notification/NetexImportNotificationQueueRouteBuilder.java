@@ -121,7 +121,6 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
 
         from("direct:notifyConsumers")
                 .log(LoggingLevel.INFO, correlation() + "Notifying Kafka topic ${properties:nisaba.kafka.topic.event}")
-                .marshal().avro("no.entur.nisaba.avro.NetexImportEvent")
                 .setHeader(KafkaConstants.KEY, header(DATASET_CODESPACE))
                 .to("kafka:{{nisaba.kafka.topic.event}}?headerFilterStrategy=#kafkaFilterAllHeadersFilterStrategy")
                 .routeId("notify-consumers");
