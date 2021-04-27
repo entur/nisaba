@@ -35,6 +35,7 @@ import java.util.TreeSet;
 import static no.entur.nisaba.Constants.BLOBSTORE_PATH_OUTBOUND;
 import static no.entur.nisaba.Constants.DATASET_CODESPACE;
 import static no.entur.nisaba.Constants.DATASET_CREATION_TIME;
+import static no.entur.nisaba.Constants.DATASET_IMPORT_KEY;
 import static no.entur.nisaba.Constants.FILE_HANDLE;
 import static org.apache.camel.builder.Builder.bean;
 
@@ -54,7 +55,7 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
 
         singletonFrom("entur-google-pubsub:NetexExportNotificationQueue")
                 .process(this::setCorrelationIdIfMissing)
-                .setHeader(DATASET_CODESPACE, body())
+                .setHeader(DATASET_CODESPACE, bodyAs(String.class))
                 .log(LoggingLevel.INFO, correlation() + "Received NeTEx export notification")
                 .to("direct:downloadNetexDataset")
                 .choice()
@@ -65,7 +66,7 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .log(LoggingLevel.INFO, correlation() + "NeTEx export file downloaded")
                 .to("direct:retrieveDatasetCreationTime")
                 .bean(NetexImportEventFactory.class, "createNetexImportEvent")
-                .setHeader(KafkaConstants.KEY, bean(NetexImportEventKeyFactory.class, "createNetexImportEventKey"))
+                .setHeader(DATASET_IMPORT_KEY, bean(NetexImportEventKeyFactory.class, "createNetexImportEventKey"))
                 .to("direct:notifyConsumersIfNew")
                 .routeId("netex-export-notification-queue");
 
@@ -108,7 +109,7 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
         // Use an idempotent repository backed by a Kafka topic to identify duplicate import events.
         // a dataset import is uniquely identified by the concatenation of its codespace and creation date.
         from("direct:notifyConsumersIfNew")
-                .idempotentConsumer(header(KafkaConstants.KEY)).messageIdRepositoryRef("netexImportEventIdempotentRepo").skipDuplicate(false)
+                .idempotentConsumer(header(DATASET_IMPORT_KEY)).messageIdRepositoryRef("netexImportEventIdempotentRepo").skipDuplicate(false)
                 .filter(exchangeProperty(Exchange.DUPLICATE_MESSAGE).isEqualTo(true))
                 .log(LoggingLevel.INFO, correlation() + "An event has already been sent for this dataset. Skipping")
                 .stop()
@@ -121,6 +122,7 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
         from("direct:notifyConsumers")
                 .log(LoggingLevel.INFO, correlation() + "Notifying Kafka topic ${properties:nisaba.kafka.topic.event}")
                 .marshal().avro("no.entur.nisaba.avro.NetexImportEvent")
+                .setHeader(KafkaConstants.KEY, header(DATASET_CODESPACE))
                 .to("kafka:{{nisaba.kafka.topic.event}}?headerFilterStrategy=#kafkaFilterAllHeadersFilterStrategy")
                 .routeId("notify-consumers");
 

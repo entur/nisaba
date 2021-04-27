@@ -39,5 +39,5 @@ Example: `avi_2021-04-21T11:51:59`
 
 # Kafka record
 Nisaba publishes a Kafka record in the topic `rutedata-dataset-import-event-production` (respectively `rutedata-dataset-import-event-dev` and `rutedata-dataset-import-event-staging`) with the following structure:
-- Kafka key: dataset import unique key
-- Kafka value: JSON format containing a field `codespace` and a field `importDateTime`
+- Kafka key: dataset codespace
+- Kafka value: Avro format containing a field `codespace` and a field `importDateTime`
