@@ -20,7 +20,6 @@ import no.entur.nisaba.Constants;
 import no.entur.nisaba.NisabaRouteBuilderIntegrationTestBase;
 import no.entur.nisaba.TestApp;
 import no.entur.nisaba.avro.NetexImportEvent;
-import no.entur.nisaba.avro.AvroDeserializer;
 import org.apache.camel.EndpointInject;
 import org.apache.camel.Produce;
 import org.apache.camel.ProducerTemplate;
@@ -78,8 +77,7 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
         context.start();
         producerTemplate.sendBody(CODESPACE);
         nisabaEventTopic.assertIsSatisfied();
-        byte[] body = nisabaEventTopic.getReceivedExchanges().get(0).getIn().getBody(byte[].class);
-        NetexImportEvent netexImportEvent = AvroDeserializer.deSerializeAvroNetexImportEvent(body);
+        NetexImportEvent netexImportEvent = nisabaEventTopic.getReceivedExchanges().get(0).getIn().getBody(NetexImportEvent.class);
         Assertions.assertEquals("avi", netexImportEvent.getCodespace().toString());
         Assertions.assertEquals(now.truncatedTo(ChronoUnit.SECONDS), LocalDateTime.parse(netexImportEvent.getImportDateTime().toString()));
     }

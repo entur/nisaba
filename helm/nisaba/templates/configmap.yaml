@@ -20,7 +20,7 @@ data:
     camel.component.kafka.sasl-mechanism=SCRAM-SHA-512
     camel.component.kafka.security-protocol=SASL_SSL
     camel.component.kafka.sasl-jaas-config=org.apache.kafka.common.security.scram.ScramLoginModule required username="${nisaba.kafka.sasl.username}" password="${nisaba.kafka.sasl.password}";
-
+    camel.component.kafka.schema-registry-u-r-l={{ .Values.kafka.registry }}
 
     # PubSub
     spring.cloud.gcp.pubsub.project-id={{ .Values.gcp.pubsubProjectId }}
