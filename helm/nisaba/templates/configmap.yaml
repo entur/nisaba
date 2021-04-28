@@ -15,6 +15,8 @@ data:
     # Kafka
     nisaba.kafka.topic.event={{ .Values.kafka.topic.event }}
     nisaba.kafka.topic.idempotent={{ .Values.kafka.topic.idempotent }}
+    nisaba.kafka.topic.commont={{ .Values.kafka.topic.common }}
+    nisaba.kafka.topic.servicejourney={{ .Values.kafka.topic.servicejourney }}
     camel.component.kafka.brokers={{ .Values.kafka.brokers }}
     camel.component.kafka.client-id=nisaba
     camel.component.kafka.sasl-mechanism=SCRAM-SHA-512

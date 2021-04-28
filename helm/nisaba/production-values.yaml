@@ -14,3 +14,5 @@ kafka:
   topic:
     event: rutedata-dataset-import-event-production
     idempotent: rutedata-dataset-import-event-idempotent-repo-production
+    common: rutedata-dataset-import-common-production
+    servicejourney: rutedata-dataset-import-servicejourney-production

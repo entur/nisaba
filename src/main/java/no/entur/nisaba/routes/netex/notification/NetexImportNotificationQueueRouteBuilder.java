@@ -132,6 +132,7 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
 
         from("direct:publishServiceJourneys")
                 .setBody(header(DATASET_CODESPACE))
+                .setHeader(KafkaConstants.KEY, header(DATASET_IMPORT_KEY))
                 .to("direct:downloadNetexDataset")
                 .split(new ZipSplitter())
                 .streaming()
@@ -148,6 +149,7 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
 
         from("direct:processCommonFile")
                 .log(LoggingLevel.INFO, correlation() + "Processing common file ${header." + Exchange.FILE_NAME + "}")
+                .to("kafka:{{nisaba.kafka.topic.common}}?headerFilterStrategy=#kafkaFilterAllHeadersFilterStrategy")
                 .routeId("process-common-file");
 
         from("direct:processLineFile")
@@ -161,6 +163,7 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .log(LoggingLevel.INFO, correlation() + "Original file: ${body}")
                 .to("xslt:copyServiceJourney.xslt")
                 .log(LoggingLevel.INFO, correlation() + "Transformed file: ${body}")
+                .to("kafka:{{nisaba.kafka.topic.servicejourney}}?headerFilterStrategy=#kafkaFilterAllHeadersFilterStrategy")
                 .routeId("process-line-file");
     }
 
