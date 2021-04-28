@@ -9,7 +9,7 @@ gcp:
 monitoringEnabled: true
 
 kafka:
-  brokers: localhost:9092
+  brokers: bootstrap.test-int.kafka.entur.io:9095
   registry: http://schema-registry.test-int.kafka.entur.io:8001
   topic:
     event: rutedata-dataset-import-event-staging

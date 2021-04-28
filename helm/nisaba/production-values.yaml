@@ -9,7 +9,7 @@ gcp:
 monitoringEnabled: false
 
 kafka:
-  brokers: localhost:9092
+  brokers: bootstrap.prod-int.kafka.entur.io:9095
   registry: http://schema-registry.prod-int.kafka.entur.io:8001
   topic:
     event: rutedata-dataset-import-event-production

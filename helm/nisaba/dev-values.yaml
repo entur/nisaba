@@ -14,4 +14,3 @@ kafka:
   topic:
     event: rutedata-dataset-import-event-dev
     idempotent: rutedata-dataset-import-event-idempotent-repo-dev
-
