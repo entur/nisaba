@@ -47,6 +47,9 @@ import static org.apache.camel.builder.Builder.bean;
 public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
 
     private static final String EXPORT_FILE_NAME = "netex/rb_${body}-" + Constants.CURRENT_AGGREGATED_NETEX_FILENAME;
+    public static final Namespaces XML_NAMESPACE_NETEX = new Namespaces("netex", "http://www.netex.org.uk/netex");
+    private static final String LINE_FILE = "LINE_FILE";
+    private static final String SERVICE_JOURNEY_ID = "SERVICE_JOURNEY_ID";
 
     @Override
     public void configure() throws Exception {
@@ -54,6 +57,7 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
 
 
         singletonFrom("entur-google-pubsub:NetexExportNotificationQueue")
+
                 .process(this::setCorrelationIdIfMissing)
                 .setHeader(DATASET_CODESPACE, bodyAs(String.class))
                 .log(LoggingLevel.INFO, correlation() + "Received NeTEx export notification")
@@ -68,6 +72,7 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .bean(NetexImportEventFactory.class, "createNetexImportEvent")
                 .setHeader(DATASET_IMPORT_KEY, bean(NetexImportEventKeyFactory.class, "createNetexImportEventKey"))
                 .to("direct:notifyConsumersIfNew")
+                .to("direct:publishServiceJourneys")
                 .routeId("netex-export-notification-queue");
 
         from("direct:downloadNetexDataset")
@@ -97,7 +102,7 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .routeId("retrieve-dataset-creation-time");
 
         from("direct:parseCreatedAttribute")
-                .setBody(xpath("/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/@created", String.class, new Namespaces("netex", "http://www.netex.org.uk/netex")))
+                .setBody(xpath("/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/@created", String.class, XML_NAMESPACE_NETEX))
                 .choice()
                 .when(PredicateBuilder.or(body().isNull(), body().isEqualTo("")))
                 .log(LoggingLevel.WARN, correlation() + "'created' attribute not found in file ${header." + Exchange.FILE_NAME + "}")
@@ -125,7 +130,38 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .to("kafka:{{nisaba.kafka.topic.event}}?headerFilterStrategy=#kafkaFilterAllHeadersFilterStrategy")
                 .routeId("notify-consumers");
 
+        from("direct:publishServiceJourneys")
+                .setBody(header(DATASET_CODESPACE))
+                .to("direct:downloadNetexDataset")
+                .split(new ZipSplitter())
+                .streaming()
+                .filter(header(Exchange.FILE_NAME).not().endsWith(".xml"))
+                .log(LoggingLevel.INFO, correlation() + "Ignoring non-XML file ${header." + Exchange.FILE_NAME + "}")
+                .stop()
+                .end()
+                .choice()
+                .when(header(Exchange.FILE_NAME).startsWith("_"))
+                .to("direct:processCommonFile")
+                .otherwise()
+                .to("direct:processLineFile")
+                .routeId("publish-service-journeys");
 
+        from("direct:processCommonFile")
+                .log(LoggingLevel.INFO, correlation() + "Processing common file ${header." + Exchange.FILE_NAME + "}")
+                .routeId("process-common-file");
+
+        from("direct:processLineFile")
+                .streamCaching()
+                .log(LoggingLevel.INFO, correlation() + "Processing line file ${header." + Exchange.FILE_NAME + "}")
+                .setHeader(LINE_FILE, body())
+                .split(xpath("/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:TimetableFrame/netex:vehicleJourneys/netex:ServiceJourney/@id", String.class, XML_NAMESPACE_NETEX))
+                .log(LoggingLevel.INFO, correlation() + "Found ServiceJourney ${body}")
+                .setHeader(SERVICE_JOURNEY_ID, body())
+                .setBody(header(LINE_FILE))
+                .log(LoggingLevel.INFO, correlation() + "Original file: ${body}")
+                .to("xslt:copyServiceJourney.xslt")
+                .log(LoggingLevel.INFO, correlation() + "Transformed file: ${body}")
+                .routeId("process-line-file");
     }
 
 }

@@ -94,5 +94,23 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
         checkCreatedAttribute.assertIsSatisfied();
     }
 
+    @Test
+    void testExtractServiceJourney() throws Exception {
+
+        nisabaInMemoryBlobStoreRepository.uploadBlob(BLOBSTORE_PATH_OUTBOUND + "netex/rb_" + CODESPACE + "-" + CURRENT_AGGREGATED_NETEX_FILENAME,
+                getClass().getResourceAsStream("/no/entur/nisaba/netex/import/rb_avi-aggregated-netex.zip"),
+                false);
+
+        AdviceWith.adviceWith(context, "netex-export-notification-queue", a -> a.weaveByToUri("direct:retrieveDatasetCreationTime").replace().to("mock:retrieveDatasetCreationTime"));
+        retrieveDatasetCreationTime.whenAnyExchangeReceived(exchange -> exchange.getIn().setHeader(Constants.DATASET_CREATION_TIME,  LocalDateTime.now()));
+
+        AdviceWith.adviceWith(context, "notify-consumers", a -> a.weaveByToUri("kafka:{{nisaba.kafka.topic.event}}?headerFilterStrategy=#kafkaFilterAllHeadersFilterStrategy").replace().to("mock:nisabaEventTopic"));
+
+        context.start();
+        producerTemplate.sendBody(CODESPACE);
+
+        Thread.sleep(20000);
+    }
+
 
 }
