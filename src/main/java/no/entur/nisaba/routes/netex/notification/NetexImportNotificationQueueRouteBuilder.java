@@ -154,7 +154,7 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
 
         from("direct:processLineFile")
                 .log(LoggingLevel.INFO, correlation() + "Processing line file ${header." + Exchange.FILE_NAME + "}")
-                .convertBodyTo(String.class)
+                .convertBodyTo(javax.xml.transform.dom.DOMSource.class)
                 .setHeader(LINE_FILE, body())
                 .split(xpath("/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:TimetableFrame/netex:vehicleJourneys/netex:ServiceJourney/@id", XML_NAMESPACE_NETEX))
                 .parallelProcessing()
