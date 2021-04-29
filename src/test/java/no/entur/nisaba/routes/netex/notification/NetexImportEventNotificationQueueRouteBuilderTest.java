@@ -75,7 +75,7 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
         AdviceWith.adviceWith(context, "notify-consumers", a -> a.weaveByToUri("kafka:{{nisaba.kafka.topic.event}}?headerFilterStrategy=#kafkaFilterAllHeadersFilterStrategy").replace().to("mock:nisabaEventTopic"));
 
         AdviceWith.adviceWith(context, "process-common-file", a -> a.weaveByToUri("kafka:{{nisaba.kafka.topic.common}}?headerFilterStrategy=#kafkaFilterAllHeadersFilterStrategy").replace().to("mock:nisabaCommonTopic"));
-        AdviceWith.adviceWith(context, "process-line-file", a -> a.weaveByToUri("kafka:{{nisaba.kafka.topic.servicejourney}}?headerFilterStrategy=#kafkaFilterAllHeadersFilterStrategy").replace().to("mock:nisabaServiceJourneyTopic"));
+        AdviceWith.adviceWith(context, "process-service-journey", a -> a.weaveByToUri("kafka:{{nisaba.kafka.topic.servicejourney}}?headerFilterStrategy=#kafkaFilterAllHeadersFilterStrategy").replace().to("mock:nisabaServiceJourneyTopic"));
 
         LocalDateTime now = LocalDateTime.now();
 
@@ -102,7 +102,7 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
         AdviceWith.adviceWith(context, "parse-created-attribute", a -> a.weaveAddLast().to("mock:checkCreatedAttribute"));
 
         AdviceWith.adviceWith(context, "process-common-file", a -> a.weaveByToUri("kafka:{{nisaba.kafka.topic.common}}?headerFilterStrategy=#kafkaFilterAllHeadersFilterStrategy").replace().to("mock:nisabaCommonTopic"));
-        AdviceWith.adviceWith(context, "process-line-file", a -> a.weaveByToUri("kafka:{{nisaba.kafka.topic.servicejourney}}?headerFilterStrategy=#kafkaFilterAllHeadersFilterStrategy").replace().to("mock:nisabaServiceJourneyTopic"));
+        AdviceWith.adviceWith(context, "process-service-journey", a -> a.weaveByToUri("kafka:{{nisaba.kafka.topic.servicejourney}}?headerFilterStrategy=#kafkaFilterAllHeadersFilterStrategy").replace().to("mock:nisabaServiceJourneyTopic"));
 
 
         checkCreatedAttribute.expectedBodiesReceived(LocalDateTime.parse("2021-04-13T09:09:45.409"));
@@ -124,17 +124,16 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
 
         AdviceWith.adviceWith(context, "notify-consumers", a -> a.weaveByToUri("kafka:{{nisaba.kafka.topic.event}}?headerFilterStrategy=#kafkaFilterAllHeadersFilterStrategy").replace().to("mock:nisabaEventTopic"));
         AdviceWith.adviceWith(context, "process-common-file", a -> a.weaveByToUri("kafka:{{nisaba.kafka.topic.common}}?headerFilterStrategy=#kafkaFilterAllHeadersFilterStrategy").replace().to("mock:nisabaCommonTopic"));
-        AdviceWith.adviceWith(context, "process-line-file", a -> a.weaveByToUri("kafka:{{nisaba.kafka.topic.servicejourney}}?headerFilterStrategy=#kafkaFilterAllHeadersFilterStrategy").replace().to("mock:nisabaServiceJourneyTopic"));
+        AdviceWith.adviceWith(context, "process-service-journey", a -> a.weaveByToUri("kafka:{{nisaba.kafka.topic.servicejourney}}?headerFilterStrategy=#kafkaFilterAllHeadersFilterStrategy").replace().to("mock:nisabaServiceJourneyTopic"));
 
         nisabaCommonTopic.expectedMessageCount(1);
-        nisabaServiceJourneyTopic.expectedMessageCount(2);
+        nisabaServiceJourneyTopic.expectedMessageCount(24);
 
         context.start();
         producerTemplate.sendBody(CODESPACE);
 
         nisabaCommonTopic.assertIsSatisfied();
         nisabaServiceJourneyTopic.assertIsSatisfied();
-        ;
     }
 
 

@@ -156,15 +156,20 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .streamCaching()
                 .log(LoggingLevel.INFO, correlation() + "Processing line file ${header." + Exchange.FILE_NAME + "}")
                 .setHeader(LINE_FILE, body())
-                .split(xpath("/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:TimetableFrame/netex:vehicleJourneys/netex:ServiceJourney/@id", String.class, XML_NAMESPACE_NETEX))
+                .convertBodyTo(String.class)
+                .split(xpath("/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:TimetableFrame/netex:vehicleJourneys/netex:ServiceJourney/@id", XML_NAMESPACE_NETEX))
+                .to("direct:processServiceJourney")
+                .routeId("process-line-file");
+
+        from("direct:processServiceJourney")
+                .streamCaching()
+                .setBody(simple("${body.value}"))
                 .log(LoggingLevel.INFO, correlation() + "Found ServiceJourney ${body}")
                 .setHeader(SERVICE_JOURNEY_ID, body())
                 .setBody(header(LINE_FILE))
-                .log(LoggingLevel.INFO, correlation() + "Original file: ${body}")
-                .to("xslt:copyServiceJourney.xslt")
-                .log(LoggingLevel.INFO, correlation() + "Transformed file: ${body}")
+                .to("xslt:filterServiceJourney.xsl")
                 .to("kafka:{{nisaba.kafka.topic.servicejourney}}?headerFilterStrategy=#kafkaFilterAllHeadersFilterStrategy")
-                .routeId("process-line-file");
+                .routeId("process-service-journey");
     }
 
 }
