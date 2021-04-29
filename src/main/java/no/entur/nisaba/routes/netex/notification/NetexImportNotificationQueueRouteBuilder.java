@@ -153,21 +153,20 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .routeId("process-common-file");
 
         from("direct:processLineFile")
-                .streamCaching()
                 .log(LoggingLevel.INFO, correlation() + "Processing line file ${header." + Exchange.FILE_NAME + "}")
-                .setHeader(LINE_FILE, body())
                 .convertBodyTo(String.class)
+                .setHeader(LINE_FILE, body())
                 .split(xpath("/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:TimetableFrame/netex:vehicleJourneys/netex:ServiceJourney/@id", XML_NAMESPACE_NETEX))
+                .parallelProcessing()
                 .to("direct:processServiceJourney")
                 .routeId("process-line-file");
 
         from("direct:processServiceJourney")
-                .streamCaching()
                 .setBody(simple("${body.value}"))
                 .log(LoggingLevel.INFO, correlation() + "Found ServiceJourney ${body}")
                 .setHeader(SERVICE_JOURNEY_ID, body())
                 .setBody(header(LINE_FILE))
-                .to("xslt:filterServiceJourney.xsl")
+                .to("xslt-saxon:filterServiceJourney.xsl")
                 .to("kafka:{{nisaba.kafka.topic.servicejourney}}?headerFilterStrategy=#kafkaFilterAllHeadersFilterStrategy")
                 .routeId("process-service-journey");
     }
