@@ -151,6 +151,7 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
 
         from("direct:processCommonFile")
                 .log(LoggingLevel.INFO, correlation() + "Processing common file ${header." + Exchange.FILE_NAME + "}")
+                .to("xslt-saxon:filterServiceLinks.xsl")
                 .marshal().zipFile()
                 .to("kafka:{{nisaba.kafka.topic.common}}?clientId=nisaba-common&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy")
                 .routeId("process-common-file");
@@ -166,7 +167,7 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
 
         from("direct:processServiceJourney")
                 .setBody(simple("${body.value}"))
-                .log(LoggingLevel.INFO, correlation() + "Found ServiceJourney ${body}")
+                .log(LoggingLevel.INFO, correlation() + "Processing ServiceJourney ${body}")
                 .setHeader(SERVICE_JOURNEY_ID, body())
                 .setBody(header(LINE_FILE))
                 .to("xslt-saxon:filterServiceJourney.xsl")
