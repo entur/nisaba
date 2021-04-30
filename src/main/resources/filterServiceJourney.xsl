@@ -1,19 +1,40 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+                xmlns:xsd="http://www.w3.org/2001/XMLSchema"
                 xmlns:netex="http://www.netex.org.uk/netex"
-                version="1.0">
+                version="3.0">
 
-    <xsl:output omit-xml-declaration="no" indent="yes"/>
+    <xsl:output omit-xml-declaration="no" indent="no"/>
     <xsl:strip-space elements="*"/>
 
     <!-- ID of the selected service journey -->
-    <xsl:param name="SERVICE_JOURNEY_ID"/>
-    <!-- ID of the journey pattern referred to by the selected service journey -->
-    <xsl:variable name="journeyPatternId"
+    <xsl:param name="SERVICE_JOURNEY_ID" as="xsd:string"/>
+
+    <!-- ID of the journey pattern of the selected service journey -->
+    <xsl:variable name="journeyPatternId" as="xsd:string"
                   select="string(/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:TimetableFrame/netex:vehicleJourneys/netex:ServiceJourney[@id=$SERVICE_JOURNEY_ID]/netex:JourneyPatternRef/@ref)"/>
-    <!-- ID of the route referred to by the selected service journey -->
-    <xsl:variable name="routeID"
+
+    <!-- ID of the route of the selected service journey -->
+    <xsl:variable name="routeId" as="xsd:string"
                   select="string(/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:ServiceFrame/netex:journeyPatterns/netex:JourneyPattern[@id = $journeyPatternId]/netex:RouteRef/@ref)"/>
+
+    <!-- ID of the (unique) line in the file  -->
+    <xsl:variable name="lineId" as="xsd:string"
+                  select="string(/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:ServiceFrame/netex:lines/netex:Line/@id)"/>
+
+    <!-- Concatenated list of ids of the TimetabledPassingTime of the selected service journey -->
+    <xsl:variable name="timetablePassingTimeIds" as="xsd:string"
+                  select="string-join(/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:TimetableFrame/netex:vehicleJourneys/netex:ServiceJourney[@id=$SERVICE_JOURNEY_ID]/netex:passingTimes/netex:TimetabledPassingTime/@id, ' ')"/>
+
+    <!-- Concatenated list of ids of the stop points of the selected service journey -->
+    <xsl:variable name="stopPointsIds" as="xsd:string"
+                  select="string-join(/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:ServiceFrame/netex:journeyPatterns/netex:JourneyPattern[@id = $journeyPatternId]/netex:pointsInSequence/netex:StopPointInJourneyPattern/@id, ' ')"/>
+
+
+    <!-- Concatenated list of ids for noticed elements related to the selected service journey (the service journey + the journey pattern + the line + the TimetabledPassingTimes + the stop points) -->
+    <xsl:variable name="noticedElementIds" as="xsd:string"
+                  select="concat($SERVICE_JOURNEY_ID, ' ', $journeyPatternId, ' ', $lineId, ' ', $timetablePassingTimeIds, ' ', $stopPointsIds)"/>
+
 
     <!-- Copy all nodes by default -->
     <xsl:template match="*|@*|text()|/">
@@ -22,7 +43,7 @@
         </xsl:copy>
     </xsl:template>
 
-    <!-- Remove other ServiceJourneys than the one whose id is passed as a parameter-->
+    <!-- Remove other ServiceJourneys than the selected ServiceJourney -->
     <xsl:template
             match="netex:ServiceJourney[@id!=$SERVICE_JOURNEY_ID]">
     </xsl:template>
@@ -39,13 +60,17 @@
 
     <!-- Remove Routes that are not referred by the selected ServiceJourney -->
     <xsl:template
-            match="netex:Route[@id != $routeID]">
+            match="netex:Route[@id != $routeId]">
     </xsl:template>
 
-    <!-- Remove ServiceJourneyInterchange that are not referring to the selected ServiceJourney -->
+    <!-- Remove ServiceJourneyInterchanges that are not referring to the selected ServiceJourney -->
     <xsl:template
             match="netex:ServiceJourneyInterchange[/netex:FromJourneyRef/@ref != $SERVICE_JOURNEY_ID and /netex:ToJourneyRef/@ref != $SERVICE_JOURNEY_ID]">
     </xsl:template>
 
+    <!-- Remove NoticeAssignments that are not related to the selected ServiceJourney -->
+    <xsl:template
+            match="netex:NoticeAssignment[not(contains($noticedElementIds, netex:NoticedObjectRef/@ref))]">
+    </xsl:template>
 
 </xsl:stylesheet>

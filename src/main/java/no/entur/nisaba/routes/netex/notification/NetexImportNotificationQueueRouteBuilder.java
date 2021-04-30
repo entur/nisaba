@@ -132,7 +132,6 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
 
         from("direct:publishServiceJourneys")
                 .setBody(header(DATASET_CODESPACE))
-                .setHeader(KafkaConstants.KEY, header(DATASET_IMPORT_KEY))
                 .to("direct:downloadNetexDataset")
                 .split(new ZipSplitter())
                 .streaming()
@@ -167,6 +166,7 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .setHeader(SERVICE_JOURNEY_ID, body())
                 .setBody(header(LINE_FILE))
                 .to("xslt-saxon:filterServiceJourney.xsl")
+                .setHeader(KafkaConstants.KEY, header(SERVICE_JOURNEY_ID))
                 .to("kafka:{{nisaba.kafka.topic.servicejourney}}?headerFilterStrategy=#kafkaFilterAllHeadersFilterStrategy")
                 .routeId("process-service-journey");
     }
