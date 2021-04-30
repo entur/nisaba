@@ -18,12 +18,10 @@ data:
     nisaba.kafka.topic.commont={{ .Values.kafka.topic.common }}
     nisaba.kafka.topic.servicejourney={{ .Values.kafka.topic.servicejourney }}
     camel.component.kafka.brokers={{ .Values.kafka.brokers }}
-    camel.component.kafka.client-id=nisaba
     camel.component.kafka.sasl-mechanism=SCRAM-SHA-512
     camel.component.kafka.security-protocol=SASL_SSL
     camel.component.kafka.sasl-jaas-config=org.apache.kafka.common.security.scram.ScramLoginModule required username="${nisaba.kafka.sasl.username}" password="${nisaba.kafka.sasl.password}";
     camel.component.kafka.schema-registry-u-r-l={{ .Values.kafka.registry }}
-    camel.component.kafka.value-serializer=io.confluent.kafka.serializers.KafkaAvroSerializer
 
     # PubSub
     spring.cloud.gcp.pubsub.project-id={{ .Values.gcp.pubsubProjectId }}

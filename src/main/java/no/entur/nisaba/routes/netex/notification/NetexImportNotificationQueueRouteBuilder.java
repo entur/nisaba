@@ -72,7 +72,6 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .bean(NetexImportEventFactory.class, "createNetexImportEvent")
                 .setHeader(DATASET_IMPORT_KEY, bean(NetexImportEventKeyFactory.class, "createNetexImportEventKey"))
                 .to("direct:notifyConsumersIfNew")
-                .to("direct:publishServiceJourneys")
                 .routeId("netex-export-notification-queue");
 
         from("direct:downloadNetexDataset")
@@ -121,16 +120,20 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .end()
                 .log(LoggingLevel.INFO, correlation() + "This is a new dataset. Notifying consumers")
                 .to("direct:notifyConsumers")
+                .to("direct:publishServiceJourneys")
+                .log(LoggingLevel.INFO, correlation() + "Dataset processing complete")
                 .end()
                 .routeId("notify-consumers-if-new");
 
         from("direct:notifyConsumers")
                 .log(LoggingLevel.INFO, correlation() + "Notifying Kafka topic ${properties:nisaba.kafka.topic.event}")
                 .setHeader(KafkaConstants.KEY, header(DATASET_CODESPACE))
-                .to("kafka:{{nisaba.kafka.topic.event}}?headerFilterStrategy=#kafkaFilterAllHeadersFilterStrategy")
+                .to("kafka:{{nisaba.kafka.topic.event}}?clientId=nisaba-event&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy&valueSerializer=io.confluent.kafka.serializers.KafkaAvroSerializer")
+                .removeHeader(KafkaConstants.KEY)
                 .routeId("notify-consumers");
 
         from("direct:publishServiceJourneys")
+                .log(LoggingLevel.INFO, correlation() + "Publishing ServiceJourneys")
                 .setBody(header(DATASET_CODESPACE))
                 .to("direct:downloadNetexDataset")
                 .split(new ZipSplitter())
@@ -148,7 +151,8 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
 
         from("direct:processCommonFile")
                 .log(LoggingLevel.INFO, correlation() + "Processing common file ${header." + Exchange.FILE_NAME + "}")
-                .to("kafka:{{nisaba.kafka.topic.common}}?headerFilterStrategy=#kafkaFilterAllHeadersFilterStrategy")
+                .marshal().zipFile()
+                .to("kafka:{{nisaba.kafka.topic.common}}?clientId=nisaba-common&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy")
                 .routeId("process-common-file");
 
         from("direct:processLineFile")
@@ -166,8 +170,8 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .setHeader(SERVICE_JOURNEY_ID, body())
                 .setBody(header(LINE_FILE))
                 .to("xslt-saxon:filterServiceJourney.xsl")
-                .setHeader(KafkaConstants.KEY, header(SERVICE_JOURNEY_ID))
-                .to("kafka:{{nisaba.kafka.topic.servicejourney}}?headerFilterStrategy=#kafkaFilterAllHeadersFilterStrategy")
+                .marshal().zipFile()
+                .to("kafka:{{nisaba.kafka.topic.servicejourney}}?clientId=nisaba-servicejourney&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy")
                 .routeId("process-service-journey");
     }
 
