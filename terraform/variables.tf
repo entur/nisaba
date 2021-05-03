@@ -41,9 +41,12 @@ variable "service_account_bucket_role" {
 }
 
 variable "bucket_marduk_instance_name" {
-  description = "Main storage bucket name"
+  description = "Marduk bucket name"
 }
 
+variable "bucket_nisaba_instance_name" {
+  description = "Nisaba bucket name"
+}
 
 variable  ror-nisaba-kafka-username {
   description = "Nisaba kafka user name"

@@ -48,8 +48,7 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
 
     private static final String EXPORT_FILE_NAME = "netex/rb_${body}-" + Constants.CURRENT_AGGREGATED_NETEX_FILENAME;
     public static final Namespaces XML_NAMESPACE_NETEX = new Namespaces("netex", "http://www.netex.org.uk/netex");
-    private static final String LINE_FILE = "LINE_FILE";
-    private static final String SERVICE_JOURNEY_ID = "SERVICE_JOURNEY_ID";
+    private static final String LINE_FILE_NAME = "${header." + DATASET_IMPORT_KEY + "}/${header." + Exchange.FILE_NAME + "}";
 
     @Override
     public void configure() throws Exception {
@@ -142,37 +141,19 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .log(LoggingLevel.INFO, correlation() + "Ignoring non-XML file ${header." + Exchange.FILE_NAME + "}")
                 .stop()
                 .end()
-                .choice()
-                .when(header(Exchange.FILE_NAME).startsWith("_"))
-                .to("direct:processCommonFile")
-                .otherwise()
-                .to("direct:processLineFile")
+                .marshal().zipFile()
+                .to("direct:uploadNetexLineFile")
+                .setBody(simple(LINE_FILE_NAME))
+                .to("entur-google-pubsub:NetexServiceJourneyPublicationQueue")
                 .routeId("publish-service-journeys");
 
-        from("direct:processCommonFile")
-                .log(LoggingLevel.INFO, correlation() + "Processing common file ${header." + Exchange.FILE_NAME + "}")
-                .to("xslt:filterServiceLinks.xsl")
-                .marshal().zipFile()
-                .to("kafka:{{nisaba.kafka.topic.common}}?clientId=nisaba-common&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy")
-                .routeId("process-common-file");
 
-        from("direct:processLineFile")
-                .log(LoggingLevel.INFO, correlation() + "Processing line file ${header." + Exchange.FILE_NAME + "}")
-                .convertBodyTo(String.class)
-                .setHeader(LINE_FILE, body())
-                .split(xpath("/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:TimetableFrame/netex:vehicleJourneys/netex:ServiceJourney/@id", XML_NAMESPACE_NETEX))
-                .parallelProcessing().executorServiceRef("splitServiceJourneysExecutorService")
-                .to("direct:processServiceJourney")
-                .routeId("process-line-file");
+        from("direct:uploadNetexLineFile")
+                .log(LoggingLevel.INFO, correlation() + "Uploading NeTEx line file")
+                .setHeader(FILE_HANDLE, simple(LINE_FILE_NAME))
+                .to("direct:uploadNisabaBlob")
+                .routeId("upload-netex-line-file");
 
-        from("direct:processServiceJourney")
-                .setBody(simple("${body.value}"))
-                .log(LoggingLevel.INFO, correlation() + "Processing ServiceJourney ${body}")
-                .setHeader(SERVICE_JOURNEY_ID, body())
-                .setBody(header(LINE_FILE))
-               .to("xslt:filterServiceJourney.xsl")
-                .to("kafka:{{nisaba.kafka.topic.servicejourney}}?clientId=nisaba-servicejourney&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy")
-                .routeId("process-service-journey");
     }
 
 }

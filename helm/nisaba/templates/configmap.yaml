@@ -37,6 +37,7 @@ data:
     blobstore.gcs.project.id={{ .Values.gcp.blobstoreProjectId }}
     blobstore.gcs.credential.path=/etc/nisaba-service-account/credentials.json
     blobstore.gcs.container.name={{ .Values.gcp.bucketName }}
+    blobstore.gcs.nisaba.container.name={{ .Values.gcp.nisaba.bucketName }}
 
     # Actuator
     management.server.port=9001

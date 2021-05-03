@@ -1,10 +1,12 @@
 env: production
-replicas: 2
+replicas: 3
 
 gcp:
   blobstoreProjectId: entur-ror-prod
   pubsubProjectId: entur-ror-prod
   bucketName: marduk-production
+  nisaba:
+    bucketName: nisaba-production
 
 monitoringEnabled: false
 
@@ -15,4 +17,4 @@ kafka:
     event: rutedata-dataset-import-event-production
     idempotent: rutedata-dataset-import-event-idempotent-repo-production
     common: rutedata-dataset-import-common-production
-    servicejourney: rutedata-dataset-import-servicejourney-production
+    servicejourney: rutedata-dataset-import-service-journey-production
