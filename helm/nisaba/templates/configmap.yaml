@@ -11,6 +11,8 @@ data:
     camel.springboot.name=Nisaba
     camel.dataformat.json-jackson.module-refs=jacksonJavaTimeModule
 
+    # Service Journey Processing
+    nisaba.servicejourney.split.threads=3
 
     # Kafka
     nisaba.kafka.topic.event={{ .Values.kafka.topic.event }}

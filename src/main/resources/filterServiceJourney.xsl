@@ -1,38 +1,37 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
-                xmlns:xsd="http://www.w3.org/2001/XMLSchema"
                 xmlns:netex="http://www.netex.org.uk/netex"
-                version="3.0">
+                version="1.0">
 
     <xsl:output omit-xml-declaration="no" indent="no"/>
     <xsl:strip-space elements="*"/>
 
     <!-- ID of the selected service journey -->
-    <xsl:param name="SERVICE_JOURNEY_ID" as="xsd:string"/>
+    <xsl:param name="SERVICE_JOURNEY_ID" />
 
     <!-- ID of the journey pattern of the selected service journey -->
-    <xsl:variable name="journeyPatternId" as="xsd:string"
+    <xsl:variable name="journeyPatternId"
                   select="string(/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:TimetableFrame/netex:vehicleJourneys/netex:ServiceJourney[@id=$SERVICE_JOURNEY_ID]/netex:JourneyPatternRef/@ref)"/>
 
     <!-- ID of the route of the selected service journey -->
-    <xsl:variable name="routeId" as="xsd:string"
+    <xsl:variable name="routeId"
                   select="string(/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:ServiceFrame/netex:journeyPatterns/netex:JourneyPattern[@id = $journeyPatternId]/netex:RouteRef/@ref)"/>
 
     <!-- ID of the (unique) line in the file  -->
-    <xsl:variable name="lineId" as="xsd:string"
+    <xsl:variable name="lineId"
                   select="string(/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:ServiceFrame/netex:lines/netex:Line/@id)"/>
 
     <!-- Concatenated list of ids of the TimetabledPassingTime of the selected service journey -->
-    <xsl:variable name="timetablePassingTimeIds" as="xsd:string"
+    <xsl:variable name="timetablePassingTimeIds"
                   select="string-join(/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:TimetableFrame/netex:vehicleJourneys/netex:ServiceJourney[@id=$SERVICE_JOURNEY_ID]/netex:passingTimes/netex:TimetabledPassingTime/@id, ' ')"/>
 
     <!-- Concatenated list of ids of the stop points of the selected service journey -->
-    <xsl:variable name="stopPointsIds" as="xsd:string"
+    <xsl:variable name="stopPointsIds"
                   select="string-join(/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:ServiceFrame/netex:journeyPatterns/netex:JourneyPattern[@id = $journeyPatternId]/netex:pointsInSequence/netex:StopPointInJourneyPattern/@id, ' ')"/>
 
 
     <!-- Concatenated list of ids for noticed elements related to the selected service journey (the service journey + the journey pattern + the line + the TimetabledPassingTimes + the stop points) -->
-    <xsl:variable name="noticedElementIds" as="xsd:string"
+    <xsl:variable name="noticedElementIds"
                   select="concat($SERVICE_JOURNEY_ID, ' ', $journeyPatternId, ' ', $lineId, ' ', $timetablePassingTimeIds, ' ', $stopPointsIds)"/>
 
 

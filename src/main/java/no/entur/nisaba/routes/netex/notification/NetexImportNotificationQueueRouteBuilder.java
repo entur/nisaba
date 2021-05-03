@@ -151,17 +151,17 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
 
         from("direct:processCommonFile")
                 .log(LoggingLevel.INFO, correlation() + "Processing common file ${header." + Exchange.FILE_NAME + "}")
-                .to("xslt-saxon:filterServiceLinks.xsl")
+                .to("xslt:filterServiceLinks.xsl")
                 .marshal().zipFile()
                 .to("kafka:{{nisaba.kafka.topic.common}}?clientId=nisaba-common&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy")
                 .routeId("process-common-file");
 
         from("direct:processLineFile")
                 .log(LoggingLevel.INFO, correlation() + "Processing line file ${header." + Exchange.FILE_NAME + "}")
-                .convertBodyTo(javax.xml.transform.dom.DOMSource.class)
+                .convertBodyTo(String.class)
                 .setHeader(LINE_FILE, body())
                 .split(xpath("/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:TimetableFrame/netex:vehicleJourneys/netex:ServiceJourney/@id", XML_NAMESPACE_NETEX))
-                .parallelProcessing()
+                .parallelProcessing().executorServiceRef("splitServiceJourneysExecutorService")
                 .to("direct:processServiceJourney")
                 .routeId("process-line-file");
 
@@ -170,8 +170,7 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .log(LoggingLevel.INFO, correlation() + "Processing ServiceJourney ${body}")
                 .setHeader(SERVICE_JOURNEY_ID, body())
                 .setBody(header(LINE_FILE))
-                .to("xslt-saxon:filterServiceJourney.xsl")
-                .marshal().zipFile()
+               .to("xslt:filterServiceJourney.xsl")
                 .to("kafka:{{nisaba.kafka.topic.servicejourney}}?clientId=nisaba-servicejourney&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy")
                 .routeId("process-service-journey");
     }

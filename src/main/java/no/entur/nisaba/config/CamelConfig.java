@@ -18,7 +18,9 @@ package no.entur.nisaba.config;
 
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import no.entur.nisaba.Constants;
+import org.apache.camel.CamelContext;
 import org.apache.camel.Exchange;
+import org.apache.camel.builder.ThreadPoolBuilder;
 import org.apache.camel.component.kafka.KafkaConfiguration;
 import org.apache.camel.processor.idempotent.kafka.KafkaIdempotentRepository;
 import org.apache.camel.spi.HeaderFilterStrategy;
@@ -26,6 +28,7 @@ import org.apache.camel.spi.IdempotentRepository;
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.config.SaslConfigs;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -33,6 +36,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.util.StringUtils;
 
 import java.util.Properties;
+import java.util.concurrent.ExecutorService;
 
 @Configuration
 public class CamelConfig {
@@ -107,5 +111,22 @@ public class CamelConfig {
         return new JavaTimeModule();
     }
 
+
+    /**
+     * Configure the Camel thread pool for bulk operations on providers.
+     *
+     * @param camelContext
+     * @return
+     * @throws Exception
+     */
+    @Bean
+    public ExecutorService splitServiceJourneysExecutorService(@Autowired CamelContext camelContext, @Value("${nisaba.servicejourney.split.threads:3}") int nbThreadForParallelServiceJourneyProcessing) throws Exception {
+        ThreadPoolBuilder poolBuilder = new ThreadPoolBuilder(camelContext);
+        return poolBuilder
+                .poolSize(nbThreadForParallelServiceJourneyProcessing)
+                .maxPoolSize(nbThreadForParallelServiceJourneyProcessing)
+                .maxQueueSize(1000)
+                .build("splitServiceJourneysExecutorService");
+    }
 
 }
