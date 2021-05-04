@@ -26,7 +26,7 @@
         <entur.google.pubsub.emulator.download.skip>false</entur.google.pubsub.emulator.download.skip>
         <camel.version>3.7.3</camel.version>
         <spring-boot.version>2.4.5</spring-boot.version>
-        <entur.helpers.version>1.0.47</entur.helpers.version>
+        <entur.helpers.version>1.0.48</entur.helpers.version>
         <commons-io.version>2.8.0</commons-io.version>
         <avro.version>1.10.2</avro.version>
         <confluent-kafka-client.version>6.1.1</confluent-kafka-client.version>
@@ -128,6 +128,23 @@
             <groupId>org.apache.camel.springboot</groupId>
             <artifactId>camel-kafka-starter</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.apache.camel.springboot</groupId>
+            <artifactId>camel-xpath-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.camel.springboot</groupId>
+            <artifactId>camel-xslt-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.camel.springboot</groupId>
+            <artifactId>camel-xslt-saxon-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.woodstox</groupId>
+            <artifactId>woodstox-core</artifactId>
+            <version>6.2.4</version>
+        </dependency>
 
         <!-- Other -->
 
@@ -225,7 +242,7 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <argLine>@{argLine} -Xms500m -Xmx500m -Xss256k</argLine>
+                    <argLine>@{argLine} -Xms500m -Xmx4000m -Xss256k</argLine>
                     <systemPropertyVariables combine.children="override">
                         <spring.output.ansi.enabled>ALWAYS</spring.output.ansi.enabled>
                     </systemPropertyVariables>

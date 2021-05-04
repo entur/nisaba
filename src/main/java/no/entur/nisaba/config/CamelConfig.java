@@ -17,6 +17,7 @@
 package no.entur.nisaba.config;
 
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import no.entur.nisaba.Constants;
 import org.apache.camel.Exchange;
 import org.apache.camel.component.kafka.KafkaConfiguration;
 import org.apache.camel.processor.idempotent.kafka.KafkaIdempotentRepository;
@@ -75,18 +76,18 @@ public class CamelConfig {
 
 
     /**
-     * Filter out all headers before sending a message to Kafka.
+     * Filter out all headers except the dataset import key before sending a message to Kafka.
      *
-     * @return a header filter strategy that filters out all headers in a Camel message.
+     * @return a header filter strategy that filters out all headers  except the dataset import key in a Camel message.
      */
-    @Bean("kafkaFilterAllHeadersFilterStrategy")
-    public HeaderFilterStrategy kafkaFilterAllHeaderFilterStrategy() {
+    @Bean("nisabaKafkaHeaderFilterStrategy")
+    public HeaderFilterStrategy nisabaKafkaHeaderFilterStrategy() {
         return new HeaderFilterStrategy() {
 
 
             @Override
             public boolean applyFilterToCamelHeaders(String headerName, Object headerValue, Exchange exchange) {
-                return true;
+                return !Constants.DATASET_IMPORT_KEY.equals(headerName);
             }
 
             @Override
@@ -105,6 +106,4 @@ public class CamelConfig {
     JavaTimeModule jacksonJavaTimeModule() {
         return new JavaTimeModule();
     }
-
-
 }

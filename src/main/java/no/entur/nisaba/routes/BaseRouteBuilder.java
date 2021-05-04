@@ -27,7 +27,6 @@ import org.apache.camel.component.hazelcast.policy.HazelcastRoutePolicy;
 import org.apache.camel.model.RouteDefinition;
 import org.apache.camel.spi.RoutePolicy;
 import org.apache.camel.spi.Synchronization;
-import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.entur.pubsub.camel.EnturGooglePubSubConstants;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.util.FileSystemUtils;
@@ -77,12 +76,9 @@ public abstract class BaseRouteBuilder extends RouteBuilder {
         int redeliveryCounter = exchange.getIn().getHeader("CamelRedeliveryCounter", Integer.class);
         int redeliveryMaxCounter = exchange.getIn().getHeader("CamelRedeliveryMaxCounter", Integer.class);
         Throwable camelCaughtThrowable = exchange.getProperty("CamelExceptionCaught", Throwable.class);
-        Throwable rootCause = ExceptionUtils.getRootCause(camelCaughtThrowable);
+        String correlation = simple(correlation(), String.class).evaluate(exchange, String.class);
 
-        String rootCauseType = rootCause != null ? rootCause.getClass().getName() : "";
-        String rootCauseMessage = rootCause != null ? rootCause.getMessage() : "";
-
-        log.warn("Exchange failed ({}: {}) . Redelivering the message locally, attempt {}/{}...", rootCauseType, rootCauseMessage, redeliveryCounter, redeliveryMaxCounter);
+        log.warn("{} Exchange failed, redelivering the message locally, attempt {}/{}...", correlation, redeliveryCounter, redeliveryMaxCounter, camelCaughtThrowable);
     }
 
     protected String logDebugShowAll() {

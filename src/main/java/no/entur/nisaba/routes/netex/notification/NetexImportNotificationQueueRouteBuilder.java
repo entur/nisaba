@@ -25,7 +25,6 @@ import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.FlexibleAggregationStrategy;
 import org.apache.camel.component.kafka.KafkaConstants;
 import org.apache.camel.dataformat.zipfile.ZipSplitter;
-import org.apache.camel.support.builder.Namespaces;
 import org.apache.camel.support.builder.PredicateBuilder;
 import org.springframework.stereotype.Component;
 
@@ -37,6 +36,7 @@ import static no.entur.nisaba.Constants.DATASET_CODESPACE;
 import static no.entur.nisaba.Constants.DATASET_CREATION_TIME;
 import static no.entur.nisaba.Constants.DATASET_IMPORT_KEY;
 import static no.entur.nisaba.Constants.FILE_HANDLE;
+import static no.entur.nisaba.Constants.XML_NAMESPACE_NETEX;
 import static org.apache.camel.builder.Builder.bean;
 
 /**
@@ -47,6 +47,7 @@ import static org.apache.camel.builder.Builder.bean;
 public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
 
     private static final String EXPORT_FILE_NAME = "netex/rb_${body}-" + Constants.CURRENT_AGGREGATED_NETEX_FILENAME;
+    private static final String LINE_FILE_NAME = "${header." + DATASET_IMPORT_KEY + "}/${header." + Exchange.FILE_NAME + "}";
 
     @Override
     public void configure() throws Exception {
@@ -54,6 +55,7 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
 
 
         singletonFrom("entur-google-pubsub:NetexExportNotificationQueue")
+
                 .process(this::setCorrelationIdIfMissing)
                 .setHeader(DATASET_CODESPACE, bodyAs(String.class))
                 .log(LoggingLevel.INFO, correlation() + "Received NeTEx export notification")
@@ -97,7 +99,7 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .routeId("retrieve-dataset-creation-time");
 
         from("direct:parseCreatedAttribute")
-                .setBody(xpath("/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/@created", String.class, new Namespaces("netex", "http://www.netex.org.uk/netex")))
+                .setBody(xpath("/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/@created", String.class, XML_NAMESPACE_NETEX))
                 .choice()
                 .when(PredicateBuilder.or(body().isNull(), body().isEqualTo("")))
                 .log(LoggingLevel.WARN, correlation() + "'created' attribute not found in file ${header." + Exchange.FILE_NAME + "}")
@@ -116,15 +118,40 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .end()
                 .log(LoggingLevel.INFO, correlation() + "This is a new dataset. Notifying consumers")
                 .to("direct:notifyConsumers")
+                .to("direct:publishServiceJourneys")
+                .log(LoggingLevel.INFO, correlation() + "Dataset processing complete")
                 .end()
                 .routeId("notify-consumers-if-new");
 
         from("direct:notifyConsumers")
                 .log(LoggingLevel.INFO, correlation() + "Notifying Kafka topic ${properties:nisaba.kafka.topic.event}")
                 .setHeader(KafkaConstants.KEY, header(DATASET_CODESPACE))
-                .to("kafka:{{nisaba.kafka.topic.event}}?headerFilterStrategy=#kafkaFilterAllHeadersFilterStrategy")
+                .to("kafka:{{nisaba.kafka.topic.event}}?clientId=nisaba-event&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy&valueSerializer=io.confluent.kafka.serializers.KafkaAvroSerializer")
+                .removeHeader(KafkaConstants.KEY)
                 .routeId("notify-consumers");
 
+        from("direct:publishServiceJourneys")
+                .log(LoggingLevel.INFO, correlation() + "Publishing ServiceJourneys")
+                .setBody(header(DATASET_CODESPACE))
+                .to("direct:downloadNetexDataset")
+                .split(new ZipSplitter())
+                .streaming()
+                .filter(header(Exchange.FILE_NAME).not().endsWith(".xml"))
+                .log(LoggingLevel.INFO, correlation() + "Ignoring non-XML file ${header." + Exchange.FILE_NAME + "}")
+                .stop()
+                .end()
+                .marshal().zipFile()
+                .to("direct:uploadNetexLineFile")
+                .setBody(simple(LINE_FILE_NAME))
+                .to("entur-google-pubsub:NetexServiceJourneyPublicationQueue")
+                .routeId("publish-service-journeys");
+
+
+        from("direct:uploadNetexLineFile")
+                .log(LoggingLevel.INFO, correlation() + "Uploading NeTEx line file")
+                .setHeader(FILE_HANDLE, simple(LINE_FILE_NAME))
+                .to("direct:uploadNisabaBlob")
+                .routeId("upload-netex-line-file");
 
     }
 

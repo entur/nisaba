@@ -18,18 +18,30 @@ resource "google_service_account" "nisaba_service_account" {
   project = var.gcp_resources_project
 }
 
-# add service account as member to the main bucket
-resource "google_storage_bucket_iam_member" "storage_main_bucket_iam_member" {
+# add service account as member to marduk bucket
+resource "google_storage_bucket_iam_member" "storage_marduk_bucket_iam_member" {
   bucket = var.bucket_marduk_instance_name
   role = var.service_account_bucket_role
   member = "serviceAccount:${google_service_account.nisaba_service_account.email}"
 }
 
+# add service account as member to nisaba bucket
+resource "google_storage_bucket_iam_member" "storage_nisaba_bucket_iam_member" {
+  bucket = var.bucket_nisaba_instance_name
+  role = var.service_account_bucket_role
+  member = "serviceAccount:${google_service_account.nisaba_service_account.email}"
+}
 
 # add service account as member to pubsub service in the resources project
 resource "google_project_iam_member" "pubsub_project_iam_member_subscriber" {
   project = var.gcp_pubsub_project
   role = "roles/pubsub.subscriber"
+  member = "serviceAccount:${google_service_account.nisaba_service_account.email}"
+}
+
+resource "google_project_iam_member" "pubsub_project_iam_member_publisher" {
+  project = var.gcp_pubsub_project
+  role = "roles/pubsub.publisher"
   member = "serviceAccount:${google_service_account.nisaba_service_account.email}"
 }
 
@@ -58,5 +70,22 @@ resource "kubernetes_secret" "ror-nisaba-secret" {
   data = {
     "kafka-username"    = var.ror-nisaba-kafka-username
     "kafka-password"    = var.ror-nisaba-kafka-password
+  }
+}
+
+# Create pubsub topics and subscriptions
+resource "google_pubsub_topic" "NetexServiceJourneyPublicationQueue" {
+  name = "NetexServiceJourneyPublicationQueue"
+  project = var.gcp_pubsub_project
+  labels = var.labels
+}
+
+resource "google_pubsub_subscription" "NetexServiceJourneyPublicationQueue" {
+  name = "NetexServiceJourneyPublicationQueue"
+  topic = google_pubsub_topic.NetexServiceJourneyPublicationQueue.name
+  project = var.gcp_pubsub_project
+  labels = var.labels
+  retry_policy {
+    minimum_backoff = "10s"
   }
 }
