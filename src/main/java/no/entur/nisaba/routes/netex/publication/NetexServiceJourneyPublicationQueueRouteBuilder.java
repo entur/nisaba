@@ -16,11 +16,12 @@
 
 package no.entur.nisaba.routes.netex.publication;
 
+import no.entur.nisaba.Constants;
 import no.entur.nisaba.routes.BaseRouteBuilder;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
-import org.apache.camel.support.builder.Namespaces;
 import org.springframework.stereotype.Component;
+import org.w3c.dom.Document;
 
 import static no.entur.nisaba.Constants.FILE_HANDLE;
 
@@ -30,7 +31,6 @@ import static no.entur.nisaba.Constants.FILE_HANDLE;
 @Component
 public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBuilder {
 
-    public static final Namespaces XML_NAMESPACE_NETEX = new Namespaces("netex", "http://www.netex.org.uk/netex");
     private static final String LINE_FILE = "LINE_FILE";
     private static final String SERVICE_JOURNEY_ID = "SERVICE_JOURNEY_ID";
 
@@ -67,16 +67,17 @@ public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBu
 
         from("direct:processLineFile")
                 .log(LoggingLevel.INFO, correlation() + "Processing line file ${header." + Exchange.FILE_NAME + "}")
-                .convertBodyTo(String.class)
+                .convertBodyTo(Document.class)
                 .setHeader(LINE_FILE, body())
-                .split(xpath("/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:TimetableFrame/netex:vehicleJourneys/netex:ServiceJourney/@id", XML_NAMESPACE_NETEX))
-                .parallelProcessing().executorServiceRef("splitServiceJourneysExecutorService")
+                .split(xpath("/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:TimetableFrame/netex:vehicleJourneys/netex:ServiceJourney/@id", Constants.XML_NAMESPACE_NETEX))
                 .to("direct:processServiceJourney")
+                .end()
+                .log(LoggingLevel.INFO, correlation() + "Processed line file ${header." + Exchange.FILE_NAME + "}")
                 .routeId("process-line-file");
 
         from("direct:processServiceJourney")
                 .setBody(simple("${body.value}"))
-                .log(LoggingLevel.INFO, correlation() + "Processing ServiceJourney ${body}")
+                .log(LoggingLevel.DEBUG, getClass().getName(), correlation() + "Processing ServiceJourney ${body}")
                 .setHeader(SERVICE_JOURNEY_ID, body())
                 .setBody(header(LINE_FILE))
                 .to("xslt:filterServiceJourney.xsl")

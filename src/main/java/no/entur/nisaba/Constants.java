@@ -16,6 +16,8 @@
 
 package no.entur.nisaba;
 
+import org.apache.camel.support.builder.Namespaces;
+
 public final class Constants {
     public static final String FILE_HANDLE = "RutebankenFileHandle";
     public static final String FILE_PREFIX = "RutebankenFilePrefix";
@@ -45,6 +47,8 @@ public final class Constants {
     public static final String DATASET_CREATION_TIME = "EnturDatasetCreationTime";
     public static final String DATASET_CODESPACE = "EnturDatasetCodespace";
     public static final String DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
+
+    public static final Namespaces XML_NAMESPACE_NETEX = new Namespaces("netex", "http://www.netex.org.uk/netex");
 
     private Constants() {
     }
