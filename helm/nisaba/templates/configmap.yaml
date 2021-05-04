@@ -11,9 +11,6 @@ data:
     camel.springboot.name=Nisaba
     camel.dataformat.json-jackson.module-refs=jacksonJavaTimeModule
 
-    # Service Journey Processing
-    nisaba.servicejourney.split.threads=3
-
     # Kafka
     nisaba.kafka.topic.event={{ .Values.kafka.topic.event }}
     nisaba.kafka.topic.idempotent={{ .Values.kafka.topic.idempotent }}
@@ -29,7 +26,7 @@ data:
     spring.cloud.gcp.pubsub.project-id={{ .Values.gcp.pubsubProjectId }}
     spring.cloud.gcp.pubsub.credentials.location=file:/etc/nisaba-service-account/credentials.json
     spring.cloud.gcp.pubsub.subscriber.parallel-pull-count=1
-    spring.cloud.gcp.pubsub.subscriber.executor-threads=30
+    spring.cloud.gcp.pubsub.subscriber.executor-threads=3
     spring.cloud.gcp.pubsub.subscriber.max-ack-extension-period=36000
     entur.pubsub.subscriber.autocreate=false
 
