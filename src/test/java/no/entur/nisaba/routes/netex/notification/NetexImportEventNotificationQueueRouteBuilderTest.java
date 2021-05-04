@@ -71,7 +71,7 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
         AdviceWith.adviceWith(context, "notify-consumers-if-new", a -> a.weaveByToUri("direct:publishServiceJourneys").replace().to("mock:sink"));
         AdviceWith.adviceWith(context, "notify-consumers", a -> a.weaveByToUri("kafka:{{nisaba.kafka.topic.event}}?clientId=nisaba-event&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy&valueSerializer=io.confluent.kafka.serializers.KafkaAvroSerializer").replace().to("mock:nisabaEventTopic"));
         AdviceWith.adviceWith(context, "process-common-file", a -> a.weaveByToUri("kafka:{{nisaba.kafka.topic.common}}?clientId=nisaba-common&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy").replace().to("mock:nisabaCommonTopic"));
-        AdviceWith.adviceWith(context, "process-service-journey", a -> a.weaveByToUri("kafka:{{nisaba.kafka.topic.servicejourney}}?clientId=nisaba-servicejourney&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy").replace().to("mock:nisabaServiceJourneyTopic"));
+        AdviceWith.adviceWith(context, "process-service-journey", a -> a.weaveByToUri("kafka:{{nisaba.kafka.topic.servicejourney}}?clientId=nisaba-servicejourney&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy&compressionCodec=gzip").replace().to("mock:nisabaServiceJourneyTopic"));
 
         LocalDateTime now = LocalDateTime.now();
         retrieveDatasetCreationTime.whenAnyExchangeReceived(exchange -> exchange.getIn().setHeader(Constants.DATASET_CREATION_TIME, now));
@@ -96,7 +96,7 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
         AdviceWith.adviceWith(context, "notify-consumers-if-new", a -> a.weaveByToUri("direct:publishServiceJourneys").replace().to("mock:sink"));
         AdviceWith.adviceWith(context, "notify-consumers", a -> a.weaveByToUri("kafka:{{nisaba.kafka.topic.event}}?clientId=nisaba-event&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy&valueSerializer=io.confluent.kafka.serializers.KafkaAvroSerializer").replace().to("mock:nisabaEventTopic"));
         AdviceWith.adviceWith(context, "process-common-file", a -> a.weaveByToUri("kafka:{{nisaba.kafka.topic.common}}?clientId=nisaba-common&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy").replace().to("mock:nisabaCommonTopic"));
-        AdviceWith.adviceWith(context, "process-service-journey", a -> a.weaveByToUri("kafka:{{nisaba.kafka.topic.servicejourney}}?clientId=nisaba-servicejourney&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy").replace().to("mock:nisabaServiceJourneyTopic"));
+        AdviceWith.adviceWith(context, "process-service-journey", a -> a.weaveByToUri("kafka:{{nisaba.kafka.topic.servicejourney}}?clientId=nisaba-servicejourney&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy&compressionCodec=gzip").replace().to("mock:nisabaServiceJourneyTopic"));
 
         checkCreatedAttribute.expectedBodiesReceived(LocalDateTime.parse("2021-04-13T09:09:45.409"));
 
@@ -110,7 +110,7 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
 
         AdviceWith.adviceWith(context, "notify-consumers", a -> a.weaveByToUri("kafka:{{nisaba.kafka.topic.event}}?clientId=nisaba-event&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy&valueSerializer=io.confluent.kafka.serializers.KafkaAvroSerializer").replace().to("mock:nisabaEventTopic"));
         AdviceWith.adviceWith(context, "process-common-file", a -> a.weaveByToUri("kafka:{{nisaba.kafka.topic.common}}?clientId=nisaba-common&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy").replace().to("mock:nisabaCommonTopic"));
-        AdviceWith.adviceWith(context, "process-service-journey", a -> a.weaveByToUri("kafka:{{nisaba.kafka.topic.servicejourney}}?clientId=nisaba-servicejourney&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy").replace().to("mock:nisabaServiceJourneyTopic"));
+        AdviceWith.adviceWith(context, "process-service-journey", a -> a.weaveByToUri("kafka:{{nisaba.kafka.topic.servicejourney}}?clientId=nisaba-servicejourney&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy&compressionCodec=gzip").replace().to("mock:nisabaServiceJourneyTopic"));
         AdviceWith.adviceWith(context, "netex-export-notification-queue", a -> a.weaveByToUri("direct:retrieveDatasetCreationTime").replace().to("mock:retrieveDatasetCreationTime"));
 
         retrieveDatasetCreationTime.whenAnyExchangeReceived(exchange -> exchange.getIn().setHeader(Constants.DATASET_CREATION_TIME, LocalDateTime.now()));
