@@ -48,6 +48,8 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
 
     private static final String EXPORT_FILE_NAME = "netex/rb_${body}-" + Constants.CURRENT_AGGREGATED_NETEX_FILENAME;
     private static final String LINE_FILE_NAME = "${header." + DATASET_IMPORT_KEY + "}/${header." + Exchange.FILE_NAME + "}";
+    private static final byte[] BUFFER_PADDING = new byte[3 * 1024 * 1024];
+    private static final String HEADER_BUFFER_PADDING = "EnturBufferPadding";
 
     @Override
     public void configure() throws Exception {
@@ -143,6 +145,8 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .marshal().zipFile()
                 .to("direct:uploadNetexLineFile")
                 .setBody(simple(LINE_FILE_NAME))
+                // pad PubSub Consumer buffer to prevent one consumer from enqueuing all messages
+                .setHeader(HEADER_BUFFER_PADDING, () -> BUFFER_PADDING)
                 .to("entur-google-pubsub:NetexServiceJourneyPublicationQueue")
                 .routeId("publish-service-journeys");
 
