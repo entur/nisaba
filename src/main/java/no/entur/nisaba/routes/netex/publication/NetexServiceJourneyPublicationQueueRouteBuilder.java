@@ -20,6 +20,7 @@ import no.entur.nisaba.Constants;
 import no.entur.nisaba.routes.BaseRouteBuilder;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
+import org.apache.camel.component.kafka.KafkaConstants;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
 
@@ -81,6 +82,7 @@ public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBu
                 .setHeader(SERVICE_JOURNEY_ID, body())
                 .setBody(header(LINE_FILE))
                 .to("xslt:filterServiceJourney.xsl")
+                .setHeader(KafkaConstants.KEY, header(SERVICE_JOURNEY_ID))
                 .to("kafka:{{nisaba.kafka.topic.servicejourney}}?clientId=nisaba-servicejourney&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy&compressionCodec=gzip")
                 .routeId("process-service-journey");
     }
