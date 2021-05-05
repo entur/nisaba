@@ -1,5 +1,5 @@
 env: dev
-replicas: 3
+replicas: 6
 
 gcp:
   blobstoreProjectId: entur-ror-dev
