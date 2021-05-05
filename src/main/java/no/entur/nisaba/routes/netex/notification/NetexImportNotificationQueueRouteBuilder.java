@@ -54,7 +54,7 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
         super.configure();
 
 
-        singletonFrom("entur-google-pubsub:NetexExportNotificationQueue")
+        singletonFrom("google-pubsub:{{spring.cloud.gcp.pubsub.project-id}}:NetexExportNotificationQueue")
 
                 .process(this::setCorrelationIdIfMissing)
                 .setHeader(DATASET_CODESPACE, bodyAs(String.class))
@@ -143,7 +143,7 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .marshal().zipFile()
                 .to("direct:uploadNetexLineFile")
                 .setBody(simple(LINE_FILE_NAME))
-                .to("entur-google-pubsub:NetexServiceJourneyPublicationQueue")
+                .to("google-pubsub:{{spring.cloud.gcp.pubsub.project-id}}:NetexServiceJourneyPublicationQueue")
                 .routeId("publish-service-journeys");
 
 
