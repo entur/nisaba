@@ -16,7 +16,6 @@
 
 package no.entur.nisaba.routes;
 
-import com.google.cloud.spring.pubsub.support.BasicAcknowledgeablePubsubMessage;
 import no.entur.nisaba.Constants;
 import org.apache.camel.Exchange;
 import org.apache.camel.ServiceStatus;
@@ -25,7 +24,6 @@ import org.apache.camel.component.google.pubsub.GooglePubsubConstants;
 import org.apache.camel.component.hazelcast.policy.HazelcastRoutePolicy;
 import org.apache.camel.model.RouteDefinition;
 import org.apache.camel.spi.RoutePolicy;
-import org.apache.camel.spi.Synchronization;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.util.FileSystemUtils;
 
@@ -103,27 +101,6 @@ public abstract class BaseRouteBuilder extends RouteBuilder {
     protected String logDebugShowAll() {
         return "log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true";
     }
-
-
-    private static class AckSynchronization implements Synchronization {
-
-        private final List<BasicAcknowledgeablePubsubMessage> ackList;
-
-        public AckSynchronization(List<BasicAcknowledgeablePubsubMessage> ackList) {
-            this.ackList = ackList;
-        }
-
-        @Override
-        public void onComplete(Exchange exchange) {
-            ackList.forEach(BasicAcknowledgeablePubsubMessage::ack);
-        }
-
-        @Override
-        public void onFailure(Exchange exchange) {
-            ackList.forEach(BasicAcknowledgeablePubsubMessage::nack);
-        }
-    }
-
 
     protected void setNewCorrelationId(Exchange e) {
         e.getIn().setHeader(Constants.CORRELATION_ID, UUID.randomUUID().toString());
