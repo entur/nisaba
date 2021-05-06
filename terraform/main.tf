@@ -85,6 +85,7 @@ resource "google_pubsub_subscription" "NetexServiceJourneyPublicationQueue" {
   topic = google_pubsub_topic.NetexServiceJourneyPublicationQueue.name
   project = var.gcp_pubsub_project
   labels = var.labels
+  ack_deadline_seconds = 600
   retry_policy {
     minimum_backoff = "10s"
   }
