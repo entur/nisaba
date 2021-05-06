@@ -42,7 +42,7 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
 
     private static final String CODESPACE = "avi";
 
-    @Produce("google-pubsub:{{spring.cloud.gcp.pubsub.project-id}}:NetexExportNotificationQueue")
+    @Produce("google-pubsub:{{nisaba.pubsub.project.id}}:NetexExportNotificationQueue")
     protected ProducerTemplate producerTemplate;
 
     @Produce("direct:parseCreatedAttribute")

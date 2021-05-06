@@ -25,9 +25,8 @@ data:
     camel.component.kafka.schema-registry-u-r-l={{ .Values.kafka.registry }}
 
     # PubSub
-    spring.cloud.gcp.pubsub.project-id={{ .Values.gcp.pubsubProjectId }}
-    spring.cloud.gcp.pubsub.credentials.location=file:/etc/nisaba-service-account/credentials.json
-    entur.pubsub.subscriber.autocreate=false
+    nisaba.pubsub.project.id={{ .Values.gcp.pubsubProjectId }}
+    spring.cloud.gcp.project-id=${nisaba.pubsub.project.id}
 
     # Blobstore
     blobstore.gcs.project.id={{ .Values.gcp.blobstoreProjectId }}

@@ -7,15 +7,22 @@ import org.apache.camel.spi.CamelEvent;
 import org.apache.camel.support.DefaultInterceptSendToEndpoint;
 import org.apache.camel.support.EventNotifierSupport;
 import org.entur.pubsub.base.EnturGooglePubSubAdmin;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
+/**
+ * Create PubSub topics and subscriptions on startup.
+ * This is used only in unit tests and local environment.
+ */
 @Component
+@Profile("google-pubsub-autocreate")
 public class EventNotifier extends EventNotifierSupport {
 
-    @Autowired
-    EnturGooglePubSubAdmin enturGooglePubSubAdmin;
+    private final EnturGooglePubSubAdmin enturGooglePubSubAdmin;
 
+    public EventNotifier(EnturGooglePubSubAdmin enturGooglePubSubAdmin) {
+        this.enturGooglePubSubAdmin = enturGooglePubSubAdmin;
+    }
 
     @Override
     public void notify(CamelEvent event) {

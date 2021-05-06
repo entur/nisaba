@@ -39,7 +39,7 @@ public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBu
     public void configure() throws Exception {
         super.configure();
 
-        from("google-pubsub:{{spring.cloud.gcp.pubsub.project-id}}:NetexServiceJourneyPublicationQueue?synchronousPull=true")
+        from("google-pubsub:{{nisaba.pubsub.project.id}}:NetexServiceJourneyPublicationQueue?synchronousPull=true")
                 .to("direct:downloadNetexLineFile")
                 .filter(body().isNull())
                 .log(LoggingLevel.ERROR, correlation() + "Cannot find line file ${header." + FILE_HANDLE + "} in the blob store")
