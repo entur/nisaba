@@ -60,6 +60,8 @@ spec:
                 secretKeyRef:
                   key: kafka-password
                   name: ror-nisaba-secret
+            - name: GOOGLE_APPLICATION_CREDENTIALS
+              value: /etc/nisaba-service-account/credentials.json
           ports:
             - containerPort: {{ .Values.service.http.internalPort }}
               name: http
