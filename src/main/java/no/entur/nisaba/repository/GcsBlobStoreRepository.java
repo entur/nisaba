@@ -22,12 +22,12 @@ import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.Storage;
 import no.entur.nisaba.domain.BlobStoreFiles;
-import org.apache.commons.lang3.StringUtils;
 import org.rutebanken.helper.gcp.BlobStoreHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Profile;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Repository;
+import org.springframework.util.StringUtils;
 
 import java.io.InputStream;
 import java.time.Instant;
@@ -79,7 +79,7 @@ public class GcsBlobStoreRepository implements BlobStoreRepository {
         while (blobIterator.hasNext()) {
             Blob blob = blobIterator.next();
             String fileName = blob.getName().replace(prefix, "");
-            if (!StringUtils.isEmpty(fileName)) {
+            if (StringUtils.hasText(fileName)) {
                 blobStoreFiles.add(toBlobStoreFile(blob, fileName));
             }
         }

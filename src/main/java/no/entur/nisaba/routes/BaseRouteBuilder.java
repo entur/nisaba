@@ -16,27 +16,25 @@
 
 package no.entur.nisaba.routes;
 
-import com.google.cloud.spring.pubsub.support.BasicAcknowledgeablePubsubMessage;
 import no.entur.nisaba.Constants;
 import org.apache.camel.Exchange;
-import org.apache.camel.ExtendedExchange;
-import org.apache.camel.Message;
 import org.apache.camel.ServiceStatus;
 import org.apache.camel.builder.RouteBuilder;
+import org.apache.camel.component.google.pubsub.GooglePubsubConstants;
 import org.apache.camel.component.hazelcast.policy.HazelcastRoutePolicy;
 import org.apache.camel.model.RouteDefinition;
 import org.apache.camel.spi.RoutePolicy;
-import org.apache.camel.spi.Synchronization;
-import org.entur.pubsub.camel.EnturGooglePubSubConstants;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.util.FileSystemUtils;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import static no.entur.nisaba.Constants.SINGLETON_ROUTE_DEFINITION_GROUP_NAME;
 
@@ -70,6 +68,25 @@ public abstract class BaseRouteBuilder extends RouteBuilder {
                 .logExhausted(true)
                 .logRetryStackTrace(true));
 
+
+        interceptFrom("google-pubsub:*")
+                .process(exchange ->
+                {
+                    Map<String, String> pubSubAttributes = exchange.getIn().getHeader(GooglePubsubConstants.ATTRIBUTES, Map.class);
+                    pubSubAttributes.entrySet().stream().filter(entry -> !entry.getKey().startsWith("CamelGooglePubsub")).forEach(entry -> exchange.getIn().setHeader(entry.getKey(), entry.getValue()));
+                });
+
+        interceptSendToEndpoint("google-pubsub:*").process(
+                exchange -> {
+                    Map<String, String> pubSubAttributes = new HashMap<>();
+                    exchange.getIn().getHeaders().entrySet().stream()
+                            .filter(entry -> !entry.getKey().startsWith("CamelGooglePubsub"))
+                            .filter(entry -> Objects.toString(entry.getValue()).length() <= 1024)
+                            .forEach(entry -> pubSubAttributes.put(entry.getKey(), Objects.toString(entry.getValue(), "")));
+                    exchange.getIn().setHeader(GooglePubsubConstants.ATTRIBUTES, pubSubAttributes);
+
+                });
+
     }
 
     protected void logRedelivery(Exchange exchange) {
@@ -85,42 +102,6 @@ public abstract class BaseRouteBuilder extends RouteBuilder {
         return "log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true";
     }
 
-    /**
-     * Add ACK/NACK completion callback for an aggregated exchange.
-     * The callback should be added after the aggregation is complete to prevent individual messages from being acked
-     * by the aggregator.
-     */
-    protected void addOnCompletionForAggregatedExchange(Exchange exchange) {
-
-        List<Message> messages = exchange.getIn().getBody(List.class);
-        List<BasicAcknowledgeablePubsubMessage> ackList = messages.stream()
-                .map(m -> m.getHeader(EnturGooglePubSubConstants.ACK_ID, BasicAcknowledgeablePubsubMessage.class))
-                .collect(Collectors.toList());
-
-        exchange.adapt(ExtendedExchange.class).addOnCompletion(new AckSynchronization(ackList));
-    }
-
-
-    private static class AckSynchronization implements Synchronization {
-
-        private final List<BasicAcknowledgeablePubsubMessage> ackList;
-
-        public AckSynchronization(List<BasicAcknowledgeablePubsubMessage> ackList) {
-            this.ackList = ackList;
-        }
-
-        @Override
-        public void onComplete(Exchange exchange) {
-            ackList.forEach(BasicAcknowledgeablePubsubMessage::ack);
-        }
-
-        @Override
-        public void onFailure(Exchange exchange) {
-            ackList.forEach(BasicAcknowledgeablePubsubMessage::nack);
-        }
-    }
-
-
     protected void setNewCorrelationId(Exchange e) {
         e.getIn().setHeader(Constants.CORRELATION_ID, UUID.randomUUID().toString());
     }
@@ -133,13 +114,6 @@ public abstract class BaseRouteBuilder extends RouteBuilder {
         return "[codespace=${header." + Constants.DATASET_CODESPACE + "} correlationId=${header." + Constants.CORRELATION_ID + "}] ";
     }
 
-    protected void removeAllCamelHeaders(Exchange e) {
-        e.getIn().removeHeaders(Constants.CAMEL_ALL_HEADERS, EnturGooglePubSubConstants.ACK_ID);
-    }
-
-    protected void removeAllCamelHttpHeaders(Exchange e) {
-        e.getIn().removeHeaders(Constants.CAMEL_ALL_HTTP_HEADERS, EnturGooglePubSubConstants.ACK_ID);
-    }
 
     /**
      * Create a new singleton route definition from URI. Only one such route should be active throughout the cluster at any time.

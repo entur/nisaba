@@ -10,6 +10,8 @@ data:
     # Camel
     camel.springboot.name=Nisaba
     camel.dataformat.json-jackson.module-refs=jacksonJavaTimeModule
+    # the Camel shutdown timeout must be shorter than the Kubernetes terminationGracePeriod
+    nisaba.shutdown.timeout=25
 
     # Kafka
     nisaba.kafka.topic.event={{ .Values.kafka.topic.event }}
@@ -23,12 +25,8 @@ data:
     camel.component.kafka.schema-registry-u-r-l={{ .Values.kafka.registry }}
 
     # PubSub
-    spring.cloud.gcp.pubsub.project-id={{ .Values.gcp.pubsubProjectId }}
-    spring.cloud.gcp.pubsub.credentials.location=file:/etc/nisaba-service-account/credentials.json
-    spring.cloud.gcp.pubsub.subscriber.parallel-pull-count=1
-    spring.cloud.gcp.pubsub.subscriber.executor-threads=1
-    spring.cloud.gcp.pubsub.subscriber.max-ack-extension-period=36000
-    entur.pubsub.subscriber.autocreate=false
+    nisaba.pubsub.project.id={{ .Values.gcp.pubsubProjectId }}
+    spring.cloud.gcp.project-id=${nisaba.pubsub.project.id}
 
     # Blobstore
     blobstore.gcs.project.id={{ .Values.gcp.blobstoreProjectId }}
@@ -52,8 +50,6 @@ data:
     logging.level.org.apache.camel.component.http.HttpComponent=WARN
 
     # Other
-    # the Camel shutdown timeout must be shorter than the Kubernetes terminationGracePeriod
-    nisaba.shutdown.timeout=25
 
     rutebanken.kubernetes.namespace={{ .Release.Namespace }}
 
