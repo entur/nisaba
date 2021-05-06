@@ -124,7 +124,7 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
         context.start();
         producerTemplate.sendBody(CODESPACE);
         nisabaCommonTopic.assertIsSatisfied();
-        nisabaServiceJourneyTopic.assertIsSatisfied();
+        nisabaServiceJourneyTopic.assertIsSatisfied(20000);
     }
 
 
