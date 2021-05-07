@@ -18,25 +18,14 @@ package no.entur.nisaba.routes;
 
 import no.entur.nisaba.Constants;
 import org.apache.camel.Exchange;
-import org.apache.camel.ServiceStatus;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.google.pubsub.GooglePubsubConstants;
-import org.apache.camel.component.hazelcast.policy.HazelcastRoutePolicy;
-import org.apache.camel.model.RouteDefinition;
-import org.apache.camel.spi.RoutePolicy;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.util.FileSystemUtils;
 
-import java.io.IOException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
-
-import static no.entur.nisaba.Constants.SINGLETON_ROUTE_DEFINITION_GROUP_NAME;
 
 
 /**
@@ -112,47 +101,6 @@ public abstract class BaseRouteBuilder extends RouteBuilder {
 
     protected String correlation() {
         return "[codespace=${header." + Constants.DATASET_CODESPACE + "} correlationId=${header." + Constants.CORRELATION_ID + "}] ";
-    }
-
-
-    /**
-     * Create a new singleton route definition from URI. Only one such route should be active throughout the cluster at any time.
-     */
-    protected RouteDefinition singletonFrom(String uri) {
-        return this.from(uri).group(SINGLETON_ROUTE_DEFINITION_GROUP_NAME);
-    }
-
-    protected boolean isStarted(String routeId) {
-        ServiceStatus status = getContext().getRouteController().getRouteStatus(routeId);
-        return status != null && status.isStarted();
-    }
-
-    protected boolean isLeader(String routeId) {
-        List<RoutePolicy> routePolicyList = getContext().getRoute(routeId).getRoutePolicyList();
-        if (routePolicyList != null) {
-            for (RoutePolicy routePolicy : routePolicyList) {
-                if (routePolicy instanceof HazelcastRoutePolicy) {
-                    return ((HazelcastRoutePolicy) (routePolicy)).isLeader();
-                }
-            }
-        }
-        return false;
-    }
-
-    protected void deleteDirectoryRecursively(String directory) {
-
-        log.debug("Deleting local directory {} ...", directory);
-        try {
-            Path pathToDelete = Paths.get(directory);
-            boolean deleted = FileSystemUtils.deleteRecursively(pathToDelete);
-            if (deleted) {
-                log.debug("Local directory {} cleanup done.", directory);
-            } else {
-                log.debug("The directory {} did not exist, ignoring deletion request", directory);
-            }
-        } catch (IOException e) {
-            log.warn("Failed to delete directory {}", directory, e);
-        }
     }
 
 }

@@ -42,7 +42,7 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
 
     private static final String CODESPACE = "avi";
 
-    @Produce("google-pubsub:{{nisaba.pubsub.project.id}}:NetexExportNotificationQueue")
+    @Produce("master:lockOnNetexExportNotificationQueue:google-pubsub:{{nisaba.pubsub.project.id}}:NetexExportNotificationQueue")
     protected ProducerTemplate producerTemplate;
 
     @Produce("direct:parseCreatedAttribute")
@@ -83,7 +83,7 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
 
         context.start();
         producerTemplate.sendBody(CODESPACE);
-        nisabaEventTopic.assertIsSatisfied();
+        nisabaEventTopic.assertIsSatisfied(20000);
         NetexImportEvent netexImportEvent = nisabaEventTopic.getReceivedExchanges().get(0).getIn().getBody(NetexImportEvent.class);
         Assertions.assertEquals("avi", netexImportEvent.getCodespace().toString());
         Assertions.assertEquals(now.truncatedTo(ChronoUnit.SECONDS), LocalDateTime.parse(netexImportEvent.getImportDateTime().toString()));
@@ -123,7 +123,7 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
 
         context.start();
         producerTemplate.sendBody(CODESPACE);
-        nisabaCommonTopic.assertIsSatisfied();
+        nisabaCommonTopic.assertIsSatisfied(20000);
         nisabaServiceJourneyTopic.assertIsSatisfied(20000);
     }
 

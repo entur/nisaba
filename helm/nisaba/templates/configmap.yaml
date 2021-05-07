@@ -10,6 +10,9 @@ data:
     # Camel
     camel.springboot.name=Nisaba
     camel.dataformat.json-jackson.module-refs=jacksonJavaTimeModule
+    camel.component.kubernetes.cluster.service.enabled=true
+    camel.component.kubernetes.cluster.service.cluster-labels[group]=ror
+    camel.component.kubernetes.cluster.service.cluster-labels[app]=nisaba
     # the Camel shutdown timeout must be shorter than the Kubernetes terminationGracePeriod
     nisaba.shutdown.timeout=25
 
@@ -39,7 +42,7 @@ data:
     management.endpoints.enabled-by-default=false
     management.endpoint.info.enabled=true
     management.endpoint.health.enabled=true
-    management.endpoint.health.group.readiness.include=readinessState,hazelcast
+    management.endpoint.health.group.readiness.include=readinessState
     management.endpoint.prometheus.enabled=true
     management.endpoints.web.exposure.include=info,health,prometheus
 
@@ -48,14 +51,6 @@ data:
     logging.level.org.apache=INFO
     logging.config=classpath:logback.xml
     logging.level.org.apache.camel.component.http.HttpComponent=WARN
-
-    # Other
-
-    rutebanken.kubernetes.namespace={{ .Release.Namespace }}
-
-    # Fix for Hazelcast exception message on shutdown
-    entur.hazelcast.shutdownhook.enabled=false
-
 
 kind: ConfigMap
 metadata:
