@@ -29,9 +29,10 @@ metadata:
   labels:
     {{- include "common.labels" . | indent 4 }}
 rules:
-  - apiGroups: [""] # "" indicates the core API group
-    resources: ["services", "pods", "configmaps", "endpoints"]
+  - apiGroups: [""]
+    resources: ["pods"]
     verbs: ["get", "watch", "list"]
-  - apiGroups: ["batch"]
-    resources: ["cronjobs", "jobs"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    resourceNames: ["nisaba-leaders"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]

@@ -11,8 +11,8 @@ data:
     camel.springboot.name=Nisaba
     camel.dataformat.json-jackson.module-refs=jacksonJavaTimeModule
     camel.component.kubernetes.cluster.service.enabled=true
-    camel.component.kubernetes.cluster.service.cluster-labels[group]=ror
     camel.component.kubernetes.cluster.service.cluster-labels[app]=nisaba
+    camel.component.kubernetes.cluster.service.config-map-name=nisaba-leaders
     # the Camel shutdown timeout must be shorter than the Kubernetes terminationGracePeriod
     nisaba.shutdown.timeout=25
 
