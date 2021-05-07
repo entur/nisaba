@@ -61,7 +61,7 @@ public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBu
 
         from("direct:processCommonFile")
                 .log(LoggingLevel.INFO, correlation() + "Processing common file ${header." + Exchange.FILE_NAME + "}")
-                .to("xslt:filterServiceLinks.xsl")
+                .to("xslt-saxon:filterServiceLinks.xsl")
                 .marshal().zipFile()
                 .to("kafka:{{nisaba.kafka.topic.common}}?clientId=nisaba-common&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy").id("to-kafka-topic-common")
                 .routeId("process-common-file");
@@ -81,7 +81,7 @@ public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBu
                 .log(LoggingLevel.DEBUG, getClass().getName(), correlation() + "Processing ServiceJourney ${body}")
                 .setHeader(SERVICE_JOURNEY_ID, body())
                 .setBody(header(LINE_FILE))
-                .to("xslt:filterServiceJourney.xsl")
+                .to("xslt-saxon:filterServiceJourney.xsl")
                 .setHeader(KafkaConstants.KEY, header(SERVICE_JOURNEY_ID))
                 .to("kafka:{{nisaba.kafka.topic.servicejourney}}?clientId=nisaba-servicejourney&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy&compressionCodec=gzip").id("to-kafka-topic-servicejourney")
                 .routeId("process-service-journey");
