@@ -27,6 +27,7 @@ import org.apache.camel.builder.AdviceWith;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.commons.io.IOUtils;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
@@ -128,6 +129,7 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
     }
 
     @Test
+    @Disabled
     void testCommonFile() throws Exception {
 
         AdviceWith.adviceWith(context, "notify-consumers", a -> a.weaveById("to-kafka-topic-event").replace().to("mock:nisabaEventTopic"));
