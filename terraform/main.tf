@@ -94,7 +94,7 @@ resource "google_pubsub_subscription" "NetexServiceJourneyPublicationQueue" {
   ack_deadline_seconds = 600
   dead_letter_policy {
     max_delivery_attempts = 3
-    dead_letter_topic = "NetexServiceJourneyPublicationDeadLetterQueue"
+    dead_letter_topic = google_pubsub_topic.NetexServiceJourneyPublicationDeadLetterQueue.name
   }
   retry_policy {
     minimum_backoff = "10s"
