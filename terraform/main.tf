@@ -100,7 +100,7 @@ resource "google_pubsub_subscription" "NetexServiceJourneyPublicationQueue" {
   labels = var.labels
   ack_deadline_seconds = 600
   dead_letter_policy {
-    max_delivery_attempts = 3
+    max_delivery_attempts = 5
     dead_letter_topic = google_pubsub_topic.NetexServiceJourneyPublicationDeadLetterQueue.id
   }
   retry_policy {
