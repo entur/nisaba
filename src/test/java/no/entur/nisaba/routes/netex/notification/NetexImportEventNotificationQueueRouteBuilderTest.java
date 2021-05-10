@@ -37,7 +37,7 @@ import java.time.temporal.ChronoUnit;
 import static no.entur.nisaba.Constants.BLOBSTORE_PATH_OUTBOUND;
 import static no.entur.nisaba.Constants.CURRENT_AGGREGATED_NETEX_FILENAME;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, classes = TestApp.class)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = TestApp.class)
 class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuilderIntegrationTestBase {
 
     private static final String CODESPACE = "avi";
@@ -70,7 +70,7 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
         AdviceWith.adviceWith(context, "netex-export-notification-queue", a -> a.weaveByToUri("direct:retrieveDatasetCreationTime").replace().to("mock:retrieveDatasetCreationTime"));
         AdviceWith.adviceWith(context, "notify-consumers-if-new", a -> a.weaveByToUri("direct:publishServiceJourneys").replace().to("mock:sink"));
         AdviceWith.adviceWith(context, "notify-consumers", a -> a.weaveById("to-kafka-topic-event").replace().to("mock:nisabaEventTopic"));
-        AdviceWith.adviceWith(context, "process-common-file", a -> a.weaveById("to-kafka-topic-common").replace().to("mock:nisabaCommonTopic"));
+        AdviceWith.adviceWith(context, "publish-common-file", a -> a.weaveById("to-kafka-topic-common").replace().to("mock:nisabaCommonTopic"));
         AdviceWith.adviceWith(context, "process-service-journey", a -> a.weaveById("to-kafka-topic-servicejourney").replace().to("mock:nisabaServiceJourneyTopic"));
 
         LocalDateTime now = LocalDateTime.now();
@@ -83,7 +83,7 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
 
         context.start();
         producerTemplate.sendBody(CODESPACE);
-        nisabaEventTopic.assertIsSatisfied();
+        nisabaEventTopic.assertIsSatisfied(20000);
         NetexImportEvent netexImportEvent = nisabaEventTopic.getReceivedExchanges().get(0).getIn().getBody(NetexImportEvent.class);
         Assertions.assertEquals("avi", netexImportEvent.getCodespace().toString());
         Assertions.assertEquals(now.truncatedTo(ChronoUnit.SECONDS), LocalDateTime.parse(netexImportEvent.getImportDateTime().toString()));
@@ -95,21 +95,21 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
         AdviceWith.adviceWith(context, "parse-created-attribute", a -> a.weaveAddLast().to("mock:checkCreatedAttribute"));
         AdviceWith.adviceWith(context, "notify-consumers-if-new", a -> a.weaveByToUri("direct:publishServiceJourneys").replace().to("mock:sink"));
         AdviceWith.adviceWith(context, "notify-consumers", a -> a.weaveById("to-kafka-topic-event").replace().to("mock:nisabaEventTopic"));
-        AdviceWith.adviceWith(context, "process-common-file", a -> a.weaveById("to-kafka-topic-common").replace().to("mock:nisabaCommonTopic"));
+        AdviceWith.adviceWith(context, "publish-common-file", a -> a.weaveById("to-kafka-topic-common").replace().to("mock:nisabaCommonTopic"));
         AdviceWith.adviceWith(context, "process-service-journey", a -> a.weaveById("to-kafka-topic-servicejourney").replace().to("mock:nisabaServiceJourneyTopic"));
 
         checkCreatedAttribute.expectedBodiesReceived(LocalDateTime.parse("2021-04-13T09:09:45.409"));
 
         context.start();
         parseCreatedAttribute.sendBody(IOUtils.toString(getClass().getResourceAsStream("/no/entur/nisaba/netex/import/_AVI_shared_data.xml"), StandardCharsets.UTF_8));
-        checkCreatedAttribute.assertIsSatisfied();
+        checkCreatedAttribute.assertIsSatisfied(20000);
     }
 
     @Test
     void testExtractServiceJourney() throws Exception {
 
         AdviceWith.adviceWith(context, "notify-consumers", a -> a.weaveById("to-kafka-topic-event").replace().to("mock:nisabaEventTopic"));
-        AdviceWith.adviceWith(context, "process-common-file", a -> a.weaveById("to-kafka-topic-common").replace().to("mock:nisabaCommonTopic"));
+        AdviceWith.adviceWith(context, "publish-common-file", a -> a.weaveById("to-kafka-topic-common").replace().to("mock:nisabaCommonTopic"));
         AdviceWith.adviceWith(context, "process-service-journey", a -> a.weaveById("to-kafka-topic-servicejourney").replace().to("mock:nisabaServiceJourneyTopic"));
         AdviceWith.adviceWith(context, "netex-export-notification-queue", a -> a.weaveByToUri("direct:retrieveDatasetCreationTime").replace().to("mock:retrieveDatasetCreationTime"));
 
@@ -123,8 +123,29 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
 
         context.start();
         producerTemplate.sendBody(CODESPACE);
-        nisabaCommonTopic.assertIsSatisfied();
+        nisabaCommonTopic.assertIsSatisfied(20000);
         nisabaServiceJourneyTopic.assertIsSatisfied(20000);
+    }
+
+    @Test
+    void testCommonFile() throws Exception {
+
+        AdviceWith.adviceWith(context, "notify-consumers", a -> a.weaveById("to-kafka-topic-event").replace().to("mock:nisabaEventTopic"));
+        AdviceWith.adviceWith(context, "publish-common-file", a -> a.weaveById("to-kafka-topic-common").replace().to("mock:nisabaCommonTopic"));
+        AdviceWith.adviceWith(context, "process-service-journey", a -> a.weaveById("to-kafka-topic-servicejourney").replace().to("mock:nisabaServiceJourneyTopic"));
+        AdviceWith.adviceWith(context, "netex-export-notification-queue", a -> a.weaveByToUri("direct:retrieveDatasetCreationTime").replace().to("mock:retrieveDatasetCreationTime"));
+
+        retrieveDatasetCreationTime.whenAnyExchangeReceived(exchange -> exchange.getIn().setHeader(Constants.DATASET_CREATION_TIME, LocalDateTime.now()));
+        nisabaCommonTopic.expectedMessageCount(6);
+
+        nisabaInMemoryBlobStoreRepository.uploadBlob(BLOBSTORE_PATH_OUTBOUND + "netex/rb_" + CODESPACE + "-" + CURRENT_AGGREGATED_NETEX_FILENAME,
+                getClass().getResourceAsStream("/no/entur/nisaba/netex/import/rb_nor-aggregated-netex.zip"),
+                false);
+
+        context.start();
+        producerTemplate.sendBody(CODESPACE);
+        nisabaCommonTopic.assertIsSatisfied(20000);
+
     }
 
 
