@@ -71,6 +71,7 @@ public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBu
                 .filter(header(Exchange.FILE_NAME).contains("_flexible_shared_data.xml"))
                 .to("xslt-saxon:filterCommonFlexibleLineFile.xsl")
                 .to("direct:publishCommonFile")
+                .log(LoggingLevel.INFO, correlation() + "Processed common file ${header." + Exchange.FILE_NAME + "}")
                 .stop()
                 .end()
 
@@ -104,6 +105,7 @@ public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBu
                 .to("direct:publishCommonFile")
                 .end()
 
+                .log(LoggingLevel.INFO, correlation() + "Processed common file ${header." + Exchange.FILE_NAME + "}")
                 .routeId("process-common-file");
 
         from("direct:publishCommonFile")

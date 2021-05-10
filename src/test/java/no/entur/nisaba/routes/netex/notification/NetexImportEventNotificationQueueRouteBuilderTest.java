@@ -37,7 +37,7 @@ import java.time.temporal.ChronoUnit;
 import static no.entur.nisaba.Constants.BLOBSTORE_PATH_OUTBOUND;
 import static no.entur.nisaba.Constants.CURRENT_AGGREGATED_NETEX_FILENAME;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, classes = TestApp.class)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = TestApp.class)
 class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuilderIntegrationTestBase {
 
     private static final String CODESPACE = "avi";
@@ -83,7 +83,7 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
 
         context.start();
         producerTemplate.sendBody(CODESPACE);
-        nisabaEventTopic.assertIsSatisfied();
+        nisabaEventTopic.assertIsSatisfied(20000);
         NetexImportEvent netexImportEvent = nisabaEventTopic.getReceivedExchanges().get(0).getIn().getBody(NetexImportEvent.class);
         Assertions.assertEquals("avi", netexImportEvent.getCodespace().toString());
         Assertions.assertEquals(now.truncatedTo(ChronoUnit.SECONDS), LocalDateTime.parse(netexImportEvent.getImportDateTime().toString()));
@@ -102,7 +102,7 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
 
         context.start();
         parseCreatedAttribute.sendBody(IOUtils.toString(getClass().getResourceAsStream("/no/entur/nisaba/netex/import/_AVI_shared_data.xml"), StandardCharsets.UTF_8));
-        checkCreatedAttribute.assertIsSatisfied();
+        checkCreatedAttribute.assertIsSatisfied(20000);
     }
 
     @Test
@@ -123,7 +123,7 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
 
         context.start();
         producerTemplate.sendBody(CODESPACE);
-        nisabaCommonTopic.assertIsSatisfied();
+        nisabaCommonTopic.assertIsSatisfied(20000);
         nisabaServiceJourneyTopic.assertIsSatisfied(20000);
     }
 
@@ -144,7 +144,7 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
 
         context.start();
         producerTemplate.sendBody(CODESPACE);
-        nisabaCommonTopic.assertIsSatisfied(40000);
+        nisabaCommonTopic.assertIsSatisfied(20000);
 
     }
 
