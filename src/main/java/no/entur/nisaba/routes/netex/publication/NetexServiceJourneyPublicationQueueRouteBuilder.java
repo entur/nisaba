@@ -21,10 +21,12 @@ import no.entur.nisaba.routes.BaseRouteBuilder;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.component.kafka.KafkaConstants;
+import org.apache.kafka.common.errors.RecordTooLargeException;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
 
 import static no.entur.nisaba.Constants.FILE_HANDLE;
+import static no.entur.nisaba.Constants.XML_NAMESPACE_NETEX;
 
 /**
  * Publish service journeys to Kafka.
@@ -32,6 +34,7 @@ import static no.entur.nisaba.Constants.FILE_HANDLE;
 @Component
 public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBuilder {
 
+    private static final String COMMON_FILE = "COMMON_FILE";
     private static final String LINE_FILE = "LINE_FILE";
     private static final String SERVICE_JOURNEY_ID = "SERVICE_JOURNEY_ID";
 
@@ -61,10 +64,56 @@ public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBu
 
         from("direct:processCommonFile")
                 .log(LoggingLevel.INFO, correlation() + "Processing common file ${header." + Exchange.FILE_NAME + "}")
-                .to("xslt-saxon:filterServiceLinks.xsl")
-                .marshal().zipFile()
-                .to("kafka:{{nisaba.kafka.topic.common}}?clientId=nisaba-common&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy").id("to-kafka-topic-common")
+                .convertBodyTo(Document.class)
+                .setHeader(COMMON_FILE, body())
+
+                // do not split the common file for flexible lines
+                .filter(header(Exchange.FILE_NAME).contains("_flexible_shared_data.xml"))
+                .to("xslt-saxon:filterCommonFlexibleLineFile.xsl")
+                .to("direct:publishCommonFile")
+                .stop()
+                .end()
+
+                // For other common files: remove scheduledStopPoints, stopAssignments, routePoints and serviceLinks and create separate PublicationDeliveries for each of them
+
+                .setBody(header(COMMON_FILE))
+                .to("xslt-saxon:filterCommonFile.xsl")
+                .to("direct:publishCommonFile")
+
+                .setBody(header(COMMON_FILE))
+                .filter().xpath("/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:ServiceFrame/netex:scheduledStopPoints", XML_NAMESPACE_NETEX)
+                .to("xslt-saxon:filterScheduledStopPoint.xsl")
+                .to("direct:publishCommonFile")
+                .end()
+
+                .setBody(header(COMMON_FILE))
+                .filter().xpath("/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:ServiceFrame/netex:stopAssignments", XML_NAMESPACE_NETEX)
+                .to("xslt-saxon:filterStopAssignment.xsl")
+                .to("direct:publishCommonFile")
+                .end()
+
+                .setBody(header(COMMON_FILE))
+                .filter().xpath("/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:ServiceFrame/netex:routePoints", XML_NAMESPACE_NETEX)
+                .to("xslt-saxon:filterRoutePoint.xsl")
+                .to("direct:publishCommonFile")
+                .end()
+
+                .setBody(header(COMMON_FILE))
+                .filter().xpath("/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:ServiceFrame/netex:serviceLinks", XML_NAMESPACE_NETEX)
+                .to("xslt-saxon:filterServiceLink.xsl")
+                .to("direct:publishCommonFile")
+                .end()
+
                 .routeId("process-common-file");
+
+        from("direct:publishCommonFile")
+                .marshal().zipFile()
+                .doTry()
+                .to("kafka:{{nisaba.kafka.topic.common}}?clientId=nisaba-common&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy").id("to-kafka-topic-common")
+                .doCatch(RecordTooLargeException.class)
+                .log(LoggingLevel.ERROR, "Cannot serialize common file ${header." + Exchange.FILE_NAME + "} into Kafka topic, max message size exceeded ${exception.stacktrace} ")
+                .stop()
+                .routeId("publish-common-file");
 
         from("direct:processLineFile")
                 .log(LoggingLevel.INFO, correlation() + "Processing line file ${header." + Exchange.FILE_NAME + "}")
@@ -83,7 +132,11 @@ public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBu
                 .setBody(header(LINE_FILE))
                 .to("xslt-saxon:filterServiceJourney.xsl")
                 .setHeader(KafkaConstants.KEY, header(SERVICE_JOURNEY_ID))
+                .doTry()
                 .to("kafka:{{nisaba.kafka.topic.servicejourney}}?clientId=nisaba-servicejourney&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy&compressionCodec=gzip").id("to-kafka-topic-servicejourney")
+                .doCatch(RecordTooLargeException.class)
+                .log(LoggingLevel.ERROR, "Cannot serialize service journey ${header." + SERVICE_JOURNEY_ID + "} in Line file ${header." + Exchange.FILE_NAME + "} into Kafka topic, max message size exceeded ${exception.stacktrace} ")
+                .stop()
                 .routeId("process-service-journey");
     }
 
