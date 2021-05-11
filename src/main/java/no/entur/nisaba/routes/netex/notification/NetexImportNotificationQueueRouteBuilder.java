@@ -54,7 +54,7 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
         super.configure();
 
 
-        singletonFrom("google-pubsub:{{nisaba.pubsub.project.id}}:NetexExportNotificationQueue")
+        from("master:lockOnNetexExportNotificationQueueRoute:google-pubsub:{{nisaba.pubsub.project.id}}:NetexExportNotificationQueue")
 
                 .process(this::setCorrelationIdIfMissing)
                 .setHeader(DATASET_CODESPACE, bodyAs(String.class))
