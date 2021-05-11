@@ -37,6 +37,7 @@ public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBu
     private static final String COMMON_FILE = "COMMON_FILE";
     private static final String LINE_FILE = "LINE_FILE";
     private static final String SERVICE_JOURNEY_ID = "SERVICE_JOURNEY_ID";
+    private static final String COMMON_FILE_PART = "COMMON_FILE_PART";
 
     @Override
     public void configure() throws Exception {
@@ -71,6 +72,7 @@ public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBu
                 .filter(header(Exchange.FILE_NAME).contains("_flexible_shared_data.xml"))
                 .log(LoggingLevel.INFO, correlation() + "Processing common flexible line file ${header." + FILE_HANDLE + "}")
                 .to("xslt-saxon:filterCommonFlexibleLineFile.xsl")
+                .setHeader(COMMON_FILE_PART, constant("Flexible lines"))
                 .to("direct:publishCommonFile")
                 .log(LoggingLevel.INFO, correlation() + "Processed common flexible line file ${header." + FILE_HANDLE + "}")
                 .stop()
@@ -81,6 +83,7 @@ public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBu
                 .setBody(header(COMMON_FILE))
                 .log(LoggingLevel.INFO, correlation() + "Processing filtered common file ${header." + FILE_HANDLE + "}")
                 .to("xslt-saxon:filterCommonFile.xsl")
+                .setHeader(COMMON_FILE_PART, constant("Filtered common file"))
                 .to("direct:publishCommonFile")
                 .log(LoggingLevel.INFO, correlation() + "Processed filtered common file ${header." + FILE_HANDLE + "}")
 
@@ -88,6 +91,7 @@ public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBu
                 .filter().xpath("/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:ServiceFrame/netex:scheduledStopPoints", XML_NAMESPACE_NETEX)
                 .log(LoggingLevel.INFO, correlation() + "Processing scheduled stop points in common file ${header." + FILE_HANDLE + "}")
                 .to("xslt-saxon:filterScheduledStopPoint.xsl")
+                .setHeader(COMMON_FILE_PART, constant("Stop Points"))
                 .to("direct:publishCommonFile")
                 .log(LoggingLevel.INFO, correlation() + "Processed scheduled stop points in common file ${header." + FILE_HANDLE + "}")
                 .end()
@@ -96,6 +100,7 @@ public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBu
                 .filter().xpath("/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:ServiceFrame/netex:stopAssignments", XML_NAMESPACE_NETEX)
                 .log(LoggingLevel.INFO, correlation() + "Processing stop assignments in common file ${header." + FILE_HANDLE + "}")
                 .to("xslt-saxon:filterStopAssignment.xsl")
+                .setHeader(COMMON_FILE_PART, constant("Stop Assignments"))
                 .to("direct:publishCommonFile")
                 .log(LoggingLevel.INFO, correlation() + "Processed stop assignments in common file ${header." + FILE_HANDLE + "}")
                 .end()
@@ -104,6 +109,7 @@ public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBu
                 .filter().xpath("/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:ServiceFrame/netex:routePoints", XML_NAMESPACE_NETEX)
                 .log(LoggingLevel.INFO, correlation() + "Processing route points in common file ${header." + FILE_HANDLE + "}")
                 .to("xslt-saxon:filterRoutePoint.xsl")
+                .setHeader(COMMON_FILE_PART, constant("Route Points"))
                 .to("direct:publishCommonFile")
                 .log(LoggingLevel.INFO, correlation() + "Processed route points in common file ${header." + FILE_HANDLE + "}")
                 .end()
@@ -112,6 +118,7 @@ public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBu
                 .filter().xpath("/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:ServiceFrame/netex:serviceLinks", XML_NAMESPACE_NETEX)
                 .log(LoggingLevel.INFO, correlation() + "Processing service links in common file ${header." + FILE_HANDLE + "}")
                 .to("xslt-saxon:filterServiceLink.xsl")
+                .setHeader(COMMON_FILE_PART, constant("Service Links"))
                 .to("direct:publishCommonFile")
                 .log(LoggingLevel.INFO, correlation() + "Processed service links in common file ${header." + FILE_HANDLE + "}")
                 .end()
@@ -124,7 +131,7 @@ public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBu
                 .doTry()
                 .to("kafka:{{nisaba.kafka.topic.common}}?clientId=nisaba-common&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy").id("to-kafka-topic-common")
                 .doCatch(RecordTooLargeException.class)
-                .log(LoggingLevel.ERROR, "Cannot serialize common file ${header." + FILE_HANDLE + "} into Kafka topic, max message size exceeded ${exception.stacktrace} ")
+                .log(LoggingLevel.ERROR, "Cannot serialize common file ${header." + FILE_HANDLE + "} (${header." + COMMON_FILE_PART + "}) into Kafka topic, max message size exceeded ${exception.stacktrace} ")
                 .stop()
                 .routeId("publish-common-file");
 
