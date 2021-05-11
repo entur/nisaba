@@ -27,7 +27,6 @@ import org.apache.camel.builder.AdviceWith;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.commons.io.IOUtils;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
@@ -44,7 +43,10 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
     private static final String CODESPACE = "avi";
 
     @Produce("google-pubsub:{{nisaba.pubsub.project.id}}:NetexExportNotificationQueue")
-    protected ProducerTemplate producerTemplate;
+    protected ProducerTemplate exportNotificationQueueProducerTemplate;
+
+    @Produce("google-pubsub:{{nisaba.pubsub.project.id}}:NetexServiceJourneyPublicationQueue")
+    protected ProducerTemplate serviceJourneyPublicationQueueProducerTemplate;
 
     @Produce("direct:parseCreatedAttribute")
     protected ProducerTemplate parseCreatedAttribute;
@@ -78,12 +80,12 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
         retrieveDatasetCreationTime.whenAnyExchangeReceived(exchange -> exchange.getIn().setHeader(Constants.DATASET_CREATION_TIME, now));
         nisabaEventTopic.expectedMessageCount(1);
 
-        nisabaInMemoryBlobStoreRepository.uploadBlob(BLOBSTORE_PATH_OUTBOUND + "netex/rb_" + CODESPACE + "-" + CURRENT_AGGREGATED_NETEX_FILENAME,
+        mardukInMemoryBlobStoreRepository.uploadBlob(BLOBSTORE_PATH_OUTBOUND + "netex/rb_" + CODESPACE + "-" + CURRENT_AGGREGATED_NETEX_FILENAME,
                 getClass().getResourceAsStream("/no/entur/nisaba/netex/import/rb_avi-aggregated-netex.zip"),
                 false);
 
         context.start();
-        producerTemplate.sendBody(CODESPACE);
+        exportNotificationQueueProducerTemplate.sendBody(CODESPACE);
         nisabaEventTopic.assertIsSatisfied(20000);
         NetexImportEvent netexImportEvent = nisabaEventTopic.getReceivedExchanges().get(0).getIn().getBody(NetexImportEvent.class);
         Assertions.assertEquals("avi", netexImportEvent.getCodespace().toString());
@@ -107,7 +109,7 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
     }
 
     @Test
-    void testExtractServiceJourney() throws Exception {
+    void testPublishDataset() throws Exception {
 
         AdviceWith.adviceWith(context, "notify-consumers", a -> a.weaveById("to-kafka-topic-event").replace().to("mock:nisabaEventTopic"));
         AdviceWith.adviceWith(context, "publish-common-file", a -> a.weaveById("to-kafka-topic-common").replace().to("mock:nisabaCommonTopic"));
@@ -118,34 +120,32 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
         nisabaCommonTopic.expectedMessageCount(1);
         nisabaServiceJourneyTopic.expectedMessageCount(24);
 
-        nisabaInMemoryBlobStoreRepository.uploadBlob(BLOBSTORE_PATH_OUTBOUND + "netex/rb_" + CODESPACE + "-" + CURRENT_AGGREGATED_NETEX_FILENAME,
+        mardukInMemoryBlobStoreRepository.uploadBlob(BLOBSTORE_PATH_OUTBOUND + "netex/rb_" + CODESPACE + "-" + CURRENT_AGGREGATED_NETEX_FILENAME,
                 getClass().getResourceAsStream("/no/entur/nisaba/netex/import/rb_avi-aggregated-netex.zip"),
                 false);
 
         context.start();
-        producerTemplate.sendBody(CODESPACE);
+        exportNotificationQueueProducerTemplate.sendBody(CODESPACE);
         nisabaCommonTopic.assertIsSatisfied(20000);
         nisabaServiceJourneyTopic.assertIsSatisfied(20000);
     }
 
     @Test
-    @Disabled
-    void testCommonFile() throws Exception {
+    void testPublishCommonFile() throws Exception {
 
         AdviceWith.adviceWith(context, "notify-consumers", a -> a.weaveById("to-kafka-topic-event").replace().to("mock:nisabaEventTopic"));
         AdviceWith.adviceWith(context, "publish-common-file", a -> a.weaveById("to-kafka-topic-common").replace().to("mock:nisabaCommonTopic"));
         AdviceWith.adviceWith(context, "process-service-journey", a -> a.weaveById("to-kafka-topic-servicejourney").replace().to("mock:nisabaServiceJourneyTopic"));
-        AdviceWith.adviceWith(context, "netex-export-notification-queue", a -> a.weaveByToUri("direct:retrieveDatasetCreationTime").replace().to("mock:retrieveDatasetCreationTime"));
 
-        retrieveDatasetCreationTime.whenAnyExchangeReceived(exchange -> exchange.getIn().setHeader(Constants.DATASET_CREATION_TIME, LocalDateTime.now()));
-        nisabaCommonTopic.expectedMessageCount(6);
+        nisabaCommonTopic.expectedMessageCount(5);
 
-        nisabaInMemoryBlobStoreRepository.uploadBlob(BLOBSTORE_PATH_OUTBOUND + "netex/rb_" + CODESPACE + "-" + CURRENT_AGGREGATED_NETEX_FILENAME,
-                getClass().getResourceAsStream("/no/entur/nisaba/netex/import/rb_nor-aggregated-netex.zip"),
+        String commonFileZipName = "_NOR_shared_data.xml.zip";
+        nisabaInMemoryBlobStoreRepository.uploadBlob(commonFileZipName,
+                getClass().getResourceAsStream("/no/entur/nisaba/netex/import/_NOR_shared_data.zip"),
                 false);
 
         context.start();
-        producerTemplate.sendBody(CODESPACE);
+        serviceJourneyPublicationQueueProducerTemplate.sendBody(commonFileZipName);
         nisabaCommonTopic.assertIsSatisfied(20000);
 
     }
