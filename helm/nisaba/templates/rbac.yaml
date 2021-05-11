@@ -39,3 +39,7 @@ rules:
     resources: ["configmaps"]
     resourceNames: ["nisaba-leaders"]
     verbs: ["get", "watch", "list", "update", "patch", "delete"]
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    resourceNames: ["nisaba-leaders-lockonnetexexportnotificationqueueroute"]
+    verbs: ["get", "create", "update", "list"]
