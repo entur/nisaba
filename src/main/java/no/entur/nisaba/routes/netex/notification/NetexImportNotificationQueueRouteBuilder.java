@@ -141,17 +141,17 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .stop()
                 .end()
                 .marshal().zipFile()
-                .to("direct:uploadNetexLineFile")
+                .to("direct:uploadNetexFile")
                 .setBody(simple(LINE_FILE_NAME))
                 .to("google-pubsub:{{nisaba.pubsub.project.id}}:NetexServiceJourneyPublicationQueue")
                 .routeId("publish-service-journeys");
 
 
-        from("direct:uploadNetexLineFile")
-                .log(LoggingLevel.INFO, correlation() + "Uploading NeTEx line file")
+        from("direct:uploadNetexFile")
                 .setHeader(FILE_HANDLE, simple(LINE_FILE_NAME))
+                .log(LoggingLevel.INFO, correlation() + "Uploading NeTEx file ${header." + FILE_HANDLE + "}")
                 .to("direct:uploadNisabaBlob")
-                .routeId("upload-netex-line-file");
+                .routeId("upload-netex-file");
 
     }
 

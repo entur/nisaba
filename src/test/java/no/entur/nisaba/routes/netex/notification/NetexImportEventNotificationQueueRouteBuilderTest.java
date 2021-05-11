@@ -37,13 +37,16 @@ import java.time.temporal.ChronoUnit;
 import static no.entur.nisaba.Constants.BLOBSTORE_PATH_OUTBOUND;
 import static no.entur.nisaba.Constants.CURRENT_AGGREGATED_NETEX_FILENAME;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, classes = TestApp.class)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = TestApp.class)
 class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuilderIntegrationTestBase {
 
     private static final String CODESPACE = "avi";
 
     @Produce("google-pubsub:{{nisaba.pubsub.project.id}}:NetexExportNotificationQueue")
-    protected ProducerTemplate producerTemplate;
+    protected ProducerTemplate exportNotificationQueueProducerTemplate;
+
+    @Produce("google-pubsub:{{nisaba.pubsub.project.id}}:NetexServiceJourneyPublicationQueue")
+    protected ProducerTemplate serviceJourneyPublicationQueueProducerTemplate;
 
     @Produce("direct:parseCreatedAttribute")
     protected ProducerTemplate parseCreatedAttribute;
@@ -70,19 +73,19 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
         AdviceWith.adviceWith(context, "netex-export-notification-queue", a -> a.weaveByToUri("direct:retrieveDatasetCreationTime").replace().to("mock:retrieveDatasetCreationTime"));
         AdviceWith.adviceWith(context, "notify-consumers-if-new", a -> a.weaveByToUri("direct:publishServiceJourneys").replace().to("mock:sink"));
         AdviceWith.adviceWith(context, "notify-consumers", a -> a.weaveById("to-kafka-topic-event").replace().to("mock:nisabaEventTopic"));
-        AdviceWith.adviceWith(context, "process-common-file", a -> a.weaveById("to-kafka-topic-common").replace().to("mock:nisabaCommonTopic"));
+        AdviceWith.adviceWith(context, "publish-common-file", a -> a.weaveById("to-kafka-topic-common").replace().to("mock:nisabaCommonTopic"));
         AdviceWith.adviceWith(context, "process-service-journey", a -> a.weaveById("to-kafka-topic-servicejourney").replace().to("mock:nisabaServiceJourneyTopic"));
 
         LocalDateTime now = LocalDateTime.now();
         retrieveDatasetCreationTime.whenAnyExchangeReceived(exchange -> exchange.getIn().setHeader(Constants.DATASET_CREATION_TIME, now));
         nisabaEventTopic.expectedMessageCount(1);
 
-        nisabaInMemoryBlobStoreRepository.uploadBlob(BLOBSTORE_PATH_OUTBOUND + "netex/rb_" + CODESPACE + "-" + CURRENT_AGGREGATED_NETEX_FILENAME,
+        mardukInMemoryBlobStoreRepository.uploadBlob(BLOBSTORE_PATH_OUTBOUND + "netex/rb_" + CODESPACE + "-" + CURRENT_AGGREGATED_NETEX_FILENAME,
                 getClass().getResourceAsStream("/no/entur/nisaba/netex/import/rb_avi-aggregated-netex.zip"),
                 false);
 
         context.start();
-        producerTemplate.sendBody(CODESPACE);
+        exportNotificationQueueProducerTemplate.sendBody(CODESPACE);
         nisabaEventTopic.assertIsSatisfied(20000);
         NetexImportEvent netexImportEvent = nisabaEventTopic.getReceivedExchanges().get(0).getIn().getBody(NetexImportEvent.class);
         Assertions.assertEquals("avi", netexImportEvent.getCodespace().toString());
@@ -95,21 +98,21 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
         AdviceWith.adviceWith(context, "parse-created-attribute", a -> a.weaveAddLast().to("mock:checkCreatedAttribute"));
         AdviceWith.adviceWith(context, "notify-consumers-if-new", a -> a.weaveByToUri("direct:publishServiceJourneys").replace().to("mock:sink"));
         AdviceWith.adviceWith(context, "notify-consumers", a -> a.weaveById("to-kafka-topic-event").replace().to("mock:nisabaEventTopic"));
-        AdviceWith.adviceWith(context, "process-common-file", a -> a.weaveById("to-kafka-topic-common").replace().to("mock:nisabaCommonTopic"));
+        AdviceWith.adviceWith(context, "publish-common-file", a -> a.weaveById("to-kafka-topic-common").replace().to("mock:nisabaCommonTopic"));
         AdviceWith.adviceWith(context, "process-service-journey", a -> a.weaveById("to-kafka-topic-servicejourney").replace().to("mock:nisabaServiceJourneyTopic"));
 
         checkCreatedAttribute.expectedBodiesReceived(LocalDateTime.parse("2021-04-13T09:09:45.409"));
 
         context.start();
         parseCreatedAttribute.sendBody(IOUtils.toString(getClass().getResourceAsStream("/no/entur/nisaba/netex/import/_AVI_shared_data.xml"), StandardCharsets.UTF_8));
-        checkCreatedAttribute.assertIsSatisfied();
+        checkCreatedAttribute.assertIsSatisfied(20000);
     }
 
     @Test
-    void testExtractServiceJourney() throws Exception {
+    void testPublishDataset() throws Exception {
 
         AdviceWith.adviceWith(context, "notify-consumers", a -> a.weaveById("to-kafka-topic-event").replace().to("mock:nisabaEventTopic"));
-        AdviceWith.adviceWith(context, "process-common-file", a -> a.weaveById("to-kafka-topic-common").replace().to("mock:nisabaCommonTopic"));
+        AdviceWith.adviceWith(context, "publish-common-file", a -> a.weaveById("to-kafka-topic-common").replace().to("mock:nisabaCommonTopic"));
         AdviceWith.adviceWith(context, "process-service-journey", a -> a.weaveById("to-kafka-topic-servicejourney").replace().to("mock:nisabaServiceJourneyTopic"));
         AdviceWith.adviceWith(context, "netex-export-notification-queue", a -> a.weaveByToUri("direct:retrieveDatasetCreationTime").replace().to("mock:retrieveDatasetCreationTime"));
 
@@ -117,14 +120,34 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
         nisabaCommonTopic.expectedMessageCount(1);
         nisabaServiceJourneyTopic.expectedMessageCount(24);
 
-        nisabaInMemoryBlobStoreRepository.uploadBlob(BLOBSTORE_PATH_OUTBOUND + "netex/rb_" + CODESPACE + "-" + CURRENT_AGGREGATED_NETEX_FILENAME,
+        mardukInMemoryBlobStoreRepository.uploadBlob(BLOBSTORE_PATH_OUTBOUND + "netex/rb_" + CODESPACE + "-" + CURRENT_AGGREGATED_NETEX_FILENAME,
                 getClass().getResourceAsStream("/no/entur/nisaba/netex/import/rb_avi-aggregated-netex.zip"),
                 false);
 
         context.start();
-        producerTemplate.sendBody(CODESPACE);
+        exportNotificationQueueProducerTemplate.sendBody(CODESPACE);
         nisabaCommonTopic.assertIsSatisfied(20000);
         nisabaServiceJourneyTopic.assertIsSatisfied(20000);
+    }
+
+    @Test
+    void testPublishCommonFile() throws Exception {
+
+        AdviceWith.adviceWith(context, "notify-consumers", a -> a.weaveById("to-kafka-topic-event").replace().to("mock:nisabaEventTopic"));
+        AdviceWith.adviceWith(context, "publish-common-file", a -> a.weaveById("to-kafka-topic-common").replace().to("mock:nisabaCommonTopic"));
+        AdviceWith.adviceWith(context, "process-service-journey", a -> a.weaveById("to-kafka-topic-servicejourney").replace().to("mock:nisabaServiceJourneyTopic"));
+
+        nisabaCommonTopic.expectedMessageCount(5);
+
+        String commonFileZipName = "_NOR_shared_data.xml.zip";
+        nisabaInMemoryBlobStoreRepository.uploadBlob(commonFileZipName,
+                getClass().getResourceAsStream("/no/entur/nisaba/netex/import/_NOR_shared_data.zip"),
+                false);
+
+        context.start();
+        serviceJourneyPublicationQueueProducerTemplate.sendBody(commonFileZipName);
+        nisabaCommonTopic.assertIsSatisfied(20000);
+
     }
 
 

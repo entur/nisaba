@@ -74,6 +74,19 @@ resource "kubernetes_secret" "ror-nisaba-secret" {
 }
 
 # Create pubsub topics and subscriptions
+resource "google_pubsub_topic" "NetexServiceJourneyPublicationDeadLetterQueue" {
+  name = "NetexServiceJourneyPublicationDeadLetterQueue"
+  project = var.gcp_pubsub_project
+  labels = var.labels
+}
+
+resource "google_pubsub_subscription" "NetexServiceJourneyPublicationDeadLetterQueue" {
+  name = "NetexServiceJourneyPublicationDeadLetterQueue"
+  topic = google_pubsub_topic.NetexServiceJourneyPublicationDeadLetterQueue.name
+  project = var.gcp_pubsub_project
+  labels = var.labels
+}
+
 resource "google_pubsub_topic" "NetexServiceJourneyPublicationQueue" {
   name = "NetexServiceJourneyPublicationQueue"
   project = var.gcp_pubsub_project
@@ -86,6 +99,10 @@ resource "google_pubsub_subscription" "NetexServiceJourneyPublicationQueue" {
   project = var.gcp_pubsub_project
   labels = var.labels
   ack_deadline_seconds = 600
+  dead_letter_policy {
+    max_delivery_attempts = 5
+    dead_letter_topic = google_pubsub_topic.NetexServiceJourneyPublicationDeadLetterQueue.id
+  }
   retry_policy {
     minimum_backoff = "10s"
   }

@@ -7,7 +7,7 @@
     <xsl:strip-space elements="*"/>
 
     <!-- ID of the selected service journey -->
-    <xsl:param name="SERVICE_JOURNEY_ID" />
+    <xsl:param name="SERVICE_JOURNEY_ID"/>
 
     <!-- ID of the journey pattern of the selected service journey -->
     <xsl:variable name="journeyPatternId"
