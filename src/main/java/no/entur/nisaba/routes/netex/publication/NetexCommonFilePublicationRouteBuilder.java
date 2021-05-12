@@ -109,6 +109,7 @@ public class NetexCommonFilePublicationRouteBuilder extends BaseRouteBuilder {
                 .to("direct:splitServiceLinks")
                 .log(LoggingLevel.INFO, correlation() + "Processed service links in common file ${header." + FILE_HANDLE + "}")
                 .end()
+
                 .log(LoggingLevel.INFO, correlation() + "Processed common file ${header." + FILE_HANDLE + "}")
                 .routeId("process-common-file");
 
@@ -119,7 +120,6 @@ public class NetexCommonFilePublicationRouteBuilder extends BaseRouteBuilder {
                 .setHeader(SPLIT_UPPER_BOUND, simple("${body.upperBound}"))
                 .setBody(header(COMMON_FILE))
                 .to("xslt-saxon:filterServiceLink.xsl")
-                .to("file:/tmp/camel?fileName=${date:now:yyyyMMddHHmmssSSS}.xml")
                 .to("direct:publishCommonFile")
                 .routeId("split-service-links");
 
