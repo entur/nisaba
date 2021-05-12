@@ -6,9 +6,12 @@
     <xsl:output omit-xml-declaration="no" indent="no"/>
     <xsl:strip-space elements="*"/>
 
+    <xsl:param name="SPLIT_LOWER_BOUND"/>
+    <xsl:param name="SPLIT_UPPER_BOUND"/>
+
     <!-- copy the sub-tree that contains the service links and discard the other sub-trees -->
     <xsl:template match="*|/">
-        <xsl:if test="descendant::netex:serviceLinks">
+        <xsl:if test="descendant-or-self::netex:serviceLinks">
             <xsl:copy>
                 <xsl:apply-templates select="@*|*"/>
             </xsl:copy>
@@ -25,8 +28,7 @@
         <xsl:copy/>
     </xsl:template>
 
-    <!-- copy all children of the serviceLinks node -->
-    <xsl:template match="netex:serviceLinks|netex:serviceLinks//*">
+    <xsl:template match="netex:ServiceLink[position() >= $SPLIT_LOWER_BOUND  and position() &lt;= $SPLIT_UPPER_BOUND ]|netex:ServiceLink[position() >= $SPLIT_LOWER_BOUND  or position() &lt;= $SPLIT_UPPER_BOUND]//* ">
         <xsl:copy>
             <xsl:apply-templates select="@*|*|text()"/>
         </xsl:copy>

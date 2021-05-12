@@ -147,7 +147,8 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
         AdviceWith.adviceWith(context, "process-service-journey", a -> a.weaveById("to-kafka-topic-servicejourney").replace().to("mock:nisabaServiceJourneyTopic"));
         AdviceWith.adviceWith(context, "pubsub-process-service-journey", a -> a.weaveByToUri("direct:processLineFile").replace().to("mock:processLineFile"));
 
-        nisabaCommonTopic.expectedMessageCount(5);
+        // expect filtered common file + scheduled stop points + stop assignments + route points + service link x 2
+        nisabaCommonTopic.expectedMessageCount(6);
         nisabaCommonTopic.setResultWaitTime(20000);
         processLineFile.expectedMessageCount(0);
 
