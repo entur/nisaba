@@ -28,7 +28,12 @@
         <xsl:copy/>
     </xsl:template>
 
-    <xsl:template match="netex:ServiceLink[position() >= $SPLIT_LOWER_BOUND  and position() &lt;= $SPLIT_UPPER_BOUND ]|netex:ServiceLink[position() >= $SPLIT_LOWER_BOUND  or position() &lt;= $SPLIT_UPPER_BOUND]//* ">
+    <!-- discard the ServiceLinks that fall outside of the current range -->
+    <xsl:template match="netex:ServiceLink[position() &lt; $SPLIT_LOWER_BOUND  or position() > $SPLIT_UPPER_BOUND ]">
+    </xsl:template>
+
+    <!-- copy all other ServiceLinks  -->
+    <xsl:template match="netex:ServiceLink|netex:ServiceLink//*">
         <xsl:copy>
             <xsl:apply-templates select="@*|*|text()"/>
         </xsl:copy>
