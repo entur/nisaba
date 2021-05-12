@@ -28,7 +28,7 @@ import static no.entur.nisaba.Constants.FILE_HANDLE;
 import static no.entur.nisaba.Constants.XML_NAMESPACE_NETEX;
 
 /**
- * Publish service journeys to Kafka.
+ * Publish shared NeTEx objects (common files) to Kafka.
  */
 @Component
 public class NetexCommonFilePublicationRouteBuilder extends BaseRouteBuilder {
