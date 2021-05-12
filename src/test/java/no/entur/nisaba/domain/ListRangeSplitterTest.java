@@ -5,12 +5,12 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-public class ListRangeSplitterTest {
+class ListRangeSplitterTest {
 
     private final ListRangeSplitter listRangeSplitter = new ListRangeSplitter(200);
 
     @Test
-    public void testLessThanOneFullRange() {
+    void testLessThanOneFullRange() {
         List<ListRangeSplitter.Range> split = listRangeSplitter.split(100);
         Assertions.assertEquals(1, split.size());
         Assertions.assertEquals(1, split.get(0).getLowerBound());
@@ -18,7 +18,7 @@ public class ListRangeSplitterTest {
     }
 
     @Test
-    public void testMoreThanOneRange() {
+    void testMoreThanOneRange() {
         List<ListRangeSplitter.Range> split = listRangeSplitter.split(250);
         Assertions.assertEquals(2, split.size());
         Assertions.assertEquals(1, split.get(0).getLowerBound());
@@ -28,7 +28,7 @@ public class ListRangeSplitterTest {
     }
 
     @Test
-    public void testNoPartialRange() {
+    void testNoPartialRange() {
         List<ListRangeSplitter.Range> split = listRangeSplitter.split(400);
         Assertions.assertEquals(2, split.size());
         Assertions.assertEquals(1, split.get(0).getLowerBound());
