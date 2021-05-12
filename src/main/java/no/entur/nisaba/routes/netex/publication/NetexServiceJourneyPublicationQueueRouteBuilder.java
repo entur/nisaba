@@ -26,7 +26,6 @@ import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
 
 import static no.entur.nisaba.Constants.FILE_HANDLE;
-import static no.entur.nisaba.Constants.XML_NAMESPACE_NETEX;
 
 /**
  * Publish service journeys to Kafka.
@@ -34,10 +33,8 @@ import static no.entur.nisaba.Constants.XML_NAMESPACE_NETEX;
 @Component
 public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBuilder {
 
-    private static final String COMMON_FILE = "COMMON_FILE";
     private static final String LINE_FILE = "LINE_FILE";
     private static final String SERVICE_JOURNEY_ID = "SERVICE_JOURNEY_ID";
-    private static final String COMMON_FILE_PART = "COMMON_FILE_PART";
 
     @Override
     public void configure() throws Exception {
@@ -62,78 +59,6 @@ public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBu
                 .setHeader(FILE_HANDLE, body())
                 .to("direct:getNisabaBlob")
                 .routeId("download-netex-file");
-
-        from("direct:processCommonFile")
-                .log(LoggingLevel.INFO, correlation() + "Processing common file ${header." + FILE_HANDLE + "}")
-                .convertBodyTo(Document.class)
-                .setHeader(COMMON_FILE, body())
-
-                // do not split the common file for flexible lines
-                .filter(header(Exchange.FILE_NAME).contains("_flexible_shared_data.xml"))
-                .log(LoggingLevel.INFO, correlation() + "Processing common flexible line file ${header." + FILE_HANDLE + "}")
-                .to("xslt-saxon:filterCommonFlexibleLineFile.xsl")
-                .setHeader(COMMON_FILE_PART, constant("Flexible lines"))
-                .to("direct:publishCommonFile")
-                .log(LoggingLevel.INFO, correlation() + "Processed common flexible line file ${header." + FILE_HANDLE + "}")
-                .stop()
-                .end()
-
-                // For other common files: remove scheduledStopPoints, stopAssignments, routePoints and serviceLinks and create separate PublicationDeliveries for each of them
-
-                .setBody(header(COMMON_FILE))
-                .log(LoggingLevel.INFO, correlation() + "Processing filtered common file ${header." + FILE_HANDLE + "}")
-                .to("xslt-saxon:filterCommonFile.xsl")
-                .setHeader(COMMON_FILE_PART, constant("Filtered common file"))
-                .to("direct:publishCommonFile")
-                .log(LoggingLevel.INFO, correlation() + "Processed filtered common file ${header." + FILE_HANDLE + "}")
-
-                .setBody(header(COMMON_FILE))
-                .filter().xpath("/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:ServiceFrame/netex:scheduledStopPoints", XML_NAMESPACE_NETEX)
-                .log(LoggingLevel.INFO, correlation() + "Processing scheduled stop points in common file ${header." + FILE_HANDLE + "}")
-                .to("xslt-saxon:filterScheduledStopPoint.xsl")
-                .setHeader(COMMON_FILE_PART, constant("Stop Points"))
-                .to("direct:publishCommonFile")
-                .log(LoggingLevel.INFO, correlation() + "Processed scheduled stop points in common file ${header." + FILE_HANDLE + "}")
-                .end()
-
-                .setBody(header(COMMON_FILE))
-                .filter().xpath("/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:ServiceFrame/netex:stopAssignments", XML_NAMESPACE_NETEX)
-                .log(LoggingLevel.INFO, correlation() + "Processing stop assignments in common file ${header." + FILE_HANDLE + "}")
-                .to("xslt-saxon:filterStopAssignment.xsl")
-                .setHeader(COMMON_FILE_PART, constant("Stop Assignments"))
-                .to("direct:publishCommonFile")
-                .log(LoggingLevel.INFO, correlation() + "Processed stop assignments in common file ${header." + FILE_HANDLE + "}")
-                .end()
-
-                .setBody(header(COMMON_FILE))
-                .filter().xpath("/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:ServiceFrame/netex:routePoints", XML_NAMESPACE_NETEX)
-                .log(LoggingLevel.INFO, correlation() + "Processing route points in common file ${header." + FILE_HANDLE + "}")
-                .to("xslt-saxon:filterRoutePoint.xsl")
-                .setHeader(COMMON_FILE_PART, constant("Route Points"))
-                .to("direct:publishCommonFile")
-                .log(LoggingLevel.INFO, correlation() + "Processed route points in common file ${header." + FILE_HANDLE + "}")
-                .end()
-
-                .setBody(header(COMMON_FILE))
-                .filter().xpath("/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:ServiceFrame/netex:serviceLinks", XML_NAMESPACE_NETEX)
-                .log(LoggingLevel.INFO, correlation() + "Processing service links in common file ${header." + FILE_HANDLE + "}")
-                .to("xslt-saxon:filterServiceLink.xsl")
-                .setHeader(COMMON_FILE_PART, constant("Service Links"))
-                .to("direct:publishCommonFile")
-                .log(LoggingLevel.INFO, correlation() + "Processed service links in common file ${header." + FILE_HANDLE + "}")
-                .end()
-
-                .log(LoggingLevel.INFO, correlation() + "Processed common file ${header." + FILE_HANDLE + "}")
-                .routeId("process-common-file");
-
-        from("direct:publishCommonFile")
-                .marshal().zipFile()
-                .doTry()
-                .to("kafka:{{nisaba.kafka.topic.common}}?clientId=nisaba-common&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy").id("to-kafka-topic-common")
-                .doCatch(RecordTooLargeException.class)
-                .log(LoggingLevel.ERROR, "Cannot serialize common file ${header." + FILE_HANDLE + "} (${header." + COMMON_FILE_PART + "}) into Kafka topic, max message size exceeded ${exception.stacktrace} ")
-                .stop()
-                .routeId("publish-common-file");
 
         from("direct:processLineFile")
                 .log(LoggingLevel.INFO, correlation() + "Processing line file ${header." + FILE_HANDLE + "}")
