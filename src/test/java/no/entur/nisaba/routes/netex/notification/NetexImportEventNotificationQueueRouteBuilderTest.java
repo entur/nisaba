@@ -86,6 +86,7 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
         LocalDateTime now = LocalDateTime.now();
         retrieveDatasetCreationTime.whenAnyExchangeReceived(exchange -> exchange.getIn().setHeader(Constants.DATASET_CREATION_TIME, now));
         nisabaEventTopic.expectedMessageCount(1);
+        nisabaEventTopic.setResultWaitTime(30000);
 
         mardukInMemoryBlobStoreRepository.uploadBlob(BLOBSTORE_PATH_OUTBOUND + "netex/rb_" + CODESPACE + "-" + CURRENT_AGGREGATED_NETEX_FILENAME,
                 getClass().getResourceAsStream("/no/entur/nisaba/netex/import/rb_avi-aggregated-netex.zip"),
@@ -127,7 +128,7 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
         retrieveDatasetCreationTime.whenAnyExchangeReceived(exchange -> exchange.getIn().setHeader(Constants.DATASET_CREATION_TIME, LocalDateTime.now()));
         processCommonFile.expectedMessageCount(1);
         nisabaServiceJourneyTopic.expectedMessageCount(24);
-        nisabaServiceJourneyTopic.setResultWaitTime(20000);
+        nisabaServiceJourneyTopic.setResultWaitTime(30000);
 
         mardukInMemoryBlobStoreRepository.uploadBlob(BLOBSTORE_PATH_OUTBOUND + "netex/rb_" + CODESPACE + "-" + CURRENT_AGGREGATED_NETEX_FILENAME,
                 getClass().getResourceAsStream("/no/entur/nisaba/netex/import/rb_avi-aggregated-netex.zip"),
@@ -149,7 +150,7 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
 
         // expect filtered common file + scheduled stop points + stop assignments + route points + service link x 2
         nisabaCommonTopic.expectedMessageCount(6);
-        nisabaCommonTopic.setResultWaitTime(20000);
+        nisabaCommonTopic.setResultWaitTime(30000);
         processLineFile.expectedMessageCount(0);
 
         String commonFileZipName = "_NOR_shared_data.xml.zip";

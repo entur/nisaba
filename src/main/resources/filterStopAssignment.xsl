@@ -6,9 +6,12 @@
     <xsl:output omit-xml-declaration="no" indent="no"/>
     <xsl:strip-space elements="*"/>
 
-    <!-- copy the sub-tree that contains the route points and discard the other sub-trees -->
+    <xsl:param name="SPLIT_LOWER_BOUND"/>
+    <xsl:param name="SPLIT_UPPER_BOUND"/>
+
+    <!-- copy the sub-tree that contains the stop assigmments and discard the other sub-trees -->
     <xsl:template match="*|/">
-        <xsl:if test="descendant::netex:stopAssignments">
+        <xsl:if test="descendant-or-self::netex:stopAssignments">
             <xsl:copy>
                 <xsl:apply-templates select="@*|*"/>
             </xsl:copy>
@@ -25,8 +28,12 @@
         <xsl:copy/>
     </xsl:template>
 
-    <!-- copy all children of the stopAssignments node -->
-    <xsl:template match="netex:stopAssignments|netex:stopAssignments//*">
+    <!-- discard the PassengerStopAssignment that fall outside of the current range -->
+    <xsl:template match="netex:PassengerStopAssignment[position() &lt; $SPLIT_LOWER_BOUND  or position() > $SPLIT_UPPER_BOUND ]">
+    </xsl:template>
+
+    <!-- copy all other  PassengerStopAssignment -->
+    <xsl:template match="netex:PassengerStopAssignment|netex:PassengerStopAssignment//*">
         <xsl:copy>
             <xsl:apply-templates select="@*|*|text()"/>
         </xsl:copy>
