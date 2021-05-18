@@ -6,9 +6,12 @@
     <xsl:output omit-xml-declaration="no" indent="no"/>
     <xsl:strip-space elements="*"/>
 
+    <xsl:param name="SPLIT_LOWER_BOUND"/>
+    <xsl:param name="SPLIT_UPPER_BOUND"/>
+
     <!-- copy the sub-tree that contains the route points and discard the other sub-trees -->
     <xsl:template match="*|/">
-        <xsl:if test="descendant::netex:routePoints">
+        <xsl:if test="descendant-or-self::netex:routePoints">
             <xsl:copy>
                 <xsl:apply-templates select="@*|*"/>
             </xsl:copy>
@@ -25,8 +28,12 @@
         <xsl:copy/>
     </xsl:template>
 
-    <!-- copy all children of the routePoints node -->
-    <xsl:template match="netex:routePoints|netex:routePoints//*">
+    <!-- discard the RoutePoints that fall outside of the current range -->
+    <xsl:template match="netex:RoutePoint[position() &lt; $SPLIT_LOWER_BOUND  or position() > $SPLIT_UPPER_BOUND ]">
+    </xsl:template>
+
+    <!-- copy all other RoutePoint -->
+    <xsl:template match="netex:RoutePoint|netex:RoutePoint//*">
         <xsl:copy>
             <xsl:apply-templates select="@*|*|text()"/>
         </xsl:copy>

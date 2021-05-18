@@ -35,10 +35,12 @@ public class NetexCommonFilePublicationRouteBuilder extends BaseRouteBuilder {
 
     private static final String COMMON_FILE = "COMMON_FILE";
     private static final String COMMON_FILE_PART = "COMMON_FILE_PART";
+    private static final String COMMON_FILE_XSLT = "COMMON_FILE_XSLT";
     private static final int RANGE_SIZE = 1000;
-    private static final String NB_SERVICE_LINKS = "NB_SERVICE_LINKS";
+    private static final String COMMON_FILE_NB_ITEMS = "COMMON_FILE_NB_ITEMS";
     private static final String SPLIT_LOWER_BOUND = "SPLIT_LOWER_BOUND";
     private static final String SPLIT_UPPER_BOUND = "SPLIT_UPPER_BOUND";
+
 
     @Override
     public void configure() throws Exception {
@@ -69,64 +71,69 @@ public class NetexCommonFilePublicationRouteBuilder extends BaseRouteBuilder {
                 .to("direct:publishCommonFile")
                 .log(LoggingLevel.INFO, correlation() + "Processed filtered common file ${header." + FILE_HANDLE + "}")
 
+                // Scheduled Stop Points
+
                 .setBody(header(COMMON_FILE))
-                .setHeader(COMMON_FILE_PART, constant("Stop Points"))
-                .filter().xpath("/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:ServiceFrame/netex:scheduledStopPoints", XML_NAMESPACE_NETEX)
-                .log(LoggingLevel.INFO, correlation() + "Processing scheduled stop points in common file ${header." + FILE_HANDLE + "}")
-                .to("xslt-saxon:filterScheduledStopPoint.xsl")
-                .to("direct:publishCommonFile")
-                .log(LoggingLevel.INFO, correlation() + "Processed scheduled stop points in common file ${header." + FILE_HANDLE + "}")
-                .end()
+                .setHeader(COMMON_FILE_PART, constant("Scheduled Stop Points"))
+                .setHeader(COMMON_FILE_XSLT, constant("filterScheduledStopPoint.xsl"))
+                .setHeader(COMMON_FILE_NB_ITEMS,
+                        xpath("count(/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:ServiceFrame/netex:scheduledStopPoints/netex:ScheduledStopPoint)", Integer.class, XML_NAMESPACE_NETEX))
+                .to("direct:splitCommonFile")
+
+                // Stop Assignments
 
                 .setBody(header(COMMON_FILE))
                 .setHeader(COMMON_FILE_PART, constant("Stop Assignments"))
-                .filter().xpath("/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:ServiceFrame/netex:stopAssignments", XML_NAMESPACE_NETEX)
-                .log(LoggingLevel.INFO, correlation() + "Processing stop assignments in common file ${header." + FILE_HANDLE + "}")
-                .to("xslt-saxon:filterStopAssignment.xsl")
-                .to("direct:publishCommonFile")
-                .log(LoggingLevel.INFO, correlation() + "Processed stop assignments in common file ${header." + FILE_HANDLE + "}")
-                .end()
+                .setHeader(COMMON_FILE_XSLT, constant("filterStopAssignment.xsl"))
+                .setHeader(COMMON_FILE_NB_ITEMS,
+                        xpath("count(/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:ServiceFrame/netex:stopAssignments/netex:PassengerStopAssignment)", Integer.class, XML_NAMESPACE_NETEX))
+                .to("direct:splitCommonFile")
+
+                // Route Points
 
                 .setBody(header(COMMON_FILE))
                 .setHeader(COMMON_FILE_PART, constant("Route Points"))
-                .filter().xpath("/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:ServiceFrame/netex:routePoints", XML_NAMESPACE_NETEX)
-                .log(LoggingLevel.INFO, correlation() + "Processing route points in common file ${header." + FILE_HANDLE + "}")
-                .to("xslt-saxon:filterRoutePoint.xsl")
-                .to("direct:publishCommonFile")
-                .log(LoggingLevel.INFO, correlation() + "Processed route points in common file ${header." + FILE_HANDLE + "}")
-                .end()
+                .setHeader(COMMON_FILE_XSLT, constant("filterRoutePoint.xsl"))
+                .setHeader(COMMON_FILE_NB_ITEMS,
+                        xpath("count(/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:ServiceFrame/netex:routePoints/netex:RoutePoint)", Integer.class, XML_NAMESPACE_NETEX))
+                .to("direct:splitCommonFile")
 
-                // for Service Links: split in several PublicationDeliveries to avoid producing Kafka messages larger than the maximum message size
+                // Service Links
 
                 .setBody(header(COMMON_FILE))
                 .setHeader(COMMON_FILE_PART, constant("Service Links"))
-                .setHeader(NB_SERVICE_LINKS,
+                .setHeader(COMMON_FILE_XSLT, constant("filterServiceLink.xsl"))
+                .setHeader(COMMON_FILE_NB_ITEMS,
                         xpath("count(/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:ServiceFrame/netex:serviceLinks/netex:ServiceLink)", Integer.class, XML_NAMESPACE_NETEX))
-                .filter(header(NB_SERVICE_LINKS).isGreaterThan(0))
-                .log(LoggingLevel.INFO, correlation() + "Processing service links in common file ${header." + FILE_HANDLE + "}")
-                .bean(new ListRangeSplitter(RANGE_SIZE), "split(${header.NB_SERVICE_LINKS})")
-                .log(LoggingLevel.INFO, correlation() + "Splitting ${header.NB_SERVICE_LINKS} service links into ${body.size} PublicationDeliveries")
-                .to("direct:splitServiceLinks")
-                .log(LoggingLevel.INFO, correlation() + "Processed service links in common file ${header." + FILE_HANDLE + "}")
-                .end()
+                .to("direct:splitCommonFile")
 
                 .log(LoggingLevel.INFO, correlation() + "Processed common file ${header." + FILE_HANDLE + "}")
                 .routeId("process-common-file");
 
-        from("direct:splitServiceLinks")
+        // split items in the common files in smaller PublicationDeliveries so that each message does not exceed the maximum size of a Kafka record
+        from("direct:splitCommonFile")
+                .filter(header(COMMON_FILE_NB_ITEMS).isGreaterThan(0))
+                .log(LoggingLevel.INFO, correlation() + "Processing ${header." + COMMON_FILE_PART + "}) in common file ${header." + FILE_HANDLE + "}")
+                .bean(new ListRangeSplitter(RANGE_SIZE), "split(${header." + COMMON_FILE_NB_ITEMS + "})")
+                .log(LoggingLevel.INFO, correlation() + "Splitting ${header." + COMMON_FILE_NB_ITEMS + "} ${header." + COMMON_FILE_PART + "} into ${body.size} PublicationDeliveries")
                 .split(body())
-                .log(LoggingLevel.INFO, correlation() + "Processing service links from position ${body.lowerBound} to position ${body.upperBound}")
+                .log(LoggingLevel.INFO, correlation() + "Processing ${header." + COMMON_FILE_PART + "}) from position ${body.lowerBound} to position ${body.upperBound}")
                 .setHeader(SPLIT_LOWER_BOUND, simple("${body.lowerBound}"))
                 .setHeader(SPLIT_UPPER_BOUND, simple("${body.upperBound}"))
                 .setBody(header(COMMON_FILE))
-                .to("xslt-saxon:filterServiceLink.xsl")
+                .toD("xslt-saxon:${header." + COMMON_FILE_XSLT + "}")
                 .to("direct:publishCommonFile")
-                .routeId("split-service-links");
+                // end split
+                .end()
+                .log(LoggingLevel.INFO, correlation() + "Processed ${header." + COMMON_FILE_PART + "}) in common file ${header." + FILE_HANDLE + "}")
+                // end filter
+                .end()
+                .routeId("split-common-file");
 
         from("direct:publishCommonFile")
                 .marshal().zipFile()
                 .doTry()
-                .to("kafka:{{nisaba.kafka.topic.common}}?clientId=nisaba-common&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy").id("to-kafka-topic-common")
+                .to("kafka:{{nisaba.kafka.topic.common}}?clientId=nisaba-common&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy&valueSerializer=org.apache.kafka.common.serialization.ByteArraySerializer").id("to-kafka-topic-common")
                 .doCatch(RecordTooLargeException.class)
                 .log(LoggingLevel.ERROR, "Cannot serialize common file ${header." + FILE_HANDLE + "} (${header." + COMMON_FILE_PART + "}) into Kafka topic, max message size exceeded ${exception.stacktrace} ")
                 .stop()

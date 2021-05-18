@@ -6,9 +6,12 @@
     <xsl:output omit-xml-declaration="no" indent="no"/>
     <xsl:strip-space elements="*"/>
 
+    <xsl:param name="SPLIT_LOWER_BOUND"/>
+    <xsl:param name="SPLIT_UPPER_BOUND"/>
+
     <!-- copy the sub-tree that contains the scheduled stop points and discard the other sub-trees -->
     <xsl:template match="*|/">
-        <xsl:if test="descendant::netex:scheduledStopPoints">
+        <xsl:if test="descendant-or-self::netex:scheduledStopPoints">
             <xsl:copy>
                 <xsl:apply-templates select="@*|*"/>
             </xsl:copy>
@@ -20,8 +23,12 @@
         <xsl:copy/>
     </xsl:template>
 
-    <!-- copy all children of the scheduledStopPoints node -->
-    <xsl:template match="netex:scheduledStopPoints|netex:scheduledStopPoints//*">
+    <!-- discard the ScheduledStopPoints that fall outside of the current range -->
+    <xsl:template match="netex:ScheduledStopPoint[position() &lt; $SPLIT_LOWER_BOUND  or position() > $SPLIT_UPPER_BOUND ]">
+    </xsl:template>
+
+    <!-- copy all other ScheduledStopPoints -->
+    <xsl:template match="netex:ScheduledStopPoint|netex:ScheduledStopPoint//*">
         <xsl:copy>
             <xsl:apply-templates select="@*|*|text()"/>
         </xsl:copy>
