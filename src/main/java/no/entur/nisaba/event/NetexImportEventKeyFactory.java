@@ -23,6 +23,9 @@ import java.time.LocalDateTime;
 
 import static no.entur.nisaba.Constants.DATE_TIME_FORMATTER;
 
+/**
+ * Create the unique key identifying the current import.
+ */
 public class NetexImportEventKeyFactory {
 
 

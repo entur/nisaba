@@ -26,29 +26,20 @@ public final class Constants {
     public static final String TARGET_FILE_HANDLE = "RutebankenTargetFileHandle";
     public static final String TARGET_FILE_PARENT = "RutebankenTargetFileParent";
     public static final String TARGET_CONTAINER = "RutebankenTargetContainer";
-
-
     public static final String FILE_PARENT_COLLECTION = "RutebankenFileParentCollection";
     public static final String CORRELATION_ID = "RutebankenCorrelationId";
-
     public static final String CURRENT_AGGREGATED_NETEX_FILENAME = "aggregated-netex.zip";
 
     public static final String BLOBSTORE_PATH_OUTBOUND = "outbound/";
-
-
     public static final String BLOBSTORE_MAKE_BLOB_PUBLIC = "RutebankenBlobstoreMakeBlobPublic";
-
-    public static final String SINGLETON_ROUTE_DEFINITION_GROUP_NAME = "RutebankenSingletonRouteDefinitionGroup";
-
-
-    public static final String CAMEL_ALL_HEADERS = "Camel*";
-    public static final String CAMEL_ALL_HTTP_HEADERS = "CamelHttp*";
 
     public static final String DATASET_IMPORT_KEY ="EnturDatasetImportKey";
     public static final String DATASET_CREATION_TIME = "EnturDatasetCreationTime";
     public static final String DATASET_CODESPACE = "EnturDatasetCodespace";
+
+    public static final String DATASET_STAT = "DATASET_STAT";
+
     public static final String DATASET_NB_SERVICE_JOURNEYS = "EnturDatasetNbServiceJourneys";
-    public static final String DATASET_NB_COMMON_FILES = "EnturDatasetNbCommonFiles";
 
     public static final String DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
     public static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern(Constants.DATE_TIME_FORMAT);

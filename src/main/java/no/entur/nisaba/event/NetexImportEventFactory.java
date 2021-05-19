@@ -25,6 +25,9 @@ import java.time.LocalDateTime;
 
 import static no.entur.nisaba.Constants.DATE_TIME_FORMATTER;
 
+/**
+ * Create the Avro NeTEx import event.
+ */
 public class NetexImportEventFactory {
 
 
@@ -36,21 +39,20 @@ public class NetexImportEventFactory {
     public static NetexImportEvent createNetexImportEvent(@Header(value = Constants.DATASET_CODESPACE) String codespace,
                                                           @Header(value = Constants.DATASET_CREATION_TIME) LocalDateTime creationDate,
                                                           @Header(value = Constants.DATASET_IMPORT_KEY) String importKey,
-                                                          @Header(value = Constants.DATASET_NB_SERVICE_JOURNEYS) Integer nbServiceJourneys,
-                                                          @Header(value = Constants.DATASET_NB_COMMON_FILES) Integer nbCommonFiles
+                                                          @Header(value = Constants.DATASET_STAT) DatasetStat datasetStat
+
     ) {
         Assert.notNull(codespace, "codespace was null");
         Assert.notNull(creationDate, "creationDate was null");
         Assert.notNull(importKey, "importKey was null");
-        Assert.notNull(nbServiceJourneys, "nbServiceJourneys was null");
-        Assert.notNull(nbCommonFiles, "nbCommonFiles was null");
+        Assert.notNull(datasetStat, "datasetStat was null");
 
         return NetexImportEvent.newBuilder()
                 .setCodespace(codespace)
                 .setImportDateTime(DATE_TIME_FORMATTER.format(creationDate))
                 .setImportKey(importKey)
-                .setServiceJourneys(nbServiceJourneys)
-                .setCommonFiles(nbCommonFiles)
+                .setServiceJourneys(datasetStat.getNbServiceJourneys())
+                .setCommonFiles(datasetStat.getNbCommonFiles())
                 .build();
 
     }

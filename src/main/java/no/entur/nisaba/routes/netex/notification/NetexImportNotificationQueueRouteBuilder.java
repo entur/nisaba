@@ -17,7 +17,7 @@
 package no.entur.nisaba.routes.netex.notification;
 
 import no.entur.nisaba.Constants;
-import no.entur.nisaba.domain.DatasetStat;
+import no.entur.nisaba.event.DatasetStatHelper;
 import no.entur.nisaba.event.NetexImportEventFactory;
 import no.entur.nisaba.event.NetexImportEventKeyFactory;
 import no.entur.nisaba.routes.BaseRouteBuilder;
@@ -36,7 +36,6 @@ import static no.entur.nisaba.Constants.BLOBSTORE_PATH_OUTBOUND;
 import static no.entur.nisaba.Constants.DATASET_CODESPACE;
 import static no.entur.nisaba.Constants.DATASET_CREATION_TIME;
 import static no.entur.nisaba.Constants.DATASET_IMPORT_KEY;
-import static no.entur.nisaba.Constants.DATASET_NB_SERVICE_JOURNEYS;
 import static no.entur.nisaba.Constants.FILE_HANDLE;
 import static no.entur.nisaba.Constants.XML_NAMESPACE_NETEX;
 import static org.apache.camel.builder.Builder.bean;
@@ -51,7 +50,6 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
     private static final String EXPORT_FILE_NAME = "netex/rb_${body}-" + Constants.CURRENT_AGGREGATED_NETEX_FILENAME;
     private static final String LINE_FILE_NAME = "${header." + DATASET_IMPORT_KEY + "}/${header." + Exchange.FILE_NAME + "}";
     private static final String NB_SERVICE_JOURNEYS_IN_FILE = "NB_SERVICE_JOURNEYS_IN_FILE";
-    private static final String DATASET_STAT = "DATASET_STAT";
 
     @Override
     public void configure() throws Exception {
@@ -129,13 +127,10 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
         from("direct:publishDataset")
                 .streamCaching()
                 .log(LoggingLevel.INFO, correlation() + "Publishing Dataset")
-                .setHeader(DATASET_STAT, bean(new DatasetStat()))
+                .bean(DatasetStatHelper.class, "init")
                 .setBody(header(DATASET_CODESPACE))
                 .to("direct:downloadNetexDataset")
-                .split(new ZipSplitter()).aggregationStrategy(new FlexibleAggregationStrategy<LocalDateTime>()
-                .storeInBody()
-                .accumulateInCollection(TreeSet.class)
-                .pick(header(NB_SERVICE_JOURNEYS_IN_FILE)))
+                .split(new ZipSplitter())
                 .streaming()
                 .filter(header(Exchange.FILE_NAME).not().endsWith(".xml"))
                 .log(LoggingLevel.INFO, correlation() + "Ignoring non-XML file ${header." + Exchange.FILE_NAME + "}")
@@ -147,7 +142,7 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .otherwise()
                 .setHeader(NB_SERVICE_JOURNEYS_IN_FILE,
                         xpath("count(/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:TimetableFrame/netex:vehicleJourneys/netex:ServiceJourney)", Integer.class, XML_NAMESPACE_NETEX))
-
+                .bean(DatasetStatHelper.class, "addServiceJourneys(${header.NB_SERVICE_JOURNEYS_IN_FILE})")
                 .marshal().zipFile()
                 .to("direct:uploadNetexFile")
                 .setBody(simple(LINE_FILE_NAME))
@@ -156,11 +151,13 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .end()
                 // end split
                 .end()
-                .process(e -> {
-                    Integer nbServiceJourneys = ((TreeSet<Integer>) e.getIn().getBody(TreeSet.class)).stream().mapToInt(Integer::intValue).sum();
-                    e.getIn().setHeader(DATASET_NB_SERVICE_JOURNEYS, nbServiceJourneys);
-                })
                 .routeId("publish-dataset");
+
+        from("direct:uploadNetexFile")
+                .setHeader(FILE_HANDLE, simple(LINE_FILE_NAME))
+                .log(LoggingLevel.INFO, correlation() + "Uploading NeTEx file ${header." + FILE_HANDLE + "}")
+                .to("direct:uploadNisabaBlob")
+                .routeId("upload-netex-file");
 
         from("direct:notifyConsumers")
                 .log(LoggingLevel.INFO, correlation() + "Notifying Kafka topic ${properties:nisaba.kafka.topic.event}")
@@ -168,13 +165,8 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .setHeader(KafkaConstants.KEY, header(DATASET_CODESPACE))
                 .to("kafka:{{nisaba.kafka.topic.event}}?clientId=nisaba-event&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy&valueSerializer=io.confluent.kafka.serializers.KafkaAvroSerializer").id("to-kafka-topic-event")
                 .removeHeader(KafkaConstants.KEY)
+                .log(LoggingLevel.INFO, correlation() + "Notified export of ${body.serviceJourneys} service journeys and ${body.commonFiles} common files")
                 .routeId("notify-consumers");
-
-        from("direct:uploadNetexFile")
-                .setHeader(FILE_HANDLE, simple(LINE_FILE_NAME))
-                .log(LoggingLevel.INFO, correlation() + "Uploading NeTEx file ${header." + FILE_HANDLE + "}")
-                .to("direct:uploadNisabaBlob")
-                .routeId("upload-netex-file");
 
     }
 

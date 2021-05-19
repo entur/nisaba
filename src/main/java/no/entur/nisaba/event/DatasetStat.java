@@ -1,5 +1,9 @@
-package no.entur.nisaba.domain;
+package no.entur.nisaba.event;
 
+
+/**
+ * Hold the service journeys and common files counters for the current import.
+ */
 public class DatasetStat {
 
     private int nbServiceJourneys;

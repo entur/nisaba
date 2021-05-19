@@ -24,7 +24,6 @@ import org.springframework.beans.factory.annotation.Value;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.UUID;
 
 
@@ -58,6 +57,9 @@ public abstract class BaseRouteBuilder extends RouteBuilder {
                 .logRetryStackTrace(true));
 
 
+        /**
+         * Copy all PubSub headers except the internal Camel PubSub headers from the PubSub message into the Camel message headers.
+         */
         interceptFrom("google-pubsub:*")
                 .process(exchange ->
                 {
@@ -65,13 +67,18 @@ public abstract class BaseRouteBuilder extends RouteBuilder {
                     pubSubAttributes.entrySet().stream().filter(entry -> !entry.getKey().startsWith("CamelGooglePubsub")).forEach(entry -> exchange.getIn().setHeader(entry.getKey(), entry.getValue()));
                 });
 
+        /**
+         * Copy only the correlationId and codespace headers from the Camel message into the PubSub message by default.
+         */
         interceptSendToEndpoint("google-pubsub:*").process(
                 exchange -> {
-                    Map<String, String> pubSubAttributes = new HashMap<>();
-                    exchange.getIn().getHeaders().entrySet().stream()
-                            .filter(entry -> !entry.getKey().startsWith("CamelGooglePubsub"))
-                            .filter(entry -> Objects.toString(entry.getValue()).length() <= 1024)
-                            .forEach(entry -> pubSubAttributes.put(entry.getKey(), Objects.toString(entry.getValue(), "")));
+                    Map<String, String> pubSubAttributes = new HashMap<>(exchange.getIn().getHeader(GooglePubsubConstants.ATTRIBUTES, new HashMap<>(), Map.class));
+                    if (exchange.getIn().getHeader(Constants.CORRELATION_ID) != null) {
+                        pubSubAttributes.put(Constants.CORRELATION_ID, exchange.getIn().getHeader(Constants.CORRELATION_ID, String.class));
+                    }
+                    if (exchange.getIn().getHeader(Constants.DATASET_CODESPACE) != null) {
+                        pubSubAttributes.put(Constants.DATASET_CODESPACE, exchange.getIn().getHeader(Constants.DATASET_CODESPACE, String.class));
+                    }
                     exchange.getIn().setHeader(GooglePubsubConstants.ATTRIBUTES, pubSubAttributes);
 
                 });
