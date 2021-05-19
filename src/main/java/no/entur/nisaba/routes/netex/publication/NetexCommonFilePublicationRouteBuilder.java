@@ -16,11 +16,13 @@
 
 package no.entur.nisaba.routes.netex.publication;
 
+import no.entur.nisaba.event.DatasetStatHelper;
 import no.entur.nisaba.domain.ListRangeSplitter;
 import no.entur.nisaba.routes.BaseRouteBuilder;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.kafka.common.errors.RecordTooLargeException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
 
@@ -36,17 +38,24 @@ public class NetexCommonFilePublicationRouteBuilder extends BaseRouteBuilder {
     private static final String COMMON_FILE = "COMMON_FILE";
     private static final String COMMON_FILE_PART = "COMMON_FILE_PART";
     private static final String COMMON_FILE_XSLT = "COMMON_FILE_XSLT";
-    private static final int RANGE_SIZE = 1000;
     private static final String COMMON_FILE_NB_ITEMS = "COMMON_FILE_NB_ITEMS";
+
     private static final String SPLIT_LOWER_BOUND = "SPLIT_LOWER_BOUND";
     private static final String SPLIT_UPPER_BOUND = "SPLIT_UPPER_BOUND";
 
+    private final int rangeSize;
+
+    public NetexCommonFilePublicationRouteBuilder(@Value("${nisaba.netex.range-size:800}") int rangeSize) {
+        this.rangeSize = rangeSize;
+    }
 
     @Override
     public void configure() throws Exception {
         super.configure();
 
 
+        // common files are processed synchronously (in the same thread as the one processing the notification event)
+        // so that the number of common files is known before sending the notification event.
         from("direct:processCommonFile")
                 .log(LoggingLevel.INFO, correlation() + "Processing common file ${header." + FILE_HANDLE + "}")
                 .convertBodyTo(Document.class)
@@ -63,6 +72,8 @@ public class NetexCommonFilePublicationRouteBuilder extends BaseRouteBuilder {
                 .end()
 
                 // For other common files: remove scheduledStopPoints, stopAssignments, routePoints and serviceLinks and create separate PublicationDeliveries for each of them
+
+                // The common file stripped of scheduledStopPoints, stopAssignments, routePoints and serviceLinks
 
                 .setBody(header(COMMON_FILE))
                 .setHeader(COMMON_FILE_PART, constant("Filtered common file"))
@@ -113,11 +124,11 @@ public class NetexCommonFilePublicationRouteBuilder extends BaseRouteBuilder {
         // split items in the common files in smaller PublicationDeliveries so that each message does not exceed the maximum size of a Kafka record
         from("direct:splitCommonFile")
                 .filter(header(COMMON_FILE_NB_ITEMS).isGreaterThan(0))
-                .log(LoggingLevel.INFO, correlation() + "Processing ${header." + COMMON_FILE_PART + "}) in common file ${header." + FILE_HANDLE + "}")
-                .bean(new ListRangeSplitter(RANGE_SIZE), "split(${header." + COMMON_FILE_NB_ITEMS + "})")
+                .log(LoggingLevel.INFO, correlation() + "Processing ${header." + COMMON_FILE_PART + "} in common file ${header." + FILE_HANDLE + "}")
+                .bean(new ListRangeSplitter(rangeSize), "split(${header." + COMMON_FILE_NB_ITEMS + "})")
                 .log(LoggingLevel.INFO, correlation() + "Splitting ${header." + COMMON_FILE_NB_ITEMS + "} ${header." + COMMON_FILE_PART + "} into ${body.size} PublicationDeliveries")
                 .split(body())
-                .log(LoggingLevel.INFO, correlation() + "Processing ${header." + COMMON_FILE_PART + "}) from position ${body.lowerBound} to position ${body.upperBound}")
+                .log(LoggingLevel.INFO, correlation() + "Processing ${header." + COMMON_FILE_PART + "} from position ${body.lowerBound} to position ${body.upperBound}")
                 .setHeader(SPLIT_LOWER_BOUND, simple("${body.lowerBound}"))
                 .setHeader(SPLIT_UPPER_BOUND, simple("${body.upperBound}"))
                 .setBody(header(COMMON_FILE))
@@ -125,15 +136,17 @@ public class NetexCommonFilePublicationRouteBuilder extends BaseRouteBuilder {
                 .to("direct:publishCommonFile")
                 // end split
                 .end()
-                .log(LoggingLevel.INFO, correlation() + "Processed ${header." + COMMON_FILE_PART + "}) in common file ${header." + FILE_HANDLE + "}")
+                .log(LoggingLevel.INFO, correlation() + "Processed ${header." + COMMON_FILE_PART + "} in common file ${header." + FILE_HANDLE + "}")
                 // end filter
                 .end()
                 .routeId("split-common-file");
 
         from("direct:publishCommonFile")
+                // explicitly compress the payload due to https://issues.apache.org/jira/browse/KAFKA-4169
                 .marshal().zipFile()
                 .doTry()
                 .to("kafka:{{nisaba.kafka.topic.common}}?clientId=nisaba-common&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy&valueSerializer=org.apache.kafka.common.serialization.ByteArraySerializer").id("to-kafka-topic-common")
+                .bean(DatasetStatHelper.class, "addCommonFiles(1)")
                 .doCatch(RecordTooLargeException.class)
                 .log(LoggingLevel.ERROR, "Cannot serialize common file ${header." + FILE_HANDLE + "} (${header." + COMMON_FILE_PART + "}) into Kafka topic, max message size exceeded ${exception.stacktrace} ")
                 .stop()
