@@ -47,10 +47,6 @@ public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBu
                 .stop()
                 .end()
                 .unmarshal().zipFile()
-                .choice()
-                .when(header(Exchange.FILE_NAME).startsWith("_"))
-                .to("direct:processCommonFile")
-                .otherwise()
                 .to("direct:processLineFile")
                 .routeId("pubsub-process-service-journey");
 

@@ -13,6 +13,21 @@
          "name":"importDateTime",
          "type":"string",
          "doc" : "The dataset initial import time. ISO-formatted local datetime"
+      },
+      {
+         "name":"importKey",
+         "type":"string",
+         "doc" : "The dataset import unique key. Also set in each message in the Kafka header EnturDatasetImportKey"
+      },
+      {
+         "name":"serviceJourneys",
+         "type":"int",
+         "doc" : "Number of service journeys in this dataset"
+      },
+      {
+         "name":"commonFiles",
+         "type":"int",
+         "doc" : "Number of common files in this dataset"
       }
    ]
 }

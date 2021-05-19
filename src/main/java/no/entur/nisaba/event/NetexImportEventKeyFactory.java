@@ -16,17 +16,23 @@
 
 package no.entur.nisaba.event;
 
-import no.entur.nisaba.avro.NetexImportEvent;
-import org.apache.camel.Body;
+import no.entur.nisaba.Constants;
+import org.apache.camel.Header;
+
+import java.time.LocalDateTime;
+
+import static no.entur.nisaba.Constants.DATE_TIME_FORMATTER;
 
 public class NetexImportEventKeyFactory {
+
 
     private NetexImportEventKeyFactory() {
 
     }
 
-    public static String createNetexImportEventKey(@Body NetexImportEvent netexImportEvent) {
-        return netexImportEvent.getCodespace().toString() + '_' + netexImportEvent.getImportDateTime().toString();
+    public static String createNetexImportEventKey(@Header(value = Constants.DATASET_CODESPACE) String codespace,
+                                                   @Header(value = Constants.DATASET_CREATION_TIME) LocalDateTime creationDate) {
+        return codespace + '_' + DATE_TIME_FORMATTER.format(creationDate);
     }
 
 }

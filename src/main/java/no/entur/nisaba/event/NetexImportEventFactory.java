@@ -19,13 +19,14 @@ package no.entur.nisaba.event;
 import no.entur.nisaba.Constants;
 import no.entur.nisaba.avro.NetexImportEvent;
 import org.apache.camel.Header;
+import org.springframework.util.Assert;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+
+import static no.entur.nisaba.Constants.DATE_TIME_FORMATTER;
 
 public class NetexImportEventFactory {
 
-    public static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern(Constants.DATE_TIME_FORMAT);
 
     private NetexImportEventFactory() {
 
@@ -33,7 +34,24 @@ public class NetexImportEventFactory {
 
 
     public static NetexImportEvent createNetexImportEvent(@Header(value = Constants.DATASET_CODESPACE) String codespace,
-                                                              @Header(value = Constants.DATASET_CREATION_TIME) LocalDateTime creationDate) {
-        return new NetexImportEvent(codespace, DATE_TIME_FORMATTER.format(creationDate));
+                                                          @Header(value = Constants.DATASET_CREATION_TIME) LocalDateTime creationDate,
+                                                          @Header(value = Constants.DATASET_IMPORT_KEY) String importKey,
+                                                          @Header(value = Constants.DATASET_NB_SERVICE_JOURNEYS) Integer nbServiceJourneys,
+                                                          @Header(value = Constants.DATASET_NB_COMMON_FILES) Integer nbCommonFiles
+    ) {
+        Assert.notNull(codespace, "codespace was null");
+        Assert.notNull(creationDate, "creationDate was null");
+        Assert.notNull(importKey, "importKey was null");
+        Assert.notNull(nbServiceJourneys, "nbServiceJourneys was null");
+        Assert.notNull(nbCommonFiles, "nbCommonFiles was null");
+
+        return NetexImportEvent.newBuilder()
+                .setCodespace(codespace)
+                .setImportDateTime(DATE_TIME_FORMATTER.format(creationDate))
+                .setImportKey(importKey)
+                .setServiceJourneys(nbServiceJourneys)
+                .setCommonFiles(nbCommonFiles)
+                .build();
+
     }
 }
