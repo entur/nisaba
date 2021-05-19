@@ -160,7 +160,7 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
 
         // expect filtered common file + scheduled stop points + stop assignments + route points + service links
         mockNisabaCommonTopic.expectedMessageCount(101);
-        mockNisabaCommonTopic.setResultWaitTime(60000);
+        mockNisabaCommonTopic.setResultWaitTime(100000);
         mockProcessLineFile.expectedMessageCount(0);
 
         mardukInMemoryBlobStoreRepository.uploadBlob(BLOBSTORE_PATH_OUTBOUND + "netex/rb_" + CODESPACE_NOR + "-" + CURRENT_AGGREGATED_NETEX_FILENAME,

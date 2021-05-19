@@ -54,6 +54,8 @@ public class NetexCommonFilePublicationRouteBuilder extends BaseRouteBuilder {
         super.configure();
 
 
+        // common files are processed synchronously (in the same thread as the one processing the notification event)
+        // so that the number of common files is known before sending the notification event.
         from("direct:processCommonFile")
                 .log(LoggingLevel.INFO, correlation() + "Processing common file ${header." + FILE_HANDLE + "}")
                 .convertBodyTo(Document.class)
@@ -70,6 +72,8 @@ public class NetexCommonFilePublicationRouteBuilder extends BaseRouteBuilder {
                 .end()
 
                 // For other common files: remove scheduledStopPoints, stopAssignments, routePoints and serviceLinks and create separate PublicationDeliveries for each of them
+
+                // The common file stripped of scheduledStopPoints, stopAssignments, routePoints and serviceLinks
 
                 .setBody(header(COMMON_FILE))
                 .setHeader(COMMON_FILE_PART, constant("Filtered common file"))
@@ -138,6 +142,7 @@ public class NetexCommonFilePublicationRouteBuilder extends BaseRouteBuilder {
                 .routeId("split-common-file");
 
         from("direct:publishCommonFile")
+                // explicitly compress the payload due to https://issues.apache.org/jira/browse/KAFKA-4169
                 .marshal().zipFile()
                 .doTry()
                 .to("kafka:{{nisaba.kafka.topic.common}}?clientId=nisaba-common&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy&valueSerializer=org.apache.kafka.common.serialization.ByteArraySerializer").id("to-kafka-topic-common")
