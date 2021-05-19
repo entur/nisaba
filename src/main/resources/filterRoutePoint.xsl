@@ -9,6 +9,23 @@
     <xsl:param name="SPLIT_LOWER_BOUND"/>
     <xsl:param name="SPLIT_UPPER_BOUND"/>
 
+    <!-- copy mandatory first-level elements in the PublicationDelivery -->
+    <xsl:template match="/netex:PublicationDelivery/netex:PublicationTimestamp|/netex:PublicationDelivery/netex:PublicationTimestamp//*">
+        <xsl:copy>
+            <xsl:apply-templates select="@*|*|text()"/>
+        </xsl:copy>
+    </xsl:template>
+    <xsl:template match="/netex:PublicationDelivery/netex:ParticipantRef|/netex:PublicationDelivery/netex:ParticipantRef//*">
+        <xsl:copy>
+            <xsl:apply-templates select="@*|*|text()"/>
+        </xsl:copy>
+    </xsl:template>
+    <xsl:template match="/netex:PublicationDelivery/netex:Description|/netex:PublicationDelivery/netex:Description//*">
+        <xsl:copy>
+            <xsl:apply-templates select="@*|*|text()"/>
+        </xsl:copy>
+    </xsl:template>
+
     <!-- copy the sub-tree that contains the route points and discard the other sub-trees -->
     <xsl:template match="*|/">
         <xsl:if test="descendant-or-self::netex:routePoints">

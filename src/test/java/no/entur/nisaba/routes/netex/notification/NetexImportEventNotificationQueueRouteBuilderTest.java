@@ -29,11 +29,18 @@ import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.commons.io.IOUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.rutebanken.netex.validation.NeTExValidator;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.xml.sax.SAXException;
 
+import javax.xml.transform.stream.StreamSource;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.zip.ZipInputStream;
 
 import static no.entur.nisaba.Constants.BLOBSTORE_PATH_OUTBOUND;
 import static no.entur.nisaba.Constants.CURRENT_AGGREGATED_NETEX_FILENAME;
@@ -149,6 +156,21 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
         context.start();
         exportNotificationQueueProducerTemplate.sendBody(CODESPACE_AVI);
         mockNisabaServiceJourneyTopic.assertIsSatisfied();
+
+        mockNisabaServiceJourneyTopic.getReceivedExchanges().forEach(
+                exchange -> {
+                    String netex = exchange.getIn().getBody(String.class);
+                    try {
+                        NeTExValidator neTExValidator = NeTExValidator.getNeTExValidator();
+                        neTExValidator.validate(new StreamSource(new StringReader(netex)));
+                    } catch (IOException | SAXException e) {
+                        Assertions.fail(e);
+                    }
+
+                }
+        );
+
+
     }
 
     @Test
@@ -172,6 +194,30 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
 
         mockNisabaCommonTopic.assertIsSatisfied();
         mockProcessLineFile.assertIsSatisfied();
+
+        mockNisabaCommonTopic.getReceivedExchanges().forEach(
+                exchange -> {
+                    byte[] body = exchange.getIn().getBody(byte[].class);
+                    ZipInputStream zis = null;
+                    try {
+                        zis = new ZipInputStream(new ByteArrayInputStream(body));
+                        zis.getNextEntry();
+                        String netex = new String(zis.readAllBytes());
+                        NeTExValidator neTExValidator = NeTExValidator.getNeTExValidator();
+                        neTExValidator.validate(new StreamSource(new StringReader(netex)));
+                    } catch (IOException | SAXException e) {
+                        Assertions.fail(e);
+                    } finally {
+                        if (zis != null) {
+                            try {
+                                zis.close();
+                            } catch (IOException e) {
+                                // ignored
+                            }
+                        }
+                    }
+                }
+        );
 
     }
 
