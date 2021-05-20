@@ -57,7 +57,6 @@ public abstract class BaseRouteBuilder extends RouteBuilder {
                 .logRetryStackTrace(true));
 
 
-
         // Copy all PubSub headers except the internal Camel PubSub headers from the PubSub message into the Camel message headers.
         interceptFrom("google-pubsub:*")
                 .process(exchange ->

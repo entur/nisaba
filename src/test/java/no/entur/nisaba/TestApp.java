@@ -16,8 +16,6 @@
 
 package no.entur.nisaba;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
@@ -29,8 +27,6 @@ import org.springframework.context.annotation.FilterType;
         @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, value = App.class),
 })
 public class TestApp extends App {
-
-    private static Logger logger = LoggerFactory.getLogger(TestApp.class);
 
     public static void main(String[] args) {
         SpringApplication.run(TestApp.class, args);

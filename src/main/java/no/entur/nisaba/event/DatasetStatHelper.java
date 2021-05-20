@@ -27,6 +27,7 @@ public class DatasetStatHelper {
 
     /**
      * Init the ServiceJourneys and common files counters for the current exchange.
+     *
      * @param headers all headers in the Camel Exchange.
      */
     public void init(@Headers Map<String, Object> headers) {
