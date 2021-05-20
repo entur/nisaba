@@ -16,8 +16,8 @@
 
 package no.entur.nisaba.routes.netex.publication;
 
-import no.entur.nisaba.event.DatasetStatHelper;
 import no.entur.nisaba.domain.ListRangeSplitter;
+import no.entur.nisaba.event.DatasetStatHelper;
 import no.entur.nisaba.routes.BaseRouteBuilder;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;

@@ -22,28 +22,19 @@ import java.time.format.DateTimeFormatter;
 
 public final class Constants {
     public static final String FILE_HANDLE = "RutebankenFileHandle";
-    public static final String FILE_PREFIX = "RutebankenFilePrefix";
-    public static final String TARGET_FILE_HANDLE = "RutebankenTargetFileHandle";
-    public static final String TARGET_FILE_PARENT = "RutebankenTargetFileParent";
-    public static final String TARGET_CONTAINER = "RutebankenTargetContainer";
-    public static final String FILE_PARENT_COLLECTION = "RutebankenFileParentCollection";
     public static final String CORRELATION_ID = "RutebankenCorrelationId";
     public static final String CURRENT_AGGREGATED_NETEX_FILENAME = "aggregated-netex.zip";
 
     public static final String BLOBSTORE_PATH_OUTBOUND = "outbound/";
-    public static final String BLOBSTORE_MAKE_BLOB_PUBLIC = "RutebankenBlobstoreMakeBlobPublic";
 
-    public static final String DATASET_IMPORT_KEY ="EnturDatasetImportKey";
+    public static final String DATASET_IMPORT_KEY = "EnturDatasetImportKey";
     public static final String DATASET_CREATION_TIME = "EnturDatasetCreationTime";
     public static final String DATASET_CODESPACE = "EnturDatasetCodespace";
 
     public static final String DATASET_STAT = "DATASET_STAT";
 
-    public static final String DATASET_NB_SERVICE_JOURNEYS = "EnturDatasetNbServiceJourneys";
-
     public static final String DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
     public static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern(Constants.DATE_TIME_FORMAT);
-
 
     public static final Namespaces XML_NAMESPACE_NETEX = new Namespaces("netex", "http://www.netex.org.uk/netex");
 

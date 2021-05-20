@@ -105,8 +105,7 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
         mockPublishDataset.whenAnyExchangeReceived(e -> e.getIn().setHeader(DATASET_STAT, new DatasetStat()));
 
         mardukInMemoryBlobStoreRepository.uploadBlob(BLOBSTORE_PATH_OUTBOUND + "netex/rb_" + CODESPACE_AVI + "-" + CURRENT_AGGREGATED_NETEX_FILENAME,
-                getClass().getResourceAsStream("/no/entur/nisaba/netex/import/rb_avi-aggregated-netex.zip"),
-                false);
+                getClass().getResourceAsStream("/no/entur/nisaba/netex/import/rb_avi-aggregated-netex.zip"));
 
         context.start();
         exportNotificationQueueProducerTemplate.sendBody(CODESPACE_AVI);
@@ -150,8 +149,7 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
         mockNisabaServiceJourneyTopic.setResultWaitTime(30000);
 
         mardukInMemoryBlobStoreRepository.uploadBlob(BLOBSTORE_PATH_OUTBOUND + "netex/rb_" + CODESPACE_AVI + "-" + CURRENT_AGGREGATED_NETEX_FILENAME,
-                getClass().getResourceAsStream("/no/entur/nisaba/netex/import/rb_avi-aggregated-netex.zip"),
-                false);
+                getClass().getResourceAsStream("/no/entur/nisaba/netex/import/rb_avi-aggregated-netex.zip"));
 
         context.start();
         exportNotificationQueueProducerTemplate.sendBody(CODESPACE_AVI);
@@ -186,8 +184,7 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
         mockProcessLineFile.expectedMessageCount(0);
 
         mardukInMemoryBlobStoreRepository.uploadBlob(BLOBSTORE_PATH_OUTBOUND + "netex/rb_" + CODESPACE_NOR + "-" + CURRENT_AGGREGATED_NETEX_FILENAME,
-                getClass().getResourceAsStream("/no/entur/nisaba/netex/import/rb_nor-aggregated-netex.zip"),
-                false);
+                getClass().getResourceAsStream("/no/entur/nisaba/netex/import/rb_nor-aggregated-netex.zip"));
 
         context.start();
         exportNotificationQueueProducerTemplate.sendBody(CODESPACE_NOR);
@@ -198,23 +195,13 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
         mockNisabaCommonTopic.getReceivedExchanges().forEach(
                 exchange -> {
                     byte[] body = exchange.getIn().getBody(byte[].class);
-                    ZipInputStream zis = null;
-                    try {
-                        zis = new ZipInputStream(new ByteArrayInputStream(body));
+                    try (ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(body))) {
                         zis.getNextEntry();
                         String netex = new String(zis.readAllBytes());
                         NeTExValidator neTExValidator = NeTExValidator.getNeTExValidator();
                         neTExValidator.validate(new StreamSource(new StringReader(netex)));
                     } catch (IOException | SAXException e) {
                         Assertions.fail(e);
-                    } finally {
-                        if (zis != null) {
-                            try {
-                                zis.close();
-                            } catch (IOException e) {
-                                // ignored
-                            }
-                        }
                     }
                 }
         );

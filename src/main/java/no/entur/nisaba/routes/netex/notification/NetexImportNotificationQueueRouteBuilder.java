@@ -76,7 +76,7 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
         from("direct:downloadNetexDataset")
                 .log(LoggingLevel.INFO, correlation() + "Downloading NeTEx dataset")
                 .setHeader(FILE_HANDLE, simple(BLOBSTORE_PATH_OUTBOUND + EXPORT_FILE_NAME))
-                .to("direct:getBlob")
+                .to("direct:getMardukBlob")
                 .routeId("download-netex-dataset");
 
         // Iterate over every XML files in the NeTEx archive, parse the "created" attribute of the CompositeFrame,

@@ -41,7 +41,7 @@ public class App extends RouteBuilder {
 
 
     // must have a main method spring-boot can run
-    public static void main(String... args) {
+    public static void main(String[] args) {
         LOGGER.info("Starting Nisaba...");
         SpringApplication.run(App.class, args);
     }

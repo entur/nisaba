@@ -16,25 +16,13 @@
 
 package no.entur.nisaba.repository;
 
-import com.google.cloud.storage.Acl;
-import com.google.cloud.storage.Blob;
-import com.google.cloud.storage.BlobId;
-import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.Storage;
-import no.entur.nisaba.domain.BlobStoreFiles;
 import org.rutebanken.helper.gcp.BlobStoreHelper;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Profile;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Repository;
-import org.springframework.util.StringUtils;
 
 import java.io.InputStream;
-import java.time.Instant;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
 
 /**
  * Blob store repository targeting Google Cloud Storage.
@@ -44,47 +32,16 @@ import java.util.List;
 @Scope("prototype")
 public class GcsBlobStoreRepository implements BlobStoreRepository {
 
-    @Autowired
-    private Storage storage;
+    private final Storage storage;
 
     private String containerName;
 
+    public GcsBlobStoreRepository(Storage storage) {
+        this.storage = storage;
+    }
+
     public void setContainerName(String containerName) {
         this.containerName = containerName;
-    }
-
-    @Override
-    public BlobStoreFiles listBlobs(Collection<String> prefixes) {
-        BlobStoreFiles blobStoreFiles = new BlobStoreFiles();
-
-
-        for (String prefix : prefixes) {
-            Iterator<Blob> blobIterator = BlobStoreHelper.listAllBlobsRecursively(storage, containerName, prefix);
-            blobIterator.forEachRemaining(blob -> blobStoreFiles.add(toBlobStoreFile(blob, blob.getName())));
-        }
-
-        return blobStoreFiles;
-    }
-
-    @Override
-    public BlobStoreFiles listBlobs(String prefix) {
-        return listBlobs(Collections.singletonList(prefix));
-    }
-
-
-    @Override
-    public BlobStoreFiles listBlobsFlat(String prefix) {
-        Iterator<Blob> blobIterator = BlobStoreHelper.listAllBlobsRecursively(storage, containerName, prefix);
-        BlobStoreFiles blobStoreFiles = new BlobStoreFiles();
-        while (blobIterator.hasNext()) {
-            Blob blob = blobIterator.next();
-            String fileName = blob.getName().replace(prefix, "");
-            if (StringUtils.hasText(fileName)) {
-                blobStoreFiles.add(toBlobStoreFile(blob, fileName));
-            }
-        }
-
-        return blobStoreFiles;
     }
 
     @Override
@@ -93,86 +50,8 @@ public class GcsBlobStoreRepository implements BlobStoreRepository {
     }
 
     @Override
-    public void uploadBlob(String name, InputStream inputStream, boolean makePublic) {
-        BlobStoreHelper.uploadBlobWithRetry(storage, containerName, name, inputStream, makePublic);
+    public void uploadBlob(String name, InputStream inputStream) {
+        BlobStoreHelper.uploadBlobWithRetry(storage, containerName, name, inputStream, false);
     }
-
-    @Override
-    public void uploadBlob(String name, InputStream inputStream, boolean makePublic, String contentType) {
-        BlobStoreHelper.uploadBlobWithRetry(storage, containerName, name, inputStream, makePublic, contentType);
-    }
-
-    @Override
-    public void copyBlob(String sourceContainerName, String sourceObjectName, String targetContainerName, String targetObjectName, boolean makePublic) {
-
-        List<Storage.BlobTargetOption> blobTargetOptions = makePublic ? List.of(Storage.BlobTargetOption.predefinedAcl(Storage.PredefinedAcl.PUBLIC_READ))
-                : Collections.emptyList();
-        Storage.CopyRequest request =
-                Storage.CopyRequest.newBuilder()
-                        .setSource(BlobId.of(sourceContainerName, sourceObjectName))
-                        .setTarget(BlobId.of(targetContainerName, targetObjectName), blobTargetOptions)
-                        .build();
-        storage.copy(request).getResult();
-    }
-
-    @Override
-    public void copyAllBlobs(String sourceContainerName, String prefix, String targetContainerName, String targetPrefix, boolean makePublic) {
-        Iterator<Blob> blobIterator = BlobStoreHelper.listAllBlobsRecursively(storage, sourceContainerName, prefix);
-        while (blobIterator.hasNext()) {
-            Blob blob = blobIterator.next();
-
-            List<Storage.BlobTargetOption> blobTargetOptions = makePublic ? List.of(Storage.BlobTargetOption.predefinedAcl(Storage.PredefinedAcl.PUBLIC_READ))
-                    : Collections.emptyList();
-
-            BlobInfo.Builder targetBlobInfoBuilder = BlobInfo.newBuilder(targetContainerName, blob.getName().replace(prefix, targetPrefix));
-            BlobId targetBlobId = targetBlobInfoBuilder.build().getBlobId();
-
-            Storage.CopyRequest request =
-                    Storage.CopyRequest.newBuilder()
-                            .setSource(blob.getBlobId())
-                            .setTarget(targetBlobId, blobTargetOptions)
-                            .build();
-            Blob targetBlob = storage.copy(request).getResult();
-
-            if (targetBlob.getName().endsWith(".html")) {
-                BlobInfo updatedInfo = targetBlob.toBuilder().setContentType("text/html").build();
-                storage.update(updatedInfo);
-            }
-        }
-    }
-
-    @Override
-    public boolean delete(String objectName) {
-        return BlobStoreHelper.delete(storage, BlobId.of(containerName, objectName));
-    }
-
-    @Override
-    public boolean deleteAllFilesInFolder(String folder) {
-        return BlobStoreHelper.deleteBlobsByPrefix(storage, containerName, folder);
-    }
-
-
-    private BlobStoreFiles.File toBlobStoreFile(Blob blob, String fileName) {
-        BlobStoreFiles.File file = new BlobStoreFiles.File(fileName, Instant.ofEpochMilli(blob.getCreateTime()), Instant.ofEpochMilli(blob.getUpdateTime()), blob.getSize());
-        if (file.getName().contains("graphs/")) {
-            file.setFormat(BlobStoreFiles.File.Format.GRAPH);
-        } else if (file.getName().contains("/netex/")) {
-            file.setFormat(BlobStoreFiles.File.Format.NETEX);
-
-        } else if (file.getName().contains("/gtfs/")) {
-            file.setFormat(BlobStoreFiles.File.Format.GTFS);
-
-        } else {
-            file.setFormat(BlobStoreFiles.File.Format.UNKOWN);
-        }
-
-        if (blob.getAcl() != null) {
-            if (blob.getAcl().stream().anyMatch(acl -> Acl.User.ofAllUsers().equals(acl.getEntity()) && acl.getRole() != null)) {
-                file.setUrl(blob.getMediaLink());
-            }
-        }
-        return file;
-    }
-
 
 }

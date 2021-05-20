@@ -15,7 +15,6 @@
 
 package no.entur.nisaba.repository;
 
-import no.entur.nisaba.domain.BlobStoreFiles;
 import no.entur.nisaba.exceptions.NisabaException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,15 +30,6 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
-import java.nio.file.attribute.BasicFileAttributes;
-import java.time.Instant;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * Simple file-based blob store repository for testing purpose.
@@ -56,42 +46,8 @@ public class LocalDiskBlobStoreRepository implements BlobStoreRepository {
 
     private String containerName;
 
-    @Override
-    public BlobStoreFiles listBlobs(String prefix) {
-        return listBlobs(Collections.singletonList(prefix));
-    }
-
-    @Override
-    public BlobStoreFiles listBlobs(Collection<String> prefixes) {
-
-        BlobStoreFiles blobStoreFiles = new BlobStoreFiles();
-        for (String prefix : prefixes) {
-            if (Paths.get(getContainerFolder(), prefix).toFile().isDirectory()) {
-                try (Stream<Path> walk = Files.walk(Paths.get(getContainerFolder(), prefix))) {
-                    List<BlobStoreFiles.File> result = walk.filter(Files::isRegularFile)
-                            .map(path -> new BlobStoreFiles.File(Paths.get(getContainerFolder()).relativize(path).toString(), getFileCreationDate(path), getFileLastModifiedDate(path), getFileSize(path))).collect(Collectors.toList());
-                    blobStoreFiles.add(result);
-                } catch (IOException e) {
-                    throw new NisabaException(e);
-                }
-            }
-
-        }
-        return blobStoreFiles;
-    }
-
     private String getContainerFolder() {
         return baseFolder + File.separator + containerName;
-    }
-
-
-    @Override
-    public BlobStoreFiles listBlobsFlat(String prefix) {
-        List<BlobStoreFiles.File> files = listBlobs(prefix).getFiles();
-        List<BlobStoreFiles.File> result = files.stream().map(file -> new BlobStoreFiles.File(file.getName().replaceFirst(prefix, ""), file.getCreated(), file.getUpdated(), file.getFileSize())).collect(Collectors.toList());
-        BlobStoreFiles blobStoreFiles = new BlobStoreFiles();
-        blobStoreFiles.add(result);
-        return blobStoreFiles;
     }
 
     @Override
@@ -113,7 +69,7 @@ public class LocalDiskBlobStoreRepository implements BlobStoreRepository {
     }
 
     @Override
-    public void uploadBlob(String objectName, InputStream inputStream, boolean makePublic) {
+    public void uploadBlob(String objectName, InputStream inputStream) {
         LOGGER.debug("Upload blob called in local-disk blob store on {}", objectName);
         try {
             Path localPath = Paths.get(objectName);
@@ -130,81 +86,10 @@ public class LocalDiskBlobStoreRepository implements BlobStoreRepository {
         }
     }
 
-    @Override
-    public void copyBlob(String sourceContainerName, String sourceObjectName, String targetContainerName, String targetObjectName, boolean makePublic) {
-        try {
-            Files.copy(Path.of(baseFolder, sourceContainerName, sourceObjectName), Path.of(baseFolder, targetContainerName, targetObjectName), StandardCopyOption.REPLACE_EXISTING);
-        } catch (IOException e) {
-            throw new NisabaException(e);
-        }
-    }
-
-    @Override
-    public void copyAllBlobs(String sourceContainerName, String prefix, String targetContainerName, String targetPrefix, boolean makePublic) {
-        // no-op implementation for local disk blobstore
-    }
-
-    @Override
-    public void uploadBlob(String objectName, InputStream inputStream, boolean makePublic, String contentType) {
-        uploadBlob(objectName, inputStream, makePublic);
-    }
 
     @Override
     public void setContainerName(String containerName) {
         this.containerName = containerName;
     }
 
-    @Override
-    public boolean delete(String objectName) {
-        LOGGER.debug("Delete blob called in local-disk blob store on: {}", objectName);
-        Path path = Paths.get(getContainerFolder()).resolve(objectName);
-        if (!path.toFile().exists()) {
-            LOGGER.debug("delete(): File not found in local-disk blob store: {} ", path);
-            return false;
-        }
-        try {
-            Files.delete(path);
-            return true;
-        } catch (IOException e) {
-            throw new NisabaException(e);
-        }
-    }
-
-    @Override
-    public boolean deleteAllFilesInFolder(String folder) {
-        Path folderToDelete = Paths.get(getContainerFolder()).resolve(folder);
-        if (folderToDelete.toFile().isDirectory()) {
-            try (Stream<Path> paths = Files.walk(folderToDelete)) {
-                paths.sorted(Comparator.reverseOrder())
-                        .forEach(path -> {
-                            try {
-                                Files.delete(path);
-                            } catch (IOException e) {
-                                throw new NisabaException(e);
-                            }
-                        });
-                return true;
-            } catch (IOException e) {
-                throw new NisabaException(e);
-            }
-        }
-        return false;
-    }
-
-    private static Instant getFileCreationDate(Path path) {
-        try {
-            BasicFileAttributes attr = Files.readAttributes(path, BasicFileAttributes.class);
-            return Instant.ofEpochMilli(attr.creationTime().toMillis());
-        } catch (IOException e) {
-            throw new NisabaException(e);
-        }
-    }
-
-    private static Instant getFileLastModifiedDate(Path path) {
-        return Instant.ofEpochMilli(path.toFile().lastModified());
-    }
-
-    private static long getFileSize(Path path) {
-        return path.toFile().length();
-    }
 }
