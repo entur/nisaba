@@ -17,7 +17,7 @@
 package no.entur.nisaba.routes.blobstore;
 
 import no.entur.nisaba.routes.BaseRouteBuilder;
-import no.entur.nisaba.services.NisabaBlobStoreService;
+import no.entur.nisaba.services.MardukBlobStoreService;
 import org.apache.camel.LoggingLevel;
 import org.springframework.stereotype.Component;
 
@@ -25,30 +25,22 @@ import static no.entur.nisaba.Constants.FILE_HANDLE;
 
 
 @Component
-public class NisabaBlobStoreRoute extends BaseRouteBuilder {
+public class MardukBlobStoreRoute extends BaseRouteBuilder {
 
-    private final NisabaBlobStoreService nisabaBlobStoreService;
+    private final MardukBlobStoreService mardukBlobStoreService;
 
-    public NisabaBlobStoreRoute(NisabaBlobStoreService nisabaBlobStoreService) {
-        this.nisabaBlobStoreService = nisabaBlobStoreService;
+    public MardukBlobStoreRoute(MardukBlobStoreService mardukBlobStoreService) {
+        this.mardukBlobStoreService = mardukBlobStoreService;
     }
 
     @Override
     public void configure() {
 
-        from("direct:uploadNisabaBlob")
+        from("direct:getMardukBlob")
                 .to(logDebugShowAll())
-                .bean(nisabaBlobStoreService, "uploadBlob")
-                .setBody(simple(""))
+                .bean(mardukBlobStoreService, "getBlob")
                 .to(logDebugShowAll())
-                .log(LoggingLevel.INFO, correlation() + "Stored file ${header." + FILE_HANDLE + "} in blob store.")
-                .routeId("blobstore-nisaba-upload");
-
-        from("direct:getNisabaBlob")
-                .to(logDebugShowAll())
-                .bean(nisabaBlobStoreService, "getBlob")
-                .to(logDebugShowAll())
-                .log(LoggingLevel.INFO, correlation() + "Returning from fetching file ${header." + FILE_HANDLE + "} from blob store.")
-                .routeId("blobstore-nisaba-download");
+                .log(LoggingLevel.INFO, correlation() + "Returning from fetching file ${header." + FILE_HANDLE + "} from Marduk bucket.")
+                .routeId("blobstore-marduk-download");
     }
 }

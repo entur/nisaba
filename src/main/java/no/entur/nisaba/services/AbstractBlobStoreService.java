@@ -1,74 +1,44 @@
+/*
+ * Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
+ * the European Commission - subsequent versions of the EUPL (the "Licence");
+ * You may not use this work except in compliance with the Licence.
+ * You may obtain a copy of the Licence at:
+ *
+ *   https://joinup.ec.europa.eu/software/page/eupl
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the Licence is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the Licence for the specific language governing permissions and
+ * limitations under the Licence.
+ *
+ */
+
 package no.entur.nisaba.services;
 
 import no.entur.nisaba.Constants;
-import no.entur.nisaba.domain.BlobStoreFiles;
-import no.entur.nisaba.exceptions.NisabaException;
 import no.entur.nisaba.repository.BlobStoreRepository;
 import org.apache.camel.Exchange;
 import org.apache.camel.Header;
 
 import java.io.InputStream;
-import java.util.Collection;
-
-import static no.entur.nisaba.Constants.FILE_HANDLE;
 
 public abstract class AbstractBlobStoreService {
 
-    protected BlobStoreRepository repository;
-
-    private String containerName;
+    protected final BlobStoreRepository repository;
 
     protected AbstractBlobStoreService(String containerName, BlobStoreRepository repository) {
-        this.containerName = containerName;
         this.repository = repository;
         this.repository.setContainerName(containerName);
-    }
-
-    public BlobStoreFiles listBlobsInFolder(@Header(value = Exchange.FILE_PARENT) String folder, Exchange exchange) {
-        return repository.listBlobs(folder + "/");
-    }
-
-    public BlobStoreFiles listBlobsInFolders(@Header(value = Constants.FILE_PARENT_COLLECTION) Collection<String> folders, Exchange exchange) {
-        return repository.listBlobs(folders);
-    }
-
-    public BlobStoreFiles.File findBlob(@Header(value = Constants.FILE_PREFIX) String prefix, Exchange exchange) {
-        BlobStoreFiles blobStoreFiles = repository.listBlobs(prefix);
-        if (blobStoreFiles.getFiles().isEmpty()) {
-            return null;
-        } else if (blobStoreFiles.getFiles().size() > 1) {
-            throw new NisabaException("Found multiple files matching the prefix " + prefix);
-        }
-        return blobStoreFiles.getFiles().get(0);
     }
 
     public InputStream getBlob(@Header(value = Constants.FILE_HANDLE) String name, Exchange exchange) {
         return repository.getBlob(name);
     }
 
-    public void uploadBlob(@Header(value = Constants.FILE_HANDLE) String name,
-                           @Header(value = Constants.BLOBSTORE_MAKE_BLOB_PUBLIC) boolean makePublic, InputStream inputStream, Exchange exchange) {
-        repository.uploadBlob(name, inputStream, makePublic);
+    public void uploadBlob(@Header(value = Constants.FILE_HANDLE) String name, InputStream inputStream, Exchange exchange) {
+        repository.uploadBlob(name, inputStream);
     }
 
-    public void copyBlobInBucket(@Header(value = Constants.FILE_HANDLE) String sourceName, @Header(value = Constants.TARGET_FILE_HANDLE) String targetName, @Header(value = Constants.BLOBSTORE_MAKE_BLOB_PUBLIC) boolean makePublic, Exchange exchange) {
-        repository.copyBlob(containerName, sourceName, containerName, targetName, makePublic);
-    }
-
-    public void copyBlobToAnotherBucket(@Header(value = Constants.FILE_HANDLE) String sourceName, @Header(value = Constants.TARGET_CONTAINER) String targetContainerName, @Header(value = Constants.TARGET_FILE_HANDLE) String targetName, @Header(value = Constants.BLOBSTORE_MAKE_BLOB_PUBLIC) boolean makePublic, Exchange exchange) {
-        repository.copyBlob(containerName, sourceName, targetContainerName, targetName, makePublic);
-    }
-
-    public void copyAllBlobs(@Header(value = Exchange.FILE_PARENT) String sourceFolder, @Header(value = Constants.TARGET_CONTAINER) String targetContainerName, @Header(value = Constants.TARGET_FILE_PARENT) String targetFolder, @Header(value = Constants.BLOBSTORE_MAKE_BLOB_PUBLIC) boolean makePublic, Exchange exchange) {
-        repository.copyAllBlobs(containerName, sourceFolder, targetContainerName, targetFolder, makePublic);
-    }
-
-    public boolean deleteBlob(@Header(value = FILE_HANDLE) String name, Exchange exchange) {
-        return repository.delete(name);
-    }
-
-    public boolean deleteAllBlobsInFolder(@Header(value = Exchange.FILE_PARENT) String folder, Exchange exchange) {
-        return repository.deleteAllFilesInFolder(folder);
-    }
 
 }

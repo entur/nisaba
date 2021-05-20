@@ -16,10 +16,7 @@
 
 package no.entur.nisaba.repository;
 
-import no.entur.nisaba.domain.BlobStoreFiles;
-
 import java.io.InputStream;
-import java.util.Collection;
 
 /**
  * Repository interface for managing binary files.
@@ -28,40 +25,10 @@ import java.util.Collection;
  */
 public interface BlobStoreRepository {
 
-    BlobStoreFiles listBlobs(Collection<String> prefixes);
-
-    /**
-     * Retrieve the list of files in the blob store under the given prefix.
-     *
-     * @param prefix the prefix under which to look up files in the blob store.
-     * @return The files in the blob store under the given prefix.
-     */
-    BlobStoreFiles listBlobs(String prefix);
-
-    /**
-     * Retrieve the list of files in the blob store under the given prefix. In the returned list
-     * of {@link BlobStoreFiles.File}s, the file names are stripped of the prefix. Example:
-     * /inbound/received/myfile.zip --> myfile.zip
-     *
-     * @param prefix the prefix under which to look up files in the blob store.
-     * @return The files in the blob store under the given prefix. The prefix is removed from the file names.
-     */
-    BlobStoreFiles listBlobsFlat(String prefix);
-
     InputStream getBlob(String objectName);
 
-    void uploadBlob(String objectName, InputStream inputStream, boolean makePublic);
-
-    void uploadBlob(String objectName, InputStream inputStream, boolean makePublic, String contentType);
-
-    void copyBlob(String sourceContainerName, String sourceObjectName, String targetContainerName, String targetObjectName, boolean makePublic);
-
-    void copyAllBlobs(String sourceContainerName, String prefix, String targetContainerName, String targetPrefix, boolean makePublic);
+    void uploadBlob(String objectName, InputStream inputStream);
 
     void setContainerName(String containerName);
-
-    boolean delete(String objectName);
-
-    boolean deleteAllFilesInFolder(String folder);
 
 }
