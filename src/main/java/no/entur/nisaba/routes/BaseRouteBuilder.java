@@ -16,13 +16,20 @@
 
 package no.entur.nisaba.routes;
 
+import com.google.pubsub.v1.ModifyAckDeadlineRequest;
+import com.google.pubsub.v1.ProjectSubscriptionName;
 import no.entur.nisaba.Constants;
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
+import org.apache.camel.component.google.pubsub.GooglePubsubComponent;
 import org.apache.camel.component.google.pubsub.GooglePubsubConstants;
+import org.apache.camel.component.google.pubsub.GooglePubsubEndpoint;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 
+import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -104,6 +111,18 @@ public abstract class BaseRouteBuilder extends RouteBuilder {
 
     protected String correlation() {
         return "[codespace=${header." + Constants.DATASET_CODESPACE + "} correlationId=${header." + Constants.CORRELATION_ID + "}] ";
+    }
+
+    public void modifyAckDeadline(Exchange exchange, int deadlineSeconds) throws IOException {
+        String ackId = exchange.getIn().getHeader(GooglePubsubConstants.ACK_ID, String.class);
+        GooglePubsubEndpoint fromEndpoint = (GooglePubsubEndpoint) exchange.getFromEndpoint();
+        String subscriptionName = ProjectSubscriptionName.format(fromEndpoint.getProjectId(), fromEndpoint.getDestinationName());
+        ModifyAckDeadlineRequest modifyAckDeadlineRequest = ModifyAckDeadlineRequest.newBuilder()
+                .setSubscription(subscriptionName)
+                .addAllAckIds(List.of(ackId))
+                .setAckDeadlineSeconds(deadlineSeconds)
+                .build();
+        fromEndpoint.getComponent().getSubscriberStub().modifyAckDeadlineCallable().call(modifyAckDeadlineRequest);
     }
 
 }
