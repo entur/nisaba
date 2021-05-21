@@ -176,16 +176,15 @@ class GooglePubsubConsumer extends DefaultConsumer {
                         }
                     }
                 } catch (IOException e) {
-                    localLog.error("Failure getting messages from PubSub", e);
-                } catch (ApiException  e) {
-                    if(e.isRetryable()) {
-                        localLog.warn("Retryable Google API exception with status code {}. Retrying...", e.getStatusCode(), e);
+                    localLog.warn("A network error occurred while pulling PubSub messages. Retrying...", e);
+                } catch (ApiException e) {
+                    if (e.isRetryable()) {
+                        localLog.warn("A retryable server-side error occurred while pulling PubSub messages (status code: {}). Retrying...", e.getStatusCode(), e);
                     } else {
-                        localLog.error("Non-retryable Google API exception with status code {}.", e.getStatusCode(), e);
+                        localLog.error("A non-retryable server-side error occurred while pulling PubSub messages (status code: {}). Consumer disconnected.", e.getStatusCode(), e);
                         throw e;
                     }
-
-            }
+                }
             }
         }
     }
