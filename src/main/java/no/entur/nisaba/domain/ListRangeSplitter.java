@@ -24,16 +24,8 @@ import java.util.List;
  */
 public class ListRangeSplitter {
 
-    private final int rangeSize;
 
-    /**
-     * @param rangeSize the size of each range.
-     */
-    public ListRangeSplitter(int rangeSize) {
-        this.rangeSize = rangeSize;
-    }
-
-    public List<Range> split(int nbItems) {
+    public List<Range> split(int nbItems, int rangeSize) {
 
         ArrayList<Range> ranges = new ArrayList<>();
         int nbRanges = nbItems / rangeSize;
