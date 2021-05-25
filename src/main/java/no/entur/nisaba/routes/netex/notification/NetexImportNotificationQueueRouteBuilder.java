@@ -38,7 +38,6 @@ import static no.entur.nisaba.Constants.DATASET_CREATION_TIME;
 import static no.entur.nisaba.Constants.DATASET_IMPORT_KEY;
 import static no.entur.nisaba.Constants.FILE_HANDLE;
 import static no.entur.nisaba.Constants.XML_NAMESPACE_NETEX;
-import static org.apache.camel.builder.Builder.bean;
 
 /**
  * Receive a notification when a new NeTEx export is available in the blob store and send an event in a Kafka topic
@@ -69,7 +68,7 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .end()
                 .log(LoggingLevel.INFO, correlation() + "NeTEx export file downloaded")
                 .to("direct:retrieveDatasetCreationTime")
-                .setHeader(DATASET_IMPORT_KEY, bean(NetexImportEventKeyFactory.class, "createNetexImportEventKey"))
+                .setHeader(DATASET_IMPORT_KEY, method(NetexImportEventKeyFactory.class, "createNetexImportEventKey"))
                 .to("direct:notifyConsumersIfNew")
                 .routeId("netex-export-notification-queue");
 

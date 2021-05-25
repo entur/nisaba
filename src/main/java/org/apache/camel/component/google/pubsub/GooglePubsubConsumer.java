@@ -42,7 +42,7 @@ import org.apache.camel.support.DefaultConsumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class GooglePubsubConsumer extends DefaultConsumer {
+public class GooglePubsubConsumer extends DefaultConsumer {
 
     private Logger localLog;
 
@@ -123,11 +123,12 @@ class GooglePubsubConsumer extends DefaultConsumer {
             }
         }
 
-        private void asynchronousPull(String subscriptionName) {
+        private void asynchronousPull(String subscriptionName) throws IOException {
             while (isRunAllowed() && !isSuspendingOrSuspended()) {
-                MessageReceiver messageReceiver = new CamelMessageReceiver(endpoint, processor);
+                MessageReceiver messageReceiver = new CamelMessageReceiver(GooglePubsubConsumer.this, endpoint, processor);
 
-                Subscriber subscriber = endpoint.getComponent().getSubscriber(subscriptionName, messageReceiver);
+                Subscriber subscriber = endpoint.getComponent().getSubscriber(subscriptionName, messageReceiver,
+                        endpoint.getServiceAccountKey());
                 try {
                     subscribers.add(subscriber);
                     subscriber.startAsync().awaitRunning();
@@ -143,7 +144,7 @@ class GooglePubsubConsumer extends DefaultConsumer {
 
         private void synchronousPull(String subscriptionName) {
             while (isRunAllowed() && !isSuspendingOrSuspended()) {
-                try (SubscriberStub subscriber = endpoint.getComponent().getSubscriberStub()) {
+                try (SubscriberStub subscriber = endpoint.getComponent().getSubscriberStub(endpoint.getServiceAccountKey())) {
 
                     PullRequest pullRequest = PullRequest.newBuilder()
                             .setMaxMessages(endpoint.getMaxMessagesPerPoll())
@@ -154,7 +155,7 @@ class GooglePubsubConsumer extends DefaultConsumer {
                     PullResponse pullResponse = subscriber.pullCallable().call(pullRequest);
                     for (ReceivedMessage message : pullResponse.getReceivedMessagesList()) {
                         PubsubMessage pubsubMessage = message.getMessage();
-                        Exchange exchange = endpoint.createExchange();
+                        Exchange exchange = createExchange(true);
                         exchange.getIn().setBody(pubsubMessage.getData().toByteArray());
 
                         exchange.getIn().setHeader(GooglePubsubConstants.ACK_ID, message.getAckId());
@@ -172,8 +173,8 @@ class GooglePubsubConsumer extends DefaultConsumer {
 
                         try {
                             processor.process(exchange);
-                        } catch (Throwable e) {
-                            exchange.setException(e);
+                        } catch (Exception e) {
+                            getExceptionHandler().handleException(e);
                         }
                     }
                 } catch (IOException e) {
