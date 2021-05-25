@@ -69,7 +69,7 @@ public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBu
         from("direct:processServiceJourney")
                 // extend pubsub acknowledgment deadline every 500 service journeys
                 .filter(exchange -> exchange.getProperty(Exchange.SPLIT_INDEX, Integer.class) % 500 == 0)
-                .process(e-> modifyAckDeadline(e, 500))
+                .process(this::extendAckDeadline)
                 //end filter
                 .end()
                 .setBody(simple("${body.value}"))
