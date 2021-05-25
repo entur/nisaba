@@ -39,14 +39,17 @@ public class NetexCommonFilePublicationRouteBuilder extends BaseRouteBuilder {
     private static final String COMMON_FILE_PART = "COMMON_FILE_PART";
     private static final String COMMON_FILE_XSLT = "COMMON_FILE_XSLT";
     private static final String COMMON_FILE_NB_ITEMS = "COMMON_FILE_NB_ITEMS";
+    private static final String COMMON_FILE_RANGE_SIZE = "COMMON_FILE_RANGE_SIZE";
 
     private static final String SPLIT_LOWER_BOUND = "SPLIT_LOWER_BOUND";
     private static final String SPLIT_UPPER_BOUND = "SPLIT_UPPER_BOUND";
 
     private final int rangeSize;
+    private final int rangeSizeForServiceLinks;
 
-    public NetexCommonFilePublicationRouteBuilder(@Value("${nisaba.netex.range-size:800}") int rangeSize) {
+    public NetexCommonFilePublicationRouteBuilder(@Value("${nisaba.netex.range-size:2000}") int rangeSize, @Value("${nisaba.netex.service-links.range-size:500}") int rangeSizeForServiceLinks) {
         this.rangeSize = rangeSize;
+        this.rangeSizeForServiceLinks = rangeSizeForServiceLinks;
     }
 
     @Override
@@ -87,6 +90,7 @@ public class NetexCommonFilePublicationRouteBuilder extends BaseRouteBuilder {
                 .setBody(header(COMMON_FILE))
                 .setHeader(COMMON_FILE_PART, constant("Scheduled Stop Points"))
                 .setHeader(COMMON_FILE_XSLT, constant("filterScheduledStopPoint.xsl"))
+                .setHeader(COMMON_FILE_RANGE_SIZE, constant(rangeSize))
                 .setHeader(COMMON_FILE_NB_ITEMS,
                         xpath("count(/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:ServiceFrame/netex:scheduledStopPoints/netex:ScheduledStopPoint)", Integer.class, XML_NAMESPACE_NETEX))
                 .to("direct:splitCommonFile")
@@ -96,6 +100,7 @@ public class NetexCommonFilePublicationRouteBuilder extends BaseRouteBuilder {
                 .setBody(header(COMMON_FILE))
                 .setHeader(COMMON_FILE_PART, constant("Stop Assignments"))
                 .setHeader(COMMON_FILE_XSLT, constant("filterStopAssignment.xsl"))
+                .setHeader(COMMON_FILE_RANGE_SIZE, constant(rangeSize))
                 .setHeader(COMMON_FILE_NB_ITEMS,
                         xpath("count(/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:ServiceFrame/netex:stopAssignments/netex:PassengerStopAssignment)", Integer.class, XML_NAMESPACE_NETEX))
                 .to("direct:splitCommonFile")
@@ -105,6 +110,7 @@ public class NetexCommonFilePublicationRouteBuilder extends BaseRouteBuilder {
                 .setBody(header(COMMON_FILE))
                 .setHeader(COMMON_FILE_PART, constant("Route Points"))
                 .setHeader(COMMON_FILE_XSLT, constant("filterRoutePoint.xsl"))
+                .setHeader(COMMON_FILE_RANGE_SIZE, constant(rangeSize))
                 .setHeader(COMMON_FILE_NB_ITEMS,
                         xpath("count(/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:ServiceFrame/netex:routePoints/netex:RoutePoint)", Integer.class, XML_NAMESPACE_NETEX))
                 .to("direct:splitCommonFile")
@@ -114,6 +120,7 @@ public class NetexCommonFilePublicationRouteBuilder extends BaseRouteBuilder {
                 .setBody(header(COMMON_FILE))
                 .setHeader(COMMON_FILE_PART, constant("Service Links"))
                 .setHeader(COMMON_FILE_XSLT, constant("filterServiceLink.xsl"))
+                .setHeader(COMMON_FILE_RANGE_SIZE, constant(rangeSizeForServiceLinks))
                 .setHeader(COMMON_FILE_NB_ITEMS,
                         xpath("count(/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:ServiceFrame/netex:serviceLinks/netex:ServiceLink)", Integer.class, XML_NAMESPACE_NETEX))
                 .to("direct:splitCommonFile")
@@ -125,7 +132,7 @@ public class NetexCommonFilePublicationRouteBuilder extends BaseRouteBuilder {
         from("direct:splitCommonFile")
                 .filter(header(COMMON_FILE_NB_ITEMS).isGreaterThan(0))
                 .log(LoggingLevel.INFO, correlation() + "Processing ${header." + COMMON_FILE_PART + "} in common file ${header." + FILE_HANDLE + "}")
-                .bean(new ListRangeSplitter(rangeSize), "split(${header." + COMMON_FILE_NB_ITEMS + "})")
+                .bean(new ListRangeSplitter(), "split(${header." + COMMON_FILE_NB_ITEMS + "}, ${header." + COMMON_FILE_RANGE_SIZE + "})")
                 .log(LoggingLevel.INFO, correlation() + "Splitting ${header." + COMMON_FILE_NB_ITEMS + "} ${header." + COMMON_FILE_PART + "} into ${body.size} PublicationDeliveries")
                 .split(body())
                 .log(LoggingLevel.INFO, correlation() + "Processing ${header." + COMMON_FILE_PART + "} from position ${body.lowerBound} to position ${body.upperBound}")
