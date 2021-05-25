@@ -16,13 +16,18 @@
 
 package no.entur.nisaba.routes;
 
+import com.google.pubsub.v1.ModifyAckDeadlineRequest;
+import com.google.pubsub.v1.ProjectSubscriptionName;
 import no.entur.nisaba.Constants;
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.google.pubsub.GooglePubsubConstants;
+import org.apache.camel.component.google.pubsub.GooglePubsubEndpoint;
 import org.springframework.beans.factory.annotation.Value;
 
+import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -31,6 +36,8 @@ import java.util.UUID;
  * Defines common route behavior.
  */
 public abstract class BaseRouteBuilder extends RouteBuilder {
+
+    private static final int ACK_DEADLINE_EXTENSION = 500;
 
     @Value("${quartz.lenient.fire.time.ms:180000}")
     private int lenientFireTimeMs;
@@ -43,7 +50,6 @@ public abstract class BaseRouteBuilder extends RouteBuilder {
 
     @Value("${nisaba.camel.redelivery.backoff.multiplier:3}")
     private int backOffMultiplier;
-
 
     @Override
     public void configure() throws Exception {
@@ -104,6 +110,23 @@ public abstract class BaseRouteBuilder extends RouteBuilder {
 
     protected String correlation() {
         return "[codespace=${header." + Constants.DATASET_CODESPACE + "} correlationId=${header." + Constants.CORRELATION_ID + "}] ";
+    }
+
+    public void extendAckDeadline(Exchange exchange) throws IOException {
+        if (log.isDebugEnabled()) {
+            String correlation = simple(correlation(), String.class).evaluate(exchange, String.class);
+            String fileName = exchange.getIn().getHeader(Exchange.FILE_NAME, String.class);
+            log.debug("{} Extending PubSub ack deadline for file {}", correlation, fileName);
+        }
+        String ackId = exchange.getIn().getHeader(GooglePubsubConstants.ACK_ID, String.class);
+        GooglePubsubEndpoint fromEndpoint = (GooglePubsubEndpoint) exchange.getFromEndpoint();
+        String subscriptionName = ProjectSubscriptionName.format(fromEndpoint.getProjectId(), fromEndpoint.getDestinationName());
+        ModifyAckDeadlineRequest modifyAckDeadlineRequest = ModifyAckDeadlineRequest.newBuilder()
+                .setSubscription(subscriptionName)
+                .addAllAckIds(List.of(ackId))
+                .setAckDeadlineSeconds(ACK_DEADLINE_EXTENSION)
+                .build();
+        fromEndpoint.getComponent().getSubscriberStub().modifyAckDeadlineCallable().call(modifyAckDeadlineRequest);
     }
 
 }
