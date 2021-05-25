@@ -149,7 +149,6 @@ public class NetexCommonFilePublicationRouteBuilder extends BaseRouteBuilder {
                 .routeId("split-common-file");
 
         from("direct:publishCommonFile")
-                .process(e-> modifyAckDeadline(e, 100))
                 // explicitly compress the payload due to https://issues.apache.org/jira/browse/KAFKA-4169
                 .marshal().zipFile()
                 .doTry()

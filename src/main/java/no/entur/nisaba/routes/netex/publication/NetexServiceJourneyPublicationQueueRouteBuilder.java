@@ -67,7 +67,11 @@ public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBu
                 .routeId("process-line-file");
 
         from("direct:processServiceJourney")
-                .process(e-> modifyAckDeadline(e, 100))
+                // extend pubsub acknowledgment deadline every 500 service journeys
+                .filter(exchange -> exchange.getProperty(Exchange.SPLIT_INDEX, Integer.class) % 500 == 0)
+                .process(e-> modifyAckDeadline(e, 500))
+                //end filter
+                .end()
                 .setBody(simple("${body.value}"))
                 .log(LoggingLevel.DEBUG, getClass().getName(), correlation() + "Processing ServiceJourney ${body}")
                 .setHeader(SERVICE_JOURNEY_ID, body())
