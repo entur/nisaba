@@ -49,7 +49,7 @@
 
     <!-- Remove DatedServiceJourneys that are not referring to the selected ServiceJourney -->
     <xsl:template
-            match="netex:DatedServiceJourney[/ServiceJourneyRef/@ref != $SERVICE_JOURNEY_ID]">
+            match="netex:DatedServiceJourney[netex:ServiceJourneyRef/@ref != $SERVICE_JOURNEY_ID]">
     </xsl:template>
 
     <!-- Remove JourneyPatterns that are not referred by the selected ServiceJourney -->
@@ -64,7 +64,7 @@
 
     <!-- Remove ServiceJourneyInterchanges that are not referring to the selected ServiceJourney -->
     <xsl:template
-            match="netex:ServiceJourneyInterchange[/netex:FromJourneyRef/@ref != $SERVICE_JOURNEY_ID and /netex:ToJourneyRef/@ref != $SERVICE_JOURNEY_ID]">
+            match="netex:ServiceJourneyInterchange[netex:FromJourneyRef/@ref != $SERVICE_JOURNEY_ID and netex:ToJourneyRef/@ref != $SERVICE_JOURNEY_ID]">
     </xsl:template>
 
     <!-- Remove NoticeAssignments that are not related to the selected ServiceJourney -->
