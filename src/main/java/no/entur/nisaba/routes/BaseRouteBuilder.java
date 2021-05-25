@@ -16,6 +16,7 @@
 
 package no.entur.nisaba.routes;
 
+import com.google.cloud.pubsub.v1.stub.SubscriberStub;
 import com.google.pubsub.v1.ModifyAckDeadlineRequest;
 import com.google.pubsub.v1.ProjectSubscriptionName;
 import no.entur.nisaba.Constants;
@@ -126,7 +127,9 @@ public abstract class BaseRouteBuilder extends RouteBuilder {
                 .addAllAckIds(List.of(ackId))
                 .setAckDeadlineSeconds(ACK_DEADLINE_EXTENSION)
                 .build();
-        fromEndpoint.getComponent().getSubscriberStub().modifyAckDeadlineCallable().call(modifyAckDeadlineRequest);
+        try (SubscriberStub subscriberStub = fromEndpoint.getComponent().getSubscriberStub()) {
+            subscriberStub.modifyAckDeadlineCallable().call(modifyAckDeadlineRequest);
+        }
     }
 
 }
