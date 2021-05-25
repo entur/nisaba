@@ -78,8 +78,10 @@ public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBu
                 .setBody(header(LINE_FILE))
                 .to("xslt-saxon:filterServiceJourney.xsl")
                 .setHeader(KafkaConstants.KEY, header(SERVICE_JOURNEY_ID))
+                // explicitly compress the payload due to https://issues.apache.org/jira/browse/KAFKA-4169
+                .marshal().zipFile()
                 .doTry()
-                .to("kafka:{{nisaba.kafka.topic.servicejourney}}?clientId=nisaba-servicejourney&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy&compressionCodec=gzip").id("to-kafka-topic-servicejourney")
+                .to("kafka:{{nisaba.kafka.topic.servicejourney}}?clientId=nisaba-servicejourney&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy").id("to-kafka-topic-servicejourney")
                 .doCatch(RecordTooLargeException.class)
                 .log(LoggingLevel.ERROR, "Cannot serialize service journey ${header." + SERVICE_JOURNEY_ID + "} in Line file ${header." + Exchange.FILE_NAME + "} into Kafka topic, max message size exceeded ${exception.stacktrace} ")
                 .stop()

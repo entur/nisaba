@@ -22,6 +22,7 @@ import no.entur.nisaba.TestApp;
 import no.entur.nisaba.avro.NetexImportEvent;
 import no.entur.nisaba.event.DatasetStat;
 import org.apache.camel.EndpointInject;
+import org.apache.camel.Exchange;
 import org.apache.camel.Produce;
 import org.apache.camel.ProducerTemplate;
 import org.apache.camel.builder.AdviceWith;
@@ -155,19 +156,7 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
         exportNotificationQueueProducerTemplate.sendBody(CODESPACE_AVI);
         mockNisabaServiceJourneyTopic.assertIsSatisfied();
 
-        mockNisabaServiceJourneyTopic.getReceivedExchanges().forEach(
-                exchange -> {
-                    String netex = exchange.getIn().getBody(String.class);
-                    try {
-                        NeTExValidator neTExValidator = NeTExValidator.getNeTExValidator();
-                        neTExValidator.validate(new StreamSource(new StringReader(netex)));
-                    } catch (IOException | SAXException e) {
-                        Assertions.fail(e);
-                    }
-
-                }
-        );
-
+        mockNisabaServiceJourneyTopic.getReceivedExchanges().forEach(this::validatePublicationDelivery);
 
     }
 
@@ -192,20 +181,20 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
         mockNisabaCommonTopic.assertIsSatisfied();
         mockProcessLineFile.assertIsSatisfied();
 
-        mockNisabaCommonTopic.getReceivedExchanges().forEach(
-                exchange -> {
-                    byte[] body = exchange.getIn().getBody(byte[].class);
-                    try (ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(body))) {
-                        zis.getNextEntry();
-                        String netex = new String(zis.readAllBytes());
-                        NeTExValidator neTExValidator = NeTExValidator.getNeTExValidator();
-                        neTExValidator.validate(new StreamSource(new StringReader(netex)));
-                    } catch (IOException | SAXException e) {
-                        Assertions.fail(e);
-                    }
-                }
-        );
+        mockNisabaCommonTopic.getReceivedExchanges().forEach(this::validatePublicationDelivery);
 
+    }
+
+    private void validatePublicationDelivery(Exchange exchange) {
+        byte[] body = exchange.getIn().getBody(byte[].class);
+        try (ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(body))) {
+            zis.getNextEntry();
+            String netex = new String(zis.readAllBytes());
+            NeTExValidator neTExValidator = NeTExValidator.getNeTExValidator();
+            neTExValidator.validate(new StreamSource(new StringReader(netex)));
+        } catch (IOException | SAXException e) {
+            Assertions.fail(e);
+        }
     }
 
 
