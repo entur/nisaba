@@ -23,6 +23,7 @@ import java.util.concurrent.ExecutorService;
 
 import com.google.api.core.AbstractApiService;
 import com.google.api.gax.rpc.ApiException;
+import com.google.api.gax.rpc.StatusCode;
 import com.google.cloud.pubsub.v1.MessageReceiver;
 import com.google.cloud.pubsub.v1.Subscriber;
 import com.google.cloud.pubsub.v1.stub.SubscriberStub;
@@ -176,16 +177,16 @@ class GooglePubsubConsumer extends DefaultConsumer {
                         }
                     }
                 } catch (IOException e) {
-                    localLog.error("Failure getting messages from PubSub", e);
-                } catch (ApiException  e) {
-                    if(e.isRetryable()) {
-                        localLog.warn("Retryable Google API exception with status code {}. Retrying...", e.getStatusCode(), e);
+                    localLog.warn("A network error occurred while pulling PubSub messages. Retrying...", e);
+                } catch (ApiException e) {
+                    StatusCode.Code statusCode = e.getStatusCode().getCode();
+                    if (e.isRetryable()) {
+                        localLog.warn("A retryable server-side error occurred while pulling PubSub messages (status code: {}). Retrying...", statusCode, e);
                     } else {
-                        localLog.error("Non-retryable Google API exception with status code {}.", e.getStatusCode(), e);
+                        localLog.error("A non-retryable server-side error occurred while pulling PubSub messages (status code: {}). Consumer disconnected.", statusCode, e);
                         throw e;
                     }
-
-            }
+                }
             }
         }
     }
