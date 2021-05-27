@@ -21,6 +21,7 @@ import no.entur.nisaba.event.DatasetStatHelper;
 import no.entur.nisaba.routes.BaseRouteBuilder;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
+import org.apache.camel.builder.ValueBuilder;
 import org.apache.kafka.common.errors.RecordTooLargeException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -92,7 +93,7 @@ public class NetexCommonFilePublicationRouteBuilder extends BaseRouteBuilder {
                 .setHeader(COMMON_FILE_XSLT, constant("filterScheduledStopPoint.xsl"))
                 .setHeader(COMMON_FILE_RANGE_SIZE, constant(rangeSize))
                 .setHeader(COMMON_FILE_NB_ITEMS,
-                        xpath("count(/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:ServiceFrame/netex:scheduledStopPoints/netex:ScheduledStopPoint)", Integer.class, XML_NAMESPACE_NETEX))
+                        countNodes("/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:ServiceFrame/netex:scheduledStopPoints/netex:ScheduledStopPoint"))
                 .to("direct:splitCommonFile")
 
                 // Stop Assignments
@@ -102,7 +103,7 @@ public class NetexCommonFilePublicationRouteBuilder extends BaseRouteBuilder {
                 .setHeader(COMMON_FILE_XSLT, constant("filterStopAssignment.xsl"))
                 .setHeader(COMMON_FILE_RANGE_SIZE, constant(rangeSize))
                 .setHeader(COMMON_FILE_NB_ITEMS,
-                        xpath("count(/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:ServiceFrame/netex:stopAssignments/netex:PassengerStopAssignment)", Integer.class, XML_NAMESPACE_NETEX))
+                        countNodes("/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:ServiceFrame/netex:stopAssignments/netex:PassengerStopAssignment"))
                 .to("direct:splitCommonFile")
 
                 // Route Points
@@ -112,7 +113,7 @@ public class NetexCommonFilePublicationRouteBuilder extends BaseRouteBuilder {
                 .setHeader(COMMON_FILE_XSLT, constant("filterRoutePoint.xsl"))
                 .setHeader(COMMON_FILE_RANGE_SIZE, constant(rangeSize))
                 .setHeader(COMMON_FILE_NB_ITEMS,
-                        xpath("count(/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:ServiceFrame/netex:routePoints/netex:RoutePoint)", Integer.class, XML_NAMESPACE_NETEX))
+                        countNodes("/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:ServiceFrame/netex:routePoints/netex:RoutePoint"))
                 .to("direct:splitCommonFile")
 
                 // Service Links
@@ -122,7 +123,7 @@ public class NetexCommonFilePublicationRouteBuilder extends BaseRouteBuilder {
                 .setHeader(COMMON_FILE_XSLT, constant("filterServiceLink.xsl"))
                 .setHeader(COMMON_FILE_RANGE_SIZE, constant(rangeSizeForServiceLinks))
                 .setHeader(COMMON_FILE_NB_ITEMS,
-                        xpath("count(/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:ServiceFrame/netex:serviceLinks/netex:ServiceLink)", Integer.class, XML_NAMESPACE_NETEX))
+                        countNodes("/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:ServiceFrame/netex:serviceLinks/netex:ServiceLink"))
                 .to("direct:splitCommonFile")
 
                 .log(LoggingLevel.INFO, correlation() + "Processed common file ${header." + FILE_HANDLE + "}")
@@ -159,6 +160,15 @@ public class NetexCommonFilePublicationRouteBuilder extends BaseRouteBuilder {
                 .stop()
                 .routeId("publish-common-file");
 
+    }
+
+    /**
+     * Count the number of nodes matching the given XPath query.
+     * @param xpathQuery the XPath query.
+     * @return the number of nodes matching the XPath query.
+     */
+    private ValueBuilder countNodes(String xpathQuery) {
+        return xpath("count(" + xpathQuery + ")", Integer.class, XML_NAMESPACE_NETEX);
     }
 
 }

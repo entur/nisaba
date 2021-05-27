@@ -62,10 +62,10 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .setHeader(DATASET_CODESPACE, bodyAs(String.class))
                 .log(LoggingLevel.INFO, correlation() + "Received NeTEx export notification")
                 .to("direct:downloadNetexDataset")
-                .choice()
-                .when(body().isNull())
+                .filter(body().isNull())
                 .log(LoggingLevel.ERROR, correlation() + "NeTEx export file not found")
                 .stop()
+                //end filter
                 .end()
                 .log(LoggingLevel.INFO, correlation() + "NeTEx export file downloaded")
                 .to("direct:retrieveDatasetCreationTime")
@@ -101,10 +101,10 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
 
         from("direct:parseCreatedAttribute")
                 .setBody(xpath("/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/@created", String.class, XML_NAMESPACE_NETEX))
-                .choice()
-                .when(PredicateBuilder.or(body().isNull(), body().isEqualTo("")))
+                .filter(PredicateBuilder.or(body().isNull(), body().isEqualTo("")))
                 .log(LoggingLevel.WARN, correlation() + "'created' attribute not found in file ${header." + Exchange.FILE_NAME + "}")
                 .stop()
+                //end filter
                 .end()
                 .bean(LocalDateTime.class, "parse(${body})")
                 .routeId("parse-created-attribute");
@@ -135,6 +135,7 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .filter(header(Exchange.FILE_NAME).not().endsWith(".xml"))
                 .log(LoggingLevel.INFO, correlation() + "Ignoring non-XML file ${header." + Exchange.FILE_NAME + "}")
                 .stop()
+                // end filter
                 .end()
                 .choice()
                 .when(header(Exchange.FILE_NAME).startsWith("_"))
