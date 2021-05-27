@@ -47,7 +47,7 @@ public class NetexCommonFilePublicationRouteBuilder extends BaseRouteBuilder {
     private final int rangeSize;
     private final int rangeSizeForServiceLinks;
 
-    public NetexCommonFilePublicationRouteBuilder(@Value("${nisaba.netex.range-size:2000}") int rangeSize, @Value("${nisaba.netex.service-links.range-size:500}") int rangeSizeForServiceLinks) {
+    public NetexCommonFilePublicationRouteBuilder(@Value("${nisaba.netex.range-size:2000}") int rangeSize, @Value("${nisaba.netex.service-links.range-size:300}") int rangeSizeForServiceLinks) {
         this.rangeSize = rangeSize;
         this.rangeSizeForServiceLinks = rangeSizeForServiceLinks;
     }
