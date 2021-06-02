@@ -36,7 +36,7 @@ public class NetexImportEventFactory {
 
     private final String mardukBucketName;
 
-    private NetexImportEventFactory(@Value("${blobstore.gcs.container.name}") String mardukBucketName) {
+    public NetexImportEventFactory(@Value("${blobstore.gcs.container.name}") String mardukBucketName) {
         this.mardukBucketName = mardukBucketName;
     }
 
