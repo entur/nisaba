@@ -3,7 +3,7 @@
                 xmlns:netex="http://www.netex.org.uk/netex"
                 version="1.0">
 
-    <xsl:output omit-xml-declaration="no" indent="no"/>
+    <xsl:output omit-xml-declaration="no" indent="yes"/>
     <xsl:strip-space elements="*"/>
 
     <!-- ID of the selected service journey -->

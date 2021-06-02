@@ -30,6 +30,10 @@
 
     <logger name="com.google.cloud.spring.core.DefaultCredentialsProvider" level="ERROR"/>
 
+    <logger name="no.entur.nisaba.routes.netex.publication.NetexServiceJourneyPublicationQueueRouteBuilder" level="DEBUG"/>
+
+
+
     <root level="DEBUG">
         <appender-ref ref="CONSOLE-ASYNC" />
     </root>

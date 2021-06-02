@@ -100,6 +100,17 @@
             <artifactId>logging</artifactId>
             <version>${entur.helpers.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.entur</groupId>
+            <artifactId>netex-parser-java</artifactId>
+            <version>1.0.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.entur</groupId>
+            <artifactId>netex-java-model</artifactId>
+            <version>1.0.12</version>
+        </dependency>
+
 
         <!-- Spring Boot -->
 
@@ -160,6 +171,10 @@
         <dependency>
             <groupId>org.apache.camel.springboot</groupId>
             <artifactId>camel-file-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.camel.springboot</groupId>
+            <artifactId>camel-jaxb-starter</artifactId>
         </dependency>
 
         <!-- Other -->
@@ -231,6 +246,12 @@
             <artifactId>netex-java-model</artifactId>
             <version>1.0.12</version>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.entur</groupId>
+            <artifactId>netex-java-model</artifactId>
+            <version>1.0.12</version>
+            <scope>compile</scope>
         </dependency>
 
     </dependencies>

@@ -28,6 +28,8 @@ import org.apache.camel.ProducerTemplate;
 import org.apache.camel.builder.AdviceWith;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.commons.io.IOUtils;
+import org.entur.netex.NetexParser;
+import org.entur.netex.index.api.NetexEntitiesIndex;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.rutebanken.netex.validation.NeTExValidator;
@@ -37,6 +39,7 @@ import org.xml.sax.SAXException;
 import javax.xml.transform.stream.StreamSource;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
@@ -49,7 +52,7 @@ import static no.entur.nisaba.Constants.DATASET_STAT;
 
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = TestApp.class)
-class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuilderIntegrationTestBase {
+class NetexPublicationRouteBuilderTest extends NisabaRouteBuilderIntegrationTestBase {
 
     private static final String CODESPACE_AVI = "avi";
     private static final String CODESPACE_NOR = "nor";
@@ -88,6 +91,24 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
 
     @EndpointInject("mock:checkCreatedAttribute")
     protected MockEndpoint mockCheckCreatedAttribute;
+
+/*    @Test
+    void testGenerateNeTEx() {
+
+        InputStream commonFile = getClass().getResourceAsStream("/no/entur/nisaba/netex/import/_AVI_shared_data.xml.zip");
+        InputStream lineFile = getClass().getResourceAsStream("/no/entur/nisaba/netex/import/AVI_AVI-Line-WF_TRD-TRF_-74-_Trondheim-Sandefjord.zip");
+
+        NetexParser parser = new NetexParser();
+        NetexEntitiesIndex indexCommonFile = parser.parse(commonFile);
+        NetexEntitiesIndex indexLineFile = parser.parse(lineFile);
+
+        NetexWriter writer = new NetexWriter();
+        writer.write(indexLineFile,indexCommonFile);
+
+
+
+    }*/
+
 
     @Test
     void testNotification() throws Exception {
