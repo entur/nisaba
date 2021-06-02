@@ -6,14 +6,20 @@ import org.rutebanken.netex.model.Common_VersionFrameStructure;
 import org.rutebanken.netex.model.CompositeFrame;
 import org.rutebanken.netex.model.DayTypeAssignmentsInFrame_RelStructure;
 import org.rutebanken.netex.model.DayTypesInFrame_RelStructure;
+import org.rutebanken.netex.model.JourneyPattern;
 import org.rutebanken.netex.model.ObjectFactory;
 import org.rutebanken.netex.model.OperatingDaysInFrame_RelStructure;
 import org.rutebanken.netex.model.OperatingPeriodsInFrame_RelStructure;
+import org.rutebanken.netex.model.PassengerStopAssignment;
 import org.rutebanken.netex.model.PublicationDeliveryStructure;
+import org.rutebanken.netex.model.Route;
+import org.rutebanken.netex.model.RoutePointsInFrame_RelStructure;
 import org.rutebanken.netex.model.ScheduledStopPointsInFrame_RelStructure;
 import org.rutebanken.netex.model.ServiceCalendarFrame;
 import org.rutebanken.netex.model.ServiceFrame;
 import org.rutebanken.netex.model.ServiceJourney;
+import org.rutebanken.netex.model.StopAssignment_VersionStructure;
+import org.rutebanken.netex.model.StopAssignmentsInFrame_RelStructure;
 import org.rutebanken.netex.model.TimetableFrame;
 import org.rutebanken.netex.model.VersionOfObjectRefStructure;
 import org.slf4j.Logger;
@@ -21,6 +27,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.xml.bind.JAXBElement;
 import javax.xml.namespace.QName;
+import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -41,26 +48,34 @@ public class PublicationDeliveryUpdater {
         ServiceJourney serviceJourney = lineEntities.getServiceJourneyIndex().get(serviceJourneyId);
         ServiceJourneyReferencedEntities serviceJourneyReferencedEntities = new ServiceJourneyReferencedEntities(serviceJourney, commonEntities);
 
+        JourneyPattern journeyPattern = lineEntities.getJourneyPatternIndex().get(serviceJourney.getJourneyPatternRef().getValue().getRef());
+        JourneyPatternReferencedEntities journeyPatternReferencedEntities = new JourneyPatternReferencedEntities(journeyPattern, commonEntities);
+
+        Route route = lineEntities.getRouteIndex().get(journeyPattern.getRouteRef().getRef());
+        RouteReferencedEntities routeReferencedEntities = new RouteReferencedEntities(route, commonEntities);
+
         // service frame
 
         ServiceFrame serviceFrame = getServiceFrame(publicationDeliveryStructure);
 
         ScheduledStopPointsInFrame_RelStructure scheduledStopPointsInFrameRelStructure = objectFactory.createScheduledStopPointsInFrame_RelStructure();
-        scheduledStopPointsInFrameRelStructure.getScheduledStopPoint().addAll(commonEntities.getScheduledStopPointIndex().getAll())
-        ;
+        scheduledStopPointsInFrameRelStructure.getScheduledStopPoint().addAll(journeyPatternReferencedEntities.getScheduledStopPoints());
         serviceFrame.setScheduledStopPoints(scheduledStopPointsInFrameRelStructure);
 
-        /*RoutePointsInFrame_RelStructure routePointsInFrameRelStructure = objectFactory.createRoutePointsInFrame_RelStructure();
-        routePointsInFrameRelStructure.getRoutePoint().add(commonEntities.getRouteIndex().getAll().stream().flatMap(route -> route.get))
+        StopAssignmentsInFrame_RelStructure stopAssignmentsInFrameRelStructure = objectFactory.createStopAssignmentsInFrame_RelStructure();
+        Collection<PassengerStopAssignment> passengerStopAssignments = journeyPatternReferencedEntities.getPassengerStopAssignments();
 
-*/
-/*        ServiceLinksInFrame_RelStructure serviceLinksInFrameRelStructure = objectFactory.createServiceLinksInFrame_RelStructure();
-        serviceLinksInFrameRelStructure.getServiceLink().addAll(commonEntities.getServiceLinkIndex().getAll());
-        serviceFrame.setServiceLinks(serviceLinksInFrameRelStructure);*/
+        Collection<? extends JAXBElement<? extends StopAssignment_VersionStructure>> wrappedPassengerStopAssignments = passengerStopAssignments.stream().map(this::wrapAsJAXBElement).collect(Collectors.toList());
+        stopAssignmentsInFrameRelStructure.getStopAssignment().addAll(wrappedPassengerStopAssignments);
+        serviceFrame.setStopAssignments(stopAssignmentsInFrameRelStructure);
+
+        RoutePointsInFrame_RelStructure routePointsInFrameRelStructure = objectFactory.createRoutePointsInFrame_RelStructure();
+        routePointsInFrameRelStructure.getRoutePoint().addAll(routeReferencedEntities.getRoutePoints());
+        serviceFrame.setRoutePoints(routePointsInFrameRelStructure);
 
         // service calendar frame
 
-        ServiceCalendarFrame serviceCalendarFrame = objectFactory.createServiceCalendarFrame();
+        ServiceCalendarFrame serviceCalendarFrame = objectFactory.createServiceCalendarFrame().withId("id").withVersion("version");
         getFrames(publicationDeliveryStructure).add(wrapAsJAXBElement(serviceCalendarFrame));
 
         DayTypesInFrame_RelStructure dayTypesInFrameRelStructure = objectFactory.createDayTypesInFrame_RelStructure();
