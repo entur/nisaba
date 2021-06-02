@@ -19,6 +19,8 @@ package no.entur.nisaba.event;
 import no.entur.nisaba.Constants;
 import no.entur.nisaba.avro.NetexImportEvent;
 import org.apache.camel.Header;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 
 import java.time.LocalDateTime;
@@ -28,18 +30,22 @@ import static no.entur.nisaba.Constants.DATE_TIME_FORMATTER;
 /**
  * Create the Avro NeTEx import event.
  */
+@Component("NetexImportEventFactory")
 public class NetexImportEventFactory {
 
 
-    private NetexImportEventFactory() {
+    private final String mardukBucketName;
 
+    private NetexImportEventFactory(@Value("${blobstore.gcs.container.name}") String mardukBucketName) {
+        this.mardukBucketName = mardukBucketName;
     }
 
 
-    public static NetexImportEvent createNetexImportEvent(@Header(value = Constants.DATASET_CODESPACE) String codespace,
+    public NetexImportEvent createNetexImportEvent(@Header(value = Constants.DATASET_CODESPACE) String codespace,
                                                           @Header(value = Constants.DATASET_CREATION_TIME) LocalDateTime creationDate,
                                                           @Header(value = Constants.DATASET_IMPORT_KEY) String importKey,
-                                                          @Header(value = Constants.DATASET_STAT) DatasetStat datasetStat
+                                                          @Header(value = Constants.DATASET_STAT) DatasetStat datasetStat,
+                                                          @Header(value = Constants.FILE_HANDLE) String  fileName
 
     ) {
         Assert.notNull(codespace, "codespace was null");
@@ -51,6 +57,7 @@ public class NetexImportEventFactory {
                 .setCodespace(codespace)
                 .setImportDateTime(DATE_TIME_FORMATTER.format(creationDate))
                 .setImportKey(importKey)
+                .setPublishedDatasetURI("gs://" + mardukBucketName + "/" +  fileName)
                 .setServiceJourneys(datasetStat.getNbServiceJourneys())
                 .setCommonFiles(datasetStat.getNbCommonFiles())
                 .build();

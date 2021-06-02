@@ -162,7 +162,7 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
 
         from("direct:notifyConsumers")
                 .log(LoggingLevel.INFO, correlation() + "Notifying Kafka topic ${properties:nisaba.kafka.topic.event}")
-                .bean(NetexImportEventFactory.class, "createNetexImportEvent")
+                .bean("NetexImportEventFactory", "createNetexImportEvent")
                 .setHeader(KafkaConstants.KEY, header(DATASET_CODESPACE))
                 .to("kafka:{{nisaba.kafka.topic.event}}?clientId=nisaba-event&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy&valueSerializer=io.confluent.kafka.serializers.KafkaAvroSerializer").id("to-kafka-topic-event")
                 .removeHeader(KafkaConstants.KEY)
