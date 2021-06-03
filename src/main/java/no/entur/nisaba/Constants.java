@@ -16,6 +16,7 @@
 
 package no.entur.nisaba;
 
+import org.apache.camel.Exchange;
 import org.apache.camel.support.builder.Namespaces;
 
 import java.time.format.DateTimeFormatter;
@@ -28,6 +29,7 @@ public final class Constants {
     public static final String BLOBSTORE_PATH_OUTBOUND = "outbound/";
 
     public static final String DATASET_IMPORT_KEY = "EnturDatasetImportKey";
+    public static final String GCS_BUCKET_FILE_NAME = "${header." + DATASET_IMPORT_KEY + "}/${header." + Exchange.FILE_NAME + "}";
     public static final String DATASET_CREATION_TIME = "EnturDatasetCreationTime";
     public static final String DATASET_CODESPACE = "EnturDatasetCodespace";
 

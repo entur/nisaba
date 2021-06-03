@@ -18,7 +18,6 @@ package no.entur.nisaba.routes.netex.notification;
 
 import no.entur.nisaba.Constants;
 import no.entur.nisaba.event.DatasetStatHelper;
-import no.entur.nisaba.event.NetexImportEventFactory;
 import no.entur.nisaba.event.NetexImportEventKeyFactory;
 import no.entur.nisaba.routes.BaseRouteBuilder;
 import org.apache.camel.Exchange;
@@ -30,6 +29,7 @@ import org.apache.camel.support.builder.PredicateBuilder;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.TreeSet;
 
 import static no.entur.nisaba.Constants.BLOBSTORE_PATH_OUTBOUND;
@@ -48,7 +48,6 @@ import static org.apache.camel.builder.Builder.bean;
 public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
 
     private static final String EXPORT_FILE_NAME = "netex/rb_${body}-" + Constants.CURRENT_AGGREGATED_NETEX_FILENAME;
-    private static final String LINE_FILE_NAME = "${header." + DATASET_IMPORT_KEY + "}/${header." + Exchange.FILE_NAME + "}";
     private static final String NB_SERVICE_JOURNEYS_IN_FILE = "NB_SERVICE_JOURNEYS_IN_FILE";
 
     @Override
@@ -130,10 +129,14 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .bean(DatasetStatHelper.class, "init")
                 .setBody(header(DATASET_CODESPACE))
                 .to("direct:downloadNetexDataset")
-                .split(new ZipSplitter())
+                .split(new ZipSplitter()).aggregationStrategy(new FlexibleAggregationStrategy<String>()
+                .storeInHeader("LINE_FILE_NAMES")
+                .accumulateInCollection(HashSet.class)
+                .pick(body()))
                 .streaming()
                 .filter(header(Exchange.FILE_NAME).not().endsWith(".xml"))
                 .log(LoggingLevel.INFO, correlation() + "Ignoring non-XML file ${header." + Exchange.FILE_NAME + "}")
+                .setBody(simple("${null}"))
                 .stop()
                 // end filter
                 .end()
@@ -146,16 +149,20 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .bean(DatasetStatHelper.class, "addServiceJourneys(${header.NB_SERVICE_JOURNEYS_IN_FILE})")
                 .marshal().zipFile()
                 .to("direct:uploadNetexFile")
-                .setBody(simple(LINE_FILE_NAME))
-                .to("google-pubsub:{{nisaba.pubsub.project.id}}:NetexServiceJourneyPublicationQueue")
                 // end choice
                 .end()
+                .setBody(simple(Constants.GCS_BUCKET_FILE_NAME))
                 // end split
+                .end()
+                .split(header("LINE_FILE_NAMES"))
+                .convertBodyTo(String.class)
+                .to("google-pubsub:{{nisaba.pubsub.project.id}}:NetexServiceJourneyPublicationQueue")
+                //end split
                 .end()
                 .routeId("publish-dataset");
 
         from("direct:uploadNetexFile")
-                .setHeader(FILE_HANDLE, simple(LINE_FILE_NAME))
+                .setHeader(FILE_HANDLE, simple(Constants.GCS_BUCKET_FILE_NAME))
                 .log(LoggingLevel.INFO, correlation() + "Uploading NeTEx file ${header." + FILE_HANDLE + "}")
                 .to("direct:uploadNisabaBlob")
                 .routeId("upload-netex-file");

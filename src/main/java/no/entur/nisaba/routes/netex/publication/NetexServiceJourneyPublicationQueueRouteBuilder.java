@@ -26,13 +26,20 @@ import org.apache.kafka.common.errors.RecordTooLargeException;
 import org.entur.netex.NetexParser;
 import org.entur.netex.index.api.NetexEntitiesIndex;
 import org.entur.netex.loader.NetexXmlParser;
+import org.rutebanken.netex.model.JourneyPattern;
 import org.rutebanken.netex.model.PublicationDeliveryStructure;
+import org.rutebanken.netex.model.Route;
+import org.rutebanken.netex.model.ServiceJourney;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
 
 import javax.xml.bind.JAXBContext;
 import java.io.InputStream;
+import java.util.Collection;
+import java.util.List;
+import java.util.stream.Collectors;
 
+import static no.entur.nisaba.Constants.DATASET_CODESPACE;
 import static no.entur.nisaba.Constants.FILE_HANDLE;
 
 /**
@@ -45,10 +52,17 @@ public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBu
     private static final String SERVICE_JOURNEY_ID = "SERVICE_JOURNEY_ID";
     private static final String COMMON_FILE_INDEX = "COMMON_FILE_INDEX";
     private static final String LINE_FILE_INDEX = "LINE_FILE_INDEX";
+    private static final String JOURNEY_PATTERNS = "JOURNEY_PATTERNS";
+    private static final String SERVICE_JOURNEYS = "SERVICE_JOURNEYS";
 
     @Override
     public void configure() throws Exception {
         super.configure();
+
+        JAXBContext context = JAXBContext
+                .newInstance(PublicationDeliveryStructure.class);
+        JaxbDataFormat xmlDataFormat = new JaxbDataFormat();
+        xmlDataFormat.setContext(context);
 
         from("google-pubsub:{{nisaba.pubsub.project.id}}:NetexServiceJourneyPublicationQueue?synchronousPull={{nisaba.pubsub.queue.servicejourney.synchronous:true}}")
                 .to("direct:downloadNetexFile")
@@ -56,27 +70,8 @@ public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBu
                 .log(LoggingLevel.ERROR, correlation() + "Cannot find line file ${header." + FILE_HANDLE + "} in the blob store")
                 .stop()
                 .end()
-                .unmarshal().zipFile()
-                .to("direct:processLineFile")
-                .routeId("pubsub-process-service-journey");
-
-        from("direct:downloadNetexFile")
-                .log(LoggingLevel.INFO, correlation() + "Downloading NeTEx file ${body}")
-                .setHeader(FILE_HANDLE, body())
-                .to("direct:getNisabaBlob")
-                .routeId("download-netex-file");
-
-        from("direct:downloadCommonFile")
-                .log(LoggingLevel.INFO, correlation() + "Downloading Common file ${body}")
-                .setHeader(FILE_HANDLE, constant("_AVI_shared_data.xml.zip"))
-                .to("direct:getNisabaBlob")
-                .routeId("download-common-file");
-
-        from("direct:processLineFile")
                 .log(LoggingLevel.INFO, correlation() + "Processing line file ${header." + FILE_HANDLE + "}")
-                .convertBodyTo(Document.class)
-                .setHeader(LINE_FILE, body())
-                .convertBodyTo(String.class)
+                .unmarshal().zipFile()
                 .process(exchange -> {
                     NetexParser parser = new NetexParser();
                     NetexEntitiesIndex index = parser.parse(exchange.getIn().getBody(InputStream.class));
@@ -92,19 +87,60 @@ public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBu
                     exchange.getIn().setHeader(COMMON_FILE_INDEX, index);
                     log.info("Parsed common file");
                 })
-                .setBody(header(LINE_FILE))
-                .split(xpath("/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:TimetableFrame/netex:vehicleJourneys/netex:ServiceJourney/@id", Constants.XML_NAMESPACE_NETEX))
-                .to("direct:processServiceJourney")
+                .to("direct:processLineFile")
+                .routeId("pubsub-process-service-journey");
+
+        from("direct:downloadNetexFile")
+                .setHeader(FILE_HANDLE, body())
+                .log(LoggingLevel.INFO, correlation() + "Downloading NeTEx file ${header." + FILE_HANDLE + "}")
+                .to("direct:getNisabaBlob")
+                .routeId("download-netex-file");
+
+        from("direct:downloadCommonFile")
+                .setHeader(FILE_HANDLE, simple("_${header." + DATASET_CODESPACE + ".toUpperCase()}_shared_data.xml.zip"))
+                .log(LoggingLevel.INFO, correlation() + "Downloading Common file ${header." + FILE_HANDLE + "}")
+                .to("direct:getNisabaBlob")
+                .routeId("download-common-file");
+
+        from("direct:processLineFile")
+                .process(exchange -> {
+                    System.out.println("aa");
+                    Collection<Route> all = exchange.getIn().getHeader(LINE_FILE_INDEX, NetexEntitiesIndex.class).getRouteIndex().getAll();
+
+                })
+                .split(simple("${header." + LINE_FILE_INDEX + ".routeIndex.all}"))
+                .to("direct:processRoute")
                 .end()
                 .log(LoggingLevel.INFO, correlation() + "Processed line file ${header." + FILE_HANDLE + "}")
                 .routeId("process-line-file");
 
-        JAXBContext context = JAXBContext
-                .newInstance(PublicationDeliveryStructure.class);
-        JaxbDataFormat xmlDataFormat = new JaxbDataFormat();
-        xmlDataFormat.setContext(context);
+        from("direct:processRoute")
+                .log(LoggingLevel.INFO, correlation() + "Processing route ${body.id}")
+                .process(exchange -> {
+                    Route route = exchange.getIn().getBody(Route.class);
+                    NetexEntitiesIndex netexEntitiesIndex = exchange.getIn().getHeader(LINE_FILE_INDEX, NetexEntitiesIndex.class);
+                    List<JourneyPattern> journeyPatterns = netexEntitiesIndex.getJourneyPatternIndex().getAll().stream().filter(journeyPattern -> journeyPattern.getRouteRef().getRef().equals(route.getId())).collect(Collectors.toList());
+                    exchange.getIn().setHeader(JOURNEY_PATTERNS, journeyPatterns);
+                })
+
+                .split(simple("${header." + JOURNEY_PATTERNS + "}"))
+                .to("direct:processJourneyPattern")
+                .routeId("process-route");
+
+        from("direct:processJourneyPattern")
+                .log(LoggingLevel.INFO, correlation() + "Processing journey pattern ${body.id}")
+                .process(exchange -> {
+                    JourneyPattern journeyPattern = exchange.getIn().getBody(JourneyPattern.class);
+                    NetexEntitiesIndex netexEntitiesIndex = exchange.getIn().getHeader(LINE_FILE_INDEX, NetexEntitiesIndex.class);
+                    List<ServiceJourney> serviceJourneys = netexEntitiesIndex.getServiceJourneyIndex().getAll().stream().filter(serviceJourney -> serviceJourney.getJourneyPatternRef().getValue().getRef().equals(journeyPattern.getId())).collect(Collectors.toList());
+                    exchange.getIn().setHeader(SERVICE_JOURNEYS, serviceJourneys);
+                })
+                .split(simple("${header." + SERVICE_JOURNEYS + "}"))
+                .to("direct:processServiceJourney")
+                .routeId("process-journey-pattern");
 
         from("direct:processServiceJourney")
+                .log(LoggingLevel.INFO, correlation() + "Processing service journey ${body.id}")
                 // extend pubsub acknowledgment deadline every 500 service journeys
                 .filter(exchange -> exchange.getProperty(Exchange.SPLIT_INDEX, Integer.class) % 500 == 0)
                 .process(this::extendAckDeadline)
