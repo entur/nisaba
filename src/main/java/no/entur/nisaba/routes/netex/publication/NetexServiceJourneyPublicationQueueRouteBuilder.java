@@ -103,12 +103,7 @@ public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBu
                 .routeId("download-common-file");
 
         from("direct:processLineFile")
-                .process(exchange -> {
-                    System.out.println("aa");
-                    Collection<Route> all = exchange.getIn().getHeader(LINE_FILE_INDEX, NetexEntitiesIndex.class).getRouteIndex().getAll();
-
-                })
-                .split(simple("${header." + LINE_FILE_INDEX + ".routeIndex.all}"))
+                    .split(simple("${header." + LINE_FILE_INDEX + ".routeIndex.all}"))
                 .to("direct:processRoute")
                 .end()
                 .log(LoggingLevel.INFO, correlation() + "Processed line file ${header." + FILE_HANDLE + "}")
@@ -119,10 +114,12 @@ public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBu
                 .process(exchange -> {
                     Route route = exchange.getIn().getBody(Route.class);
                     NetexEntitiesIndex netexEntitiesIndex = exchange.getIn().getHeader(LINE_FILE_INDEX, NetexEntitiesIndex.class);
+                    NetexEntitiesIndex commonNetexEntitiesIndex = exchange.getIn().getHeader(COMMON_FILE_INDEX, NetexEntitiesIndex.class);
                     List<JourneyPattern> journeyPatterns = netexEntitiesIndex.getJourneyPatternIndex().getAll().stream().filter(journeyPattern -> journeyPattern.getRouteRef().getRef().equals(route.getId())).collect(Collectors.toList());
                     exchange.getIn().setHeader(JOURNEY_PATTERNS, journeyPatterns);
+                    RouteReferencedEntities routeReferencedEntities = new RouteReferencedEntities(route,commonNetexEntitiesIndex);
+                    exchange.getIn().setHeader("ROUTE_REFERENCES", routeReferencedEntities);
                 })
-
                 .split(simple("${header." + JOURNEY_PATTERNS + "}"))
                 .to("direct:processJourneyPattern")
                 .routeId("process-route");
