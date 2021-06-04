@@ -5,6 +5,7 @@ gcp:
   blobstoreProjectId: entur-ror-prod
   pubsubProjectId: entur-ror-prod
   bucketName: marduk-production
+  exchangeBucketName: ror-marduk-exchange-production
   nisaba:
     bucketName: nisaba-production
 

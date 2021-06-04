@@ -113,7 +113,7 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
         mockNisabaEventTopic.assertIsSatisfied();
         NetexImportEvent netexImportEvent = mockNisabaEventTopic.getReceivedExchanges().get(0).getIn().getBody(NetexImportEvent.class);
         Assertions.assertEquals("avi", netexImportEvent.getCodespace().toString());
-        Assertions.assertEquals(now.truncatedTo(ChronoUnit.SECONDS), LocalDateTime.parse(netexImportEvent.getImportDateTime().toString()));
+        Assertions.assertEquals(now.truncatedTo(ChronoUnit.MILLIS), LocalDateTime.parse(netexImportEvent.getImportDateTime().toString()));
     }
 
     @Test

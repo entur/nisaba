@@ -35,7 +35,7 @@ public class NetexImportEventKeyFactory {
 
     public static String createNetexImportEventKey(@Header(value = Constants.DATASET_CODESPACE) String codespace,
                                                    @Header(value = Constants.DATASET_CREATION_TIME) LocalDateTime creationDate) {
-        return codespace + '_' + DATE_TIME_FORMATTER.format(creationDate);
+        return codespace + '_' + DATE_TIME_FORMATTER.format(creationDate).replace(':', '_');
     }
 
 }

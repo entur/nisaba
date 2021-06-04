@@ -33,6 +33,7 @@ import java.time.LocalDateTime;
 import java.util.TreeSet;
 
 import static no.entur.nisaba.Constants.BLOBSTORE_PATH_OUTBOUND;
+import static no.entur.nisaba.Constants.DATASET_ALL_CREATION_TIMES;
 import static no.entur.nisaba.Constants.DATASET_CODESPACE;
 import static no.entur.nisaba.Constants.DATASET_CREATION_TIME;
 import static no.entur.nisaba.Constants.DATASET_IMPORT_KEY;
@@ -95,6 +96,7 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .end()
                 .to("direct:parseCreatedAttribute")
                 .end()
+                .setHeader(DATASET_ALL_CREATION_TIMES, body())
                 .setHeader(DATASET_CREATION_TIME, simple("${body.last}"))
                 .log(LoggingLevel.INFO, correlation() + "The dataset was created on ${header." + DATASET_CREATION_TIME + "}")
                 .routeId("retrieve-dataset-creation-time");

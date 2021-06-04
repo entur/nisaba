@@ -35,6 +35,7 @@ data:
     blobstore.gcs.project.id={{ .Values.gcp.blobstoreProjectId }}
     blobstore.gcs.credential.path=/etc/nisaba-service-account/credentials.json
     blobstore.gcs.container.name={{ .Values.gcp.bucketName }}
+    blobstore.gcs.exchange.container.name={{ .Values.gcp.exchangeBucketName }}
     blobstore.gcs.nisaba.container.name={{ .Values.gcp.nisaba.bucketName }}
 
     # Actuator

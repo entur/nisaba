@@ -35,9 +35,12 @@ public class NetexImportEventFactory {
 
 
     private final String mardukBucketName;
+    private final String mardukExchangeBucketName;
 
-    public NetexImportEventFactory(@Value("${blobstore.gcs.container.name}") String mardukBucketName) {
+    public NetexImportEventFactory(@Value("${blobstore.gcs.container.name}") String mardukBucketName,
+                                   @Value("${blobstore.gcs.exchange.container.name}") String mardukExchangeBucketName) {
         this.mardukBucketName = mardukBucketName;
+        this.mardukExchangeBucketName = mardukExchangeBucketName;
     }
 
 
@@ -58,6 +61,7 @@ public class NetexImportEventFactory {
                 .setImportDateTime(DATE_TIME_FORMATTER.format(creationDate))
                 .setImportKey(importKey)
                 .setPublishedDatasetURI("gs://" + mardukBucketName + "/" +  fileName)
+                .setOriginalDatasetURI("gs://" + mardukExchangeBucketName + "/inbound/imported/" + codespace.toUpperCase() + "/" +  importKey + ".zip")
                 .setServiceJourneys(datasetStat.getNbServiceJourneys())
                 .setCommonFiles(datasetStat.getNbCommonFiles())
                 .build();

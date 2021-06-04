@@ -5,6 +5,8 @@ gcp:
   blobstoreProjectId: entur-ror-dev
   pubsubProjectId: entur-ror-dev
   bucketName: marduk-dev
+  exchangeBucketName: ror-marduk-exchange-dev
+
   nisaba:
     bucketName: nisaba-dev
 
