@@ -30,9 +30,11 @@ public final class Constants {
     public static final String BLOBSTORE_PATH_OUTBOUND = "outbound/";
 
     public static final String DATASET_IMPORT_KEY = "EnturDatasetImportKey";
+    public static final String DATASET_CHOUETTE_IMPORT_KEY = "EnturDatasetChouetteImportKey";
     public static final String DATASET_ALL_CREATION_TIMES = "EnturDatasetAllCreationTimes";
     public static final String DATASET_CREATION_TIME = "EnturDatasetCreationTime";
     public static final String DATASET_CODESPACE = "EnturDatasetCodespace";
+    public static final String DATASET_PUBLISHED_FILE_NAME = "EnturDatasetPublishedFileName";
 
     public static final String DATASET_STAT = "DATASET_STAT";
 

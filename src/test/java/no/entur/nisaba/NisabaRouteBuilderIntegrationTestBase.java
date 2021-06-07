@@ -52,11 +52,14 @@ public abstract class NisabaRouteBuilderIntegrationTestBase {
     }
 
 
-    @Value("${blobstore.gcs.container.name}")
+    @Value("${blobstore.gcs.marduk.container.name}")
     private String mardukContainerName;
 
     @Value("${blobstore.gcs.nisaba.container.name}")
     private String nisabaContainerName;
+
+    @Value("${blobstore.gcs.nisaba.exchange.container.name}")
+    private String nisabaExchangeContainerName;
 
 
     @Autowired
@@ -71,6 +74,9 @@ public abstract class NisabaRouteBuilderIntegrationTestBase {
     @Autowired
     protected InMemoryBlobStoreRepository nisabaInMemoryBlobStoreRepository;
 
+    @Autowired
+    protected InMemoryBlobStoreRepository nisabaExchangeInMemoryBlobStoreRepository;
+
 
     @EndpointInject("mock:sink")
     protected MockEndpoint sink;
@@ -79,6 +85,7 @@ public abstract class NisabaRouteBuilderIntegrationTestBase {
     void initInMemoryBlobStoreRepositories() {
         mardukInMemoryBlobStoreRepository.setContainerName(mardukContainerName);
         nisabaInMemoryBlobStoreRepository.setContainerName(nisabaContainerName);
+        nisabaExchangeInMemoryBlobStoreRepository.setContainerName(nisabaExchangeContainerName);
     }
 
 
