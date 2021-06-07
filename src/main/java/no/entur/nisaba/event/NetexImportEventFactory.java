@@ -33,31 +33,40 @@ import static no.entur.nisaba.Constants.DATE_TIME_FORMATTER;
 @Component("NetexImportEventFactory")
 public class NetexImportEventFactory {
 
-
     private final String mardukBucketName;
+    private final String nisabaExchangeBucketName;
 
-    public NetexImportEventFactory(@Value("${blobstore.gcs.container.name}") String mardukBucketName) {
+    public NetexImportEventFactory(@Value("${blobstore.gcs.marduk.container.name}") String mardukBucketName,
+                                   @Value("${blobstore.gcs.nisaba.exchange.container.name}") String nisabaExchangeBucketName) {
         this.mardukBucketName = mardukBucketName;
+        this.nisabaExchangeBucketName = nisabaExchangeBucketName;
     }
 
 
     public NetexImportEvent createNetexImportEvent(@Header(value = Constants.DATASET_CODESPACE) String codespace,
-                                                          @Header(value = Constants.DATASET_CREATION_TIME) LocalDateTime creationDate,
-                                                          @Header(value = Constants.DATASET_IMPORT_KEY) String importKey,
-                                                          @Header(value = Constants.DATASET_STAT) DatasetStat datasetStat,
-                                                          @Header(value = Constants.FILE_HANDLE) String  fileName
+                                                   @Header(value = Constants.DATASET_CREATION_TIME) LocalDateTime creationDate,
+                                                   @Header(value = Constants.DATASET_IMPORT_KEY) String importKey,
+                                                   @Header(value = Constants.DATASET_CHOUETTE_IMPORT_KEY) String chouetteImportKey,
+                                                   @Header(value = Constants.DATASET_STAT) DatasetStat datasetStat,
+                                                   @Header(value = Constants.DATASET_PUBLISHED_FILE_NAME) String publishedFileName
 
     ) {
         Assert.notNull(codespace, "codespace was null");
         Assert.notNull(creationDate, "creationDate was null");
         Assert.notNull(importKey, "importKey was null");
         Assert.notNull(datasetStat, "datasetStat was null");
+        Assert.notNull(publishedFileName, "publishedFileName was null");
 
+        String originalDatasetURI = "";
+        if (chouetteImportKey != null) {
+            originalDatasetURI = "gs://" + nisabaExchangeBucketName + "/imported/" + codespace + "/" + chouetteImportKey + ".zip";
+        }
         return NetexImportEvent.newBuilder()
                 .setCodespace(codespace)
                 .setImportDateTime(DATE_TIME_FORMATTER.format(creationDate))
                 .setImportKey(importKey)
-                .setPublishedDatasetURI("gs://" + mardukBucketName + "/" +  fileName)
+                .setPublishedDatasetURI("gs://" + mardukBucketName + "/" + publishedFileName)
+                .setOriginalDatasetURI(originalDatasetURI)
                 .setServiceJourneys(datasetStat.getNbServiceJourneys())
                 .setCommonFiles(datasetStat.getNbCommonFiles())
                 .build();

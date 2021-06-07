@@ -19,6 +19,8 @@ package no.entur.nisaba;
 import org.apache.camel.support.builder.Namespaces;
 
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.temporal.ChronoField;
 
 public final class Constants {
     public static final String FILE_HANDLE = "RutebankenFileHandle";
@@ -28,13 +30,18 @@ public final class Constants {
     public static final String BLOBSTORE_PATH_OUTBOUND = "outbound/";
 
     public static final String DATASET_IMPORT_KEY = "EnturDatasetImportKey";
+    public static final String DATASET_CHOUETTE_IMPORT_KEY = "EnturDatasetChouetteImportKey";
+    public static final String DATASET_ALL_CREATION_TIMES = "EnturDatasetAllCreationTimes";
     public static final String DATASET_CREATION_TIME = "EnturDatasetCreationTime";
     public static final String DATASET_CODESPACE = "EnturDatasetCodespace";
+    public static final String DATASET_PUBLISHED_FILE_NAME = "EnturDatasetPublishedFileName";
 
     public static final String DATASET_STAT = "DATASET_STAT";
 
-    public static final String DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
-    public static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern(Constants.DATE_TIME_FORMAT);
+     public static final DateTimeFormatter DATE_TIME_FORMATTER =  new DateTimeFormatterBuilder().appendPattern("yyyy-MM-dd'T'HH:mm:ss")
+            .optionalStart().appendFraction(ChronoField.MILLI_OF_SECOND, 0, 3, true).optionalEnd()
+            .optionalStart().appendPattern("XXXXX")
+            .optionalEnd().toFormatter();
 
     public static final Namespaces XML_NAMESPACE_NETEX = new Namespaces("netex", "http://www.netex.org.uk/netex");
 

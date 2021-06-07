@@ -21,6 +21,7 @@ import no.entur.nisaba.NisabaRouteBuilderIntegrationTestBase;
 import no.entur.nisaba.TestApp;
 import no.entur.nisaba.avro.NetexImportEvent;
 import no.entur.nisaba.event.DatasetStat;
+import no.entur.nisaba.event.NetexImportEventKeyFactory;
 import org.apache.camel.EndpointInject;
 import org.apache.camel.Exchange;
 import org.apache.camel.Produce;
@@ -41,10 +42,15 @@ import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
+import java.util.Map;
 import java.util.zip.ZipInputStream;
 
 import static no.entur.nisaba.Constants.BLOBSTORE_PATH_OUTBOUND;
 import static no.entur.nisaba.Constants.CURRENT_AGGREGATED_NETEX_FILENAME;
+import static no.entur.nisaba.Constants.DATASET_ALL_CREATION_TIMES;
+import static no.entur.nisaba.Constants.DATASET_CODESPACE;
+import static no.entur.nisaba.Constants.DATASET_CHOUETTE_IMPORT_KEY;
 import static no.entur.nisaba.Constants.DATASET_STAT;
 
 
@@ -62,6 +68,9 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
 
     @Produce("direct:parseCreatedAttribute")
     protected ProducerTemplate parseCreatedAttribute;
+
+    @Produce("direct:findChouetteImportKey")
+    protected ProducerTemplate findChouetteImportKey;
 
     @EndpointInject("mock:retrieveDatasetCreationTime")
     protected MockEndpoint mockRetrieveDatasetCreationTime;
@@ -89,6 +98,10 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
     @EndpointInject("mock:checkCreatedAttribute")
     protected MockEndpoint mockCheckCreatedAttribute;
 
+    @EndpointInject("mock:checkFindChouetteImportKey")
+    protected MockEndpoint mockCheckFindChouetteImportKey;
+
+
     @Test
     void testNotification() throws Exception {
 
@@ -113,7 +126,7 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
         mockNisabaEventTopic.assertIsSatisfied();
         NetexImportEvent netexImportEvent = mockNisabaEventTopic.getReceivedExchanges().get(0).getIn().getBody(NetexImportEvent.class);
         Assertions.assertEquals("avi", netexImportEvent.getCodespace().toString());
-        Assertions.assertEquals(now.truncatedTo(ChronoUnit.SECONDS), LocalDateTime.parse(netexImportEvent.getImportDateTime().toString()));
+        Assertions.assertEquals(now.truncatedTo(ChronoUnit.MILLIS), LocalDateTime.parse(netexImportEvent.getImportDateTime().toString()));
     }
 
     @Test
@@ -131,6 +144,39 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
         parseCreatedAttribute.sendBody(IOUtils.toString(getClass().getResourceAsStream("/no/entur/nisaba/netex/import/_AVI_shared_data.xml"), StandardCharsets.UTF_8));
         mockCheckCreatedAttribute.assertIsSatisfied();
     }
+
+    @Test
+    void testFindChouetteImportKey() throws Exception {
+
+        AdviceWith.adviceWith(context, "find-chouette-import-key", a -> a.weaveAddLast().to("mock:checkFindChouetteImportKey"));
+        AdviceWith.adviceWith(context, "notify-consumers-if-new", a -> a.weaveByToUri("direct:publishDataset").replace().to("mock:sink"));
+        AdviceWith.adviceWith(context, "notify-consumers", a -> a.weaveById("to-kafka-topic-event").replace().to("mock:nisabaEventTopic"));
+        AdviceWith.adviceWith(context, "publish-common-file", a -> a.weaveById("to-kafka-topic-common").replace().to("mock:nisabaCommonTopic"));
+        AdviceWith.adviceWith(context, "process-service-journey", a -> a.weaveById("to-kafka-topic-servicejourney").replace().to("mock:nisabaServiceJourneyTopic"));
+
+
+        List<LocalDateTime> localDateTimes = List.of(
+                LocalDateTime.of(2021, 6, 4, 10, 10, 0, 0),
+                LocalDateTime.of(2021, 6, 5, 10, 10,0,0),
+                LocalDateTime.of(2021, 6, 6, 10, 10,0,0)
+        );
+        String importKey = NetexImportEventKeyFactory.createNetexImportEventKey("avi", localDateTimes.get(1));
+        nisabaExchangeInMemoryBlobStoreRepository.uploadBlob("imported/avi/" + importKey + ".zip", new ByteArrayInputStream("test".getBytes()));
+        mockCheckFindChouetteImportKey.expectedMessageCount(1);
+
+
+        context.start();
+        findChouetteImportKey.sendBodyAndHeaders("",
+                Map.of(DATASET_CODESPACE, "avi",
+                        DATASET_ALL_CREATION_TIMES, localDateTimes)
+        );
+        mockCheckFindChouetteImportKey.assertIsSatisfied();
+        String originalImportKey = mockCheckFindChouetteImportKey.getReceivedExchanges().get(0).getIn().getHeader(DATASET_CHOUETTE_IMPORT_KEY, String.class);
+        Assertions.assertNotNull(originalImportKey);
+        Assertions.assertEquals(importKey, originalImportKey);
+
+    }
+
 
     @Test
     void testPublishServiceJourney() throws Exception {

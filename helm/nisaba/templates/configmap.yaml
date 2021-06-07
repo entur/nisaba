@@ -34,10 +34,11 @@ data:
     # Blobstore
     blobstore.gcs.project.id={{ .Values.gcp.blobstoreProjectId }}
     blobstore.gcs.credential.path=/etc/nisaba-service-account/credentials.json
-    blobstore.gcs.container.name={{ .Values.gcp.bucketName }}
+    blobstore.gcs.marduk.container.name={{ .Values.gcp.marduk.bucketName }}
     blobstore.gcs.nisaba.container.name={{ .Values.gcp.nisaba.bucketName }}
+    blobstore.gcs.nisaba.exchange.container.name={{ .Values.gcp.nisaba.exchangeBucketName }}
 
-    # Actuator
+  # Actuator
     management.server.port=9001
     management.endpoints.enabled-by-default=false
     management.endpoint.info.enabled=true

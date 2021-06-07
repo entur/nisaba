@@ -5,8 +5,10 @@ gcp:
   blobstoreProjectId: entur-ror-prod
   pubsubProjectId: entur-ror-prod
   bucketName: marduk-production
+
   nisaba:
-    bucketName: nisaba-production
+    bucketName: ror-nisaba-production
+    exchangeBucketName: ror-nisaba-exchange-production
 
 monitoringEnabled: false
 
