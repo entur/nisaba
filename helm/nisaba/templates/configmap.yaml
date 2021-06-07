@@ -38,7 +38,7 @@ data:
     blobstore.gcs.nisaba.container.name={{ .Values.gcp.nisaba.bucketName }}
     blobstore.gcs.nisaba.exchange.container.name={{ .Values.gcp.nisaba.exchangeBucketName }}
 
-  # Actuator
+    # Actuator
     management.server.port=9001
     management.endpoints.enabled-by-default=false
     management.endpoint.info.enabled=true

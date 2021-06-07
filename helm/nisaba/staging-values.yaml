@@ -4,7 +4,9 @@ replicas: 6
 gcp:
   blobstoreProjectId: entur-ror-test
   pubsubProjectId: entur-ror-test
-  bucketName: marduk-test
+
+  marduk:
+    bucketName: marduk-test
 
   nisaba:
     bucketName: ror-nisaba-test
