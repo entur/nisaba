@@ -66,6 +66,7 @@ public class NetexImportEventFactory {
                 .setImportDateTime(DATE_TIME_FORMATTER.format(creationDate))
                 .setImportKey(importKey)
                 .setPublishedDatasetURI("gs://" + mardukBucketName + "/" + publishedFileName)
+                .setPublishedDatasetPublicLink("https://storage.googleapis.com/" + mardukBucketName + "/" + publishedFileName)
                 .setOriginalDatasetURI(originalDatasetURI)
                 .setServiceJourneys(datasetStat.getNbServiceJourneys())
                 .setCommonFiles(datasetStat.getNbCommonFiles())

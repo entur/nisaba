@@ -116,7 +116,7 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
         // Use an idempotent repository backed by a Kafka topic to identify duplicate import events.
         // a dataset import is uniquely identified by the concatenation of its codespace and creation date.
         from("direct:notifyConsumersIfNew")
-                .idempotentConsumer(header(DATASET_IMPORT_KEY)).messageIdRepositoryRef("netexImportEventIdempotentRepo").skipDuplicate(false)
+                //.idempotentConsumer(header(DATASET_IMPORT_KEY)).messageIdRepositoryRef("netexImportEventIdempotentRepo").skipDuplicate(false)
                 .filter(exchangeProperty(Exchange.DUPLICATE_MESSAGE).isEqualTo(true))
                 .log(LoggingLevel.INFO, correlation() + "An event has already been sent for this dataset. Skipping")
                 .stop()
