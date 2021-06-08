@@ -1,6 +1,10 @@
 env: staging
 replicas: 6
 
+netex:
+  publish:
+    enabled: false
+
 gcp:
   blobstoreProjectId: entur-ror-test
   pubsubProjectId: entur-ror-test

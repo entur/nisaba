@@ -1,6 +1,9 @@
 env: production
 replicas: 6
 
+netex:
+  publish:
+    enabled: false
 gcp:
   blobstoreProjectId: entur-ror-prod
   pubsubProjectId: entur-ror-prod

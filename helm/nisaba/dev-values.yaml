@@ -1,6 +1,10 @@
 env: dev
 replicas: 6
 
+netex:
+  publish:
+    enabled: true
+
 gcp:
   blobstoreProjectId: entur-ror-dev
   pubsubProjectId: entur-ror-dev
