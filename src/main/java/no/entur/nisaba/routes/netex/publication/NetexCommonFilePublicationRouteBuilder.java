@@ -155,6 +155,7 @@ public class NetexCommonFilePublicationRouteBuilder extends BaseRouteBuilder {
                 .routeId("split-common-file");
 
         from("direct:publishCommonFile")
+                .filter(simple("${properties:nisaba.publish.enabled:true}"))
                 // explicitly compress the payload due to https://issues.apache.org/jira/browse/KAFKA-4169
                 .marshal().zipFile()
                 .doTry()
@@ -163,6 +164,8 @@ public class NetexCommonFilePublicationRouteBuilder extends BaseRouteBuilder {
                 .doCatch(RecordTooLargeException.class)
                 .log(LoggingLevel.ERROR, "Cannot serialize common file ${header." + FILE_HANDLE + "} (${header." + COMMON_FILE_PART + "}) into Kafka topic, max message size exceeded ${exception.stacktrace} ")
                 .stop()
+                // end filter
+                .end()
                 .routeId("publish-common-file");
 
     }

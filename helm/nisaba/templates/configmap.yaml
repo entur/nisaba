@@ -2,6 +2,9 @@ apiVersion: v1
 data:
   application.properties: |+
 
+    # Nisaba
+    nisaba.publish.enabled={{ .Values.netex.publish.enabled }}
+
     # Spring
     spring.main.sources=no.entur.nisaba
     spring.profiles.active=gcs-blobstore
@@ -34,8 +37,9 @@ data:
     # Blobstore
     blobstore.gcs.project.id={{ .Values.gcp.blobstoreProjectId }}
     blobstore.gcs.credential.path=/etc/nisaba-service-account/credentials.json
-    blobstore.gcs.container.name={{ .Values.gcp.bucketName }}
+    blobstore.gcs.marduk.container.name={{ .Values.gcp.marduk.bucketName }}
     blobstore.gcs.nisaba.container.name={{ .Values.gcp.nisaba.bucketName }}
+    blobstore.gcs.nisaba.exchange.container.name={{ .Values.gcp.nisaba.exchangeBucketName }}
 
     # Actuator
     management.server.port=9001

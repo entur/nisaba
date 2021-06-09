@@ -1,12 +1,20 @@
 env: dev
 replicas: 6
 
+netex:
+  publish:
+    enabled: true
+
 gcp:
   blobstoreProjectId: entur-ror-dev
   pubsubProjectId: entur-ror-dev
-  bucketName: marduk-dev
+
+  marduk:
+    bucketName: marduk-dev
+
   nisaba:
-    bucketName: nisaba-dev
+    bucketName: ror-nisaba-dev
+    exchangeBucketName: ror-nisaba-exchange-dev
 
 monitoringEnabled: true
 

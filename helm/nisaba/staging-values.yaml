@@ -1,12 +1,20 @@
 env: staging
 replicas: 6
 
+netex:
+  publish:
+    enabled: false
+
 gcp:
   blobstoreProjectId: entur-ror-test
   pubsubProjectId: entur-ror-test
-  bucketName: marduk-test
+
+  marduk:
+    bucketName: marduk-test
+
   nisaba:
-    bucketName: nisaba-test
+    bucketName: ror-nisaba-test
+    exchangeBucketName: ror-nisaba-exchange-test
 
 monitoringEnabled: true
 

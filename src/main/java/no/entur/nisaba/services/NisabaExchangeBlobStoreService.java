@@ -14,24 +14,20 @@
  *
  */
 
-package no.entur.nisaba.event;
+package no.entur.nisaba.services;
 
-import java.time.LocalDateTime;
-
-import static no.entur.nisaba.Constants.DATE_TIME_FORMATTER;
+import no.entur.nisaba.repository.BlobStoreRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 
 /**
- * Create the unique key identifying the current import.
+ * Operations on blobs in the main Nisaba bucket.
  */
-public class NetexImportEventKeyFactory {
+@Service
+public class NisabaExchangeBlobStoreService extends AbstractBlobStoreService {
 
-
-    private NetexImportEventKeyFactory() {
-
+    public NisabaExchangeBlobStoreService(@Value("${blobstore.gcs.nisaba.exchange.container.name}") String containerName, @Autowired BlobStoreRepository repository) {
+        super(containerName, repository);
     }
-
-    public static String createNetexImportEventKey(String codespace, LocalDateTime creationDate) {
-        return codespace + '_' + DATE_TIME_FORMATTER.format(creationDate).replace(':', '_');
-    }
-
 }
