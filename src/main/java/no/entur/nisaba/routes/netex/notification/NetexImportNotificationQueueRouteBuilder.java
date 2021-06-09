@@ -52,6 +52,7 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
 
     private static final String EXPORT_FILE_NAME = "netex/rb_${body}-" + Constants.CURRENT_AGGREGATED_NETEX_FILENAME;
     private static final String NB_SERVICE_JOURNEYS_IN_FILE = "NB_SERVICE_JOURNEYS_IN_FILE";
+    private static final String LINE_FILE_NAMES = "LINE_FILE_NAMES";
 
     @Override
     public void configure() throws Exception {
@@ -116,7 +117,7 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
         // Use an idempotent repository backed by a Kafka topic to identify duplicate import events.
         // a dataset import is uniquely identified by the concatenation of its codespace and creation date.
         from("direct:notifyConsumersIfNew")
-                .idempotentConsumer(header(DATASET_IMPORT_KEY)).messageIdRepositoryRef("netexImportEventIdempotentRepo").skipDuplicate(false)
+                //.idempotentConsumer(header(DATASET_IMPORT_KEY)).messageIdRepositoryRef("netexImportEventIdempotentRepo").skipDuplicate(false)
                 .filter(exchangeProperty(Exchange.DUPLICATE_MESSAGE).isEqualTo(true))
                 .log(LoggingLevel.INFO, correlation() + "An event has already been sent for this dataset. Skipping")
                 .stop()
@@ -135,7 +136,7 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .setBody(header(DATASET_CODESPACE))
                 .to("direct:downloadNetexDataset")
                 .split(new ZipSplitter()).aggregationStrategy(new FlexibleAggregationStrategy<String>()
-                .storeInHeader("LINE_FILE_NAMES")
+                .storeInHeader(LINE_FILE_NAMES)
                 .accumulateInCollection(HashSet.class)
                 .pick(body()))
                 .streaming()
@@ -152,23 +153,23 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .setHeader(NB_SERVICE_JOURNEYS_IN_FILE,
                         xpath("count(/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:TimetableFrame/netex:vehicleJourneys/netex:ServiceJourney)", Integer.class, XML_NAMESPACE_NETEX))
                 .bean(DatasetStatHelper.class, "addServiceJourneys(${header.NB_SERVICE_JOURNEYS_IN_FILE})")
-                .filter(simple("${properties:nisaba.publish.enabled:true}"))
                 .marshal().zipFile()
                 .to("direct:uploadNetexFile")
-                .setBody(simple(LINE_FILE_NAME))
-                .to("google-pubsub:{{nisaba.pubsub.project.id}}:NetexServiceJourneyPublicationQueue")
-                // end filter
-                .end()
                 // end choice
                 .end()
                 .setBody(simple(Constants.GCS_BUCKET_FILE_NAME))
                 // end split
                 .end()
-                .split(header("LINE_FILE_NAMES"))
+
+                .filter(simple("${properties:nisaba.publish.enabled:true}"))
+                .split(header(LINE_FILE_NAMES))
                 .convertBodyTo(String.class)
                 .to("google-pubsub:{{nisaba.pubsub.project.id}}:NetexServiceJourneyPublicationQueue")
-                //end split
+                 // end split
                 .end()
+                // end filter
+                .end()
+
                 .routeId("publish-dataset");
 
         from("direct:uploadNetexFile")

@@ -31,11 +31,9 @@ import org.rutebanken.netex.model.PublicationDeliveryStructure;
 import org.rutebanken.netex.model.Route;
 import org.rutebanken.netex.model.ServiceJourney;
 import org.springframework.stereotype.Component;
-import org.w3c.dom.Document;
 
 import javax.xml.bind.JAXBContext;
 import java.io.InputStream;
-import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -65,6 +63,7 @@ public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBu
         xmlDataFormat.setContext(context);
 
         from("google-pubsub:{{nisaba.pubsub.project.id}}:NetexServiceJourneyPublicationQueue?synchronousPull={{nisaba.pubsub.queue.servicejourney.synchronous:true}}")
+                .streamCaching()
                 .to("direct:downloadNetexFile")
                 .filter(body().isNull())
                 .log(LoggingLevel.ERROR, correlation() + "Cannot find line file ${header." + FILE_HANDLE + "} in the blob store")
@@ -78,6 +77,7 @@ public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBu
                     exchange.getIn().setHeader(LINE_FILE_INDEX, index);
                     log.info("Parsed line file");
                 })
+                .setHeader(LINE_FILE, body())
                 .to("direct:downloadCommonFile")
                 .unmarshal().zipFile()
                 .convertBodyTo(InputStream.class)
@@ -87,6 +87,7 @@ public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBu
                     exchange.getIn().setHeader(COMMON_FILE_INDEX, index);
                     log.info("Parsed common file");
                 })
+                .to("direct:buildTemplatePublicationDelivery")
                 .to("direct:processLineFile")
                 .routeId("pubsub-process-service-journey");
 
@@ -102,8 +103,22 @@ public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBu
                 .to("direct:getNisabaBlob")
                 .routeId("download-common-file");
 
+        from("direct:buildTemplatePublicationDelivery")
+                .streamCaching()
+                .setBody(header(LINE_FILE))
+                .to("file:/tmp/camel/servicejourney?fileName=${date:now:yyyyMMddHHmmssSSS}-line-before-template.xml")
+                .to("xslt-saxon:filterLineFile.xsl")
+                .convertBodyTo(String.class)
+                .to("file:/tmp/camel/servicejourney?fileName=${date:now:yyyyMMddHHmmssSSS}-line-template.xml")
+                .process(exchange -> {
+                    NetexXmlParser netexXmlParser = new NetexXmlParser();
+                    PublicationDeliveryStructure publicationDeliveryStructure = netexXmlParser.parseXmlDoc(exchange.getIn().getBody(InputStream.class));
+                    exchange.getIn().setHeader(Constants.PUBLICATION_DELIVERY_TEMPLATE, publicationDeliveryStructure);
+                })
+                .routeId("build-template-publication-delivery");
+
         from("direct:processLineFile")
-                    .split(simple("${header." + LINE_FILE_INDEX + ".routeIndex.all}"))
+                .split(simple("${header." + LINE_FILE_INDEX + ".routeIndex.all}"))
                 .to("direct:processRoute")
                 .end()
                 .log(LoggingLevel.INFO, correlation() + "Processed line file ${header." + FILE_HANDLE + "}")
@@ -117,7 +132,7 @@ public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBu
                     NetexEntitiesIndex commonNetexEntitiesIndex = exchange.getIn().getHeader(COMMON_FILE_INDEX, NetexEntitiesIndex.class);
                     List<JourneyPattern> journeyPatterns = netexEntitiesIndex.getJourneyPatternIndex().getAll().stream().filter(journeyPattern -> journeyPattern.getRouteRef().getRef().equals(route.getId())).collect(Collectors.toList());
                     exchange.getIn().setHeader(JOURNEY_PATTERNS, journeyPatterns);
-                    RouteReferencedEntities routeReferencedEntities = new RouteReferencedEntities(route,commonNetexEntitiesIndex);
+                    RouteReferencedEntities routeReferencedEntities = new RouteReferencedEntities(route, commonNetexEntitiesIndex);
                     exchange.getIn().setHeader("ROUTE_REFERENCES", routeReferencedEntities);
                 })
                 .split(simple("${header." + JOURNEY_PATTERNS + "}"))
@@ -143,24 +158,11 @@ public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBu
                 .process(this::extendAckDeadline)
                 //end filter
                 .end()
-                .setBody(simple("${body.value}"))
                 .log(LoggingLevel.DEBUG, getClass().getName(), correlation() + "Processing ServiceJourney ${body}")
-                .setHeader(SERVICE_JOURNEY_ID, body())
-                .setBody(header(LINE_FILE))
-                .to("xslt-saxon:filterServiceJourney.xsl")
-                .to("file:/tmp/camel/servicejourney?fileName=${date:now:yyyyMMddHHmmssSSS}.xml")
-                .convertBodyTo(String.class)
-                .process(exchange -> {
-                    NetexXmlParser netexXmlParser = new NetexXmlParser();
-                    PublicationDeliveryStructure publicationDeliveryStructure = netexXmlParser.parseXmlDoc(exchange.getIn().getBody(InputStream.class));
-                    exchange.getIn().setHeader("PUBLICATION_DELIVERY", publicationDeliveryStructure);
-                })
+                .setHeader(SERVICE_JOURNEY_ID, simple("${body.id}"))
                 .bean(PublicationDeliveryUpdater.class, "update")
-                .setBody(header("PUBLICATION_DELIVERY"))
                 .marshal(xmlDataFormat)
                 .to("file:/tmp/camel/servicejourney?fileName=${date:now:yyyyMMddHHmmssSSS}-transformed.xml")
-
-                .process(exchange -> System.out.println("aa"))
                 .setHeader(KafkaConstants.KEY, header(SERVICE_JOURNEY_ID))
                 // explicitly compress the payload due to https://issues.apache.org/jira/browse/KAFKA-4169
                 .marshal().zipFile()

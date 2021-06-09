@@ -4,9 +4,15 @@ import org.apache.camel.Header;
 import org.entur.netex.index.api.NetexEntitiesIndex;
 import org.rutebanken.netex.model.Common_VersionFrameStructure;
 import org.rutebanken.netex.model.CompositeFrame;
+import org.rutebanken.netex.model.DataObjectDeliveryStructure;
 import org.rutebanken.netex.model.DayTypeAssignmentsInFrame_RelStructure;
 import org.rutebanken.netex.model.DayTypesInFrame_RelStructure;
+import org.rutebanken.netex.model.Frames_RelStructure;
 import org.rutebanken.netex.model.JourneyPattern;
+import org.rutebanken.netex.model.JourneyPatternsInFrame_RelStructure;
+import org.rutebanken.netex.model.JourneysInFrame_RelStructure;
+import org.rutebanken.netex.model.Line;
+import org.rutebanken.netex.model.LinesInFrame_RelStructure;
 import org.rutebanken.netex.model.ObjectFactory;
 import org.rutebanken.netex.model.OperatingDaysInFrame_RelStructure;
 import org.rutebanken.netex.model.OperatingPeriodsInFrame_RelStructure;
@@ -14,6 +20,7 @@ import org.rutebanken.netex.model.PassengerStopAssignment;
 import org.rutebanken.netex.model.PublicationDeliveryStructure;
 import org.rutebanken.netex.model.Route;
 import org.rutebanken.netex.model.RoutePointsInFrame_RelStructure;
+import org.rutebanken.netex.model.RoutesInFrame_RelStructure;
 import org.rutebanken.netex.model.ScheduledStopPointsInFrame_RelStructure;
 import org.rutebanken.netex.model.ServiceCalendarFrame;
 import org.rutebanken.netex.model.ServiceFrame;
@@ -31,6 +38,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static no.entur.nisaba.Constants.PUBLICATION_DELIVERY_TEMPLATE;
+
 public class PublicationDeliveryUpdater {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PublicationDeliveryUpdater.class);
@@ -38,11 +47,12 @@ public class PublicationDeliveryUpdater {
     private ObjectFactory objectFactory = new ObjectFactory();
 
 
-    public void update(@Header("PUBLICATION_DELIVERY") PublicationDeliveryStructure publicationDeliveryStructure,
+    public PublicationDeliveryStructure update(@Header(PUBLICATION_DELIVERY_TEMPLATE) PublicationDeliveryStructure templatePublicationDeliveryStructure,
                        @Header("COMMON_FILE_INDEX") NetexEntitiesIndex commonEntities,
                        @Header("LINE_FILE_INDEX") NetexEntitiesIndex lineEntities,
                        @Header("SERVICE_JOURNEY_ID") String serviceJourneyId) {
-        LOGGER.info("updating " + publicationDeliveryStructure);
+
+        PublicationDeliveryStructure publicationDeliveryStructure = createPublicationDeliveryStructure(templatePublicationDeliveryStructure);
 
 
         ServiceJourney serviceJourney = lineEntities.getServiceJourneyIndex().get(serviceJourneyId);
@@ -58,6 +68,21 @@ public class PublicationDeliveryUpdater {
 
         ServiceFrame serviceFrame = getServiceFrame(publicationDeliveryStructure);
 
+        LinesInFrame_RelStructure linesInFrameRelStructure = objectFactory.createLinesInFrame_RelStructure();
+        List<JAXBElement<Line>> lines = lineEntities.getLineIndex().getAll().stream().map(this::wrapAsJAXBElement).collect(Collectors.toList());
+        linesInFrameRelStructure.getLine_().addAll(lines);
+        serviceFrame.setLines(linesInFrameRelStructure);
+
+        RoutesInFrame_RelStructure routesInFrameRelStructure = objectFactory.createRoutesInFrame_RelStructure();
+        routesInFrameRelStructure.getRoute_().add(wrapAsJAXBElement(route));
+        serviceFrame.setRoutes(routesInFrameRelStructure);
+
+        JourneyPatternsInFrame_RelStructure journeyPatternsInFrameRelStructure = objectFactory.createJourneyPatternsInFrame_RelStructure();
+        journeyPatternsInFrameRelStructure.getJourneyPattern_OrJourneyPatternView().add(wrapAsJAXBElement(journeyPattern));
+        serviceFrame.setJourneyPatterns(journeyPatternsInFrameRelStructure);
+
+
+
         ScheduledStopPointsInFrame_RelStructure scheduledStopPointsInFrameRelStructure = objectFactory.createScheduledStopPointsInFrame_RelStructure();
         scheduledStopPointsInFrameRelStructure.getScheduledStopPoint().addAll(journeyPatternReferencedEntities.getScheduledStopPoints());
         serviceFrame.setScheduledStopPoints(scheduledStopPointsInFrameRelStructure);
@@ -72,6 +97,17 @@ public class PublicationDeliveryUpdater {
         RoutePointsInFrame_RelStructure routePointsInFrameRelStructure = objectFactory.createRoutePointsInFrame_RelStructure();
         routePointsInFrameRelStructure.getRoutePoint().addAll(routeReferencedEntities.getRoutePoints());
         serviceFrame.setRoutePoints(routePointsInFrameRelStructure);
+
+        // timetable frame
+
+        TimetableFrame timetableFrame = objectFactory.createTimetableFrame().withId("id").withVersion("version");
+        getFrames(publicationDeliveryStructure).add(wrapAsJAXBElement(timetableFrame));
+
+        JourneysInFrame_RelStructure journeysInFrameRelStructure = objectFactory.createJourneysInFrame_RelStructure();
+        journeysInFrameRelStructure.getVehicleJourneyOrDatedVehicleJourneyOrNormalDatedVehicleJourney().add(serviceJourney);
+        timetableFrame.setVehicleJourneys(journeysInFrameRelStructure);
+
+
 
         // service calendar frame
 
@@ -99,16 +135,53 @@ public class PublicationDeliveryUpdater {
 
         }
 
+        return publicationDeliveryStructure;
+
+    }
+
+    private PublicationDeliveryStructure createPublicationDeliveryStructure(PublicationDeliveryStructure templatePublicationDeliveryStructure) {
+
+        CompositeFrame compositeFrame = objectFactory.createCompositeFrame();
+        CompositeFrame templateCompositeFrame = getCompositeFrame(templatePublicationDeliveryStructure);
+        compositeFrame.setId(templateCompositeFrame.getId());
+        compositeFrame.setVersion(templateCompositeFrame.getVersion());
+        compositeFrame.setCodespaces(templateCompositeFrame.getCodespaces());
+        compositeFrame.setValidityConditions(templateCompositeFrame.getValidityConditions());
+        compositeFrame.setFrameDefaults(templateCompositeFrame.getFrameDefaults());
+        Frames_RelStructure frames_relStructure = objectFactory.createFrames_RelStructure();
+        compositeFrame.setFrames(frames_relStructure);
+
+
+        ServiceFrame serviceFrame = objectFactory.createServiceFrame();
+        compositeFrame.getFrames().getCommonFrame().add(wrapAsJAXBElement(serviceFrame));
+
+        PublicationDeliveryStructure.DataObjects dataObjects = objectFactory.createPublicationDeliveryStructureDataObjects();
+        dataObjects.getCompositeFrameOrCommonFrame().add(wrapAsJAXBElement(compositeFrame));
+
+        PublicationDeliveryStructure publicationDeliveryStructure = objectFactory.createPublicationDeliveryStructure();
+        publicationDeliveryStructure.setDataObjects(dataObjects);
+        publicationDeliveryStructure.setDescription(templatePublicationDeliveryStructure.getDescription());
+        publicationDeliveryStructure.setParticipantRef(templatePublicationDeliveryStructure.getParticipantRef());
+        publicationDeliveryStructure.setPublicationTimestamp(templatePublicationDeliveryStructure.getPublicationTimestamp());
+        publicationDeliveryStructure.setVersion(templatePublicationDeliveryStructure.getVersion());
+
+        return publicationDeliveryStructure;
+
+
+    }
+
+    private CompositeFrame getCompositeFrame(PublicationDeliveryStructure publicationDeliveryStructure) {
+        Common_VersionFrameStructure commonVersionFrameStructure = publicationDeliveryStructure.getDataObjects().getCompositeFrameOrCommonFrame().get(0).getValue();
+        return ((CompositeFrame) commonVersionFrameStructure);
+    }
+
+    private List<JAXBElement<? extends Common_VersionFrameStructure>> getFrames(PublicationDeliveryStructure publicationDeliveryStructure) {
+        return getCompositeFrame(publicationDeliveryStructure).getFrames().getCommonFrame();
     }
 
     private ServiceFrame getServiceFrame(PublicationDeliveryStructure publicationDeliveryStructure) {
         List<JAXBElement<? extends Common_VersionFrameStructure>> commonFrame = getFrames(publicationDeliveryStructure);
         return (ServiceFrame) commonFrame.stream().filter(jaxbElement -> jaxbElement.getValue() instanceof ServiceFrame).findFirst().get().getValue();
-    }
-
-    private List<JAXBElement<? extends Common_VersionFrameStructure>> getFrames(PublicationDeliveryStructure publicationDeliveryStructure) {
-        Common_VersionFrameStructure commonVersionFrameStructure = publicationDeliveryStructure.getDataObjects().getCompositeFrameOrCommonFrame().get(0).getValue();
-        return ((CompositeFrame) commonVersionFrameStructure).getFrames().getCommonFrame();
     }
 
     private TimetableFrame getTimetableFrame(PublicationDeliveryStructure publicationDeliveryStructure) {
@@ -135,5 +208,8 @@ public class PublicationDeliveryUpdater {
         }
         return localPart;
     }
+
+
+
 }
 

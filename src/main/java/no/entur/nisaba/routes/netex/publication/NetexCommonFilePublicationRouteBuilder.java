@@ -45,6 +45,7 @@ public class NetexCommonFilePublicationRouteBuilder extends BaseRouteBuilder {
 
     private static final String SPLIT_LOWER_BOUND = "SPLIT_LOWER_BOUND";
     private static final String SPLIT_UPPER_BOUND = "SPLIT_UPPER_BOUND";
+    private static final String ORIGINAL_COMMON_FILE = "ORIGINAL_COMMON_FILE";
 
     private final int rangeSize;
     private final int rangeSizeForServiceLinks;
@@ -62,11 +63,12 @@ public class NetexCommonFilePublicationRouteBuilder extends BaseRouteBuilder {
         // common files are processed synchronously (in the same thread as the one processing the notification event)
         // so that the number of common files is known before sending the notification event.
         from("direct:processCommonFile")
+                .streamCaching()
                 .log(LoggingLevel.INFO, correlation() + "Processing common file ${header." + FILE_HANDLE + "}")
-                .setHeader("ORIGINAL_COMMON_FILE", body())
+                .setHeader(ORIGINAL_COMMON_FILE, body())
                 .marshal().zipFile()
                 .to("direct:uploadNetexFile")
-                .setBody(header("ORIGINAL_COMMON_FILE"))
+                .setBody(header(ORIGINAL_COMMON_FILE))
                 .convertBodyTo(Document.class)
                 .setHeader(COMMON_FILE, body())
 
@@ -90,36 +92,6 @@ public class NetexCommonFilePublicationRouteBuilder extends BaseRouteBuilder {
                 .to("xslt-saxon:filterCommonFile.xsl")
                 .to("direct:publishCommonFile")
                 .log(LoggingLevel.INFO, correlation() + "Processed filtered common file ${header." + FILE_HANDLE + "}")
-
-                // Scheduled Stop Points
-
-                .setBody(header(COMMON_FILE))
-                .setHeader(COMMON_FILE_PART, constant("Scheduled Stop Points"))
-                .setHeader(COMMON_FILE_XSLT, constant("filterScheduledStopPoint.xsl"))
-                .setHeader(COMMON_FILE_RANGE_SIZE, constant(rangeSize))
-                .setHeader(COMMON_FILE_NB_ITEMS,
-                        countNodes("/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:ServiceFrame/netex:scheduledStopPoints/netex:ScheduledStopPoint"))
-                .to("direct:splitCommonFile")
-
-                // Stop Assignments
-
-                .setBody(header(COMMON_FILE))
-                .setHeader(COMMON_FILE_PART, constant("Stop Assignments"))
-                .setHeader(COMMON_FILE_XSLT, constant("filterStopAssignment.xsl"))
-                .setHeader(COMMON_FILE_RANGE_SIZE, constant(rangeSize))
-                .setHeader(COMMON_FILE_NB_ITEMS,
-                        countNodes("/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:ServiceFrame/netex:stopAssignments/netex:PassengerStopAssignment"))
-                .to("direct:splitCommonFile")
-
-                // Route Points
-
-                .setBody(header(COMMON_FILE))
-                .setHeader(COMMON_FILE_PART, constant("Route Points"))
-                .setHeader(COMMON_FILE_XSLT, constant("filterRoutePoint.xsl"))
-                .setHeader(COMMON_FILE_RANGE_SIZE, constant(rangeSize))
-                .setHeader(COMMON_FILE_NB_ITEMS,
-                        countNodes("/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:ServiceFrame/netex:routePoints/netex:RoutePoint"))
-                .to("direct:splitCommonFile")
 
                 // Service Links
 

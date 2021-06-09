@@ -46,6 +46,7 @@ public final class Constants {
             .optionalEnd().toFormatter();
 
     public static final Namespaces XML_NAMESPACE_NETEX = new Namespaces("netex", "http://www.netex.org.uk/netex");
+    public static final String PUBLICATION_DELIVERY_TEMPLATE = "PUBLICATION_DELIVERY_TEMPLATE";
 
     private Constants() {
     }
