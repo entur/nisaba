@@ -68,6 +68,11 @@ public class PublicationDeliveryUpdater {
         Route route = lineEntities.getRouteIndex().get(journeyPattern.getRouteRef().getRef());
         RouteReferencedEntities routeReferencedEntities = new RouteReferencedEntities(route, commonEntities);
 
+
+        // resource frame
+        //getFrames(publicationDeliveryStructure).addAll(commonEntities.getResourceFrames().stream().map(this::wrapAsJAXBElement).collect(Collectors.toList()));
+
+
         // service frame
 
         ServiceFrame serviceFrame = getServiceFrame(publicationDeliveryStructure);

@@ -63,7 +63,6 @@ public class NetexCommonFilePublicationRouteBuilder extends BaseRouteBuilder {
         // so that the number of common files is known before sending the notification event.
         from("direct:processCommonFile")
                 .streamCaching()
-                .process(exchange -> System.out.println("zzz"))
                 .log(LoggingLevel.INFO, correlation() + "Processing common file ${header." + FILE_HANDLE + "}")
                 .setHeader(ORIGINAL_COMMON_FILE, body())
                 .marshal().zipFile()
