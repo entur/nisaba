@@ -28,7 +28,6 @@ import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
 
 import static no.entur.nisaba.Constants.FILE_HANDLE;
-import static no.entur.nisaba.Constants.GCS_BUCKET_FILE_NAME;
 import static no.entur.nisaba.Constants.XML_NAMESPACE_NETEX;
 
 /**
@@ -64,6 +63,7 @@ public class NetexCommonFilePublicationRouteBuilder extends BaseRouteBuilder {
         // so that the number of common files is known before sending the notification event.
         from("direct:processCommonFile")
                 .streamCaching()
+                .process(exchange -> System.out.println("zzz"))
                 .log(LoggingLevel.INFO, correlation() + "Processing common file ${header." + FILE_HANDLE + "}")
                 .setHeader(ORIGINAL_COMMON_FILE, body())
                 .marshal().zipFile()

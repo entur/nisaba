@@ -62,7 +62,12 @@ public class InMemoryBlobStoreRepository implements BlobStoreRepository {
     public InputStream getBlob(String objectName) {
         LOGGER.debug("get blob called in in-memory blob store");
         byte[] data = getBlobsForCurrentContainer().get(objectName);
-        return (data == null) ? null : new ByteArrayInputStream(data);
+        if (data != null) {
+            return new ByteArrayInputStream(data);
+        } else {
+            LOGGER.info("File '{}' in bucket '{}' does not exist", objectName, containerName);
+            return null;
+        }
     }
 
     @Override

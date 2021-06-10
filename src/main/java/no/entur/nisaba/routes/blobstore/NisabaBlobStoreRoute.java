@@ -48,7 +48,7 @@ public class NisabaBlobStoreRoute extends BaseRouteBuilder {
                 .to(logDebugShowAll())
                 .bean(nisabaBlobStoreService, "getBlob")
                 .to(logDebugShowAll())
-                .log(LoggingLevel.INFO, correlation() + "Returning from fetching file ${header." + FILE_HANDLE + "} from blob store.")
+                .log(LoggingLevel.INFO, correlation() + "Returning from fetching file ${header." + FILE_HANDLE + "} from Nisaba blob store.")
                 .routeId("blobstore-nisaba-download");
     }
 }

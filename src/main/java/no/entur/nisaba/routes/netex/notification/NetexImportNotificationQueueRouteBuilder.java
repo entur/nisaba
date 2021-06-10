@@ -140,7 +140,9 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .accumulateInCollection(HashSet.class)
                 .pick(body()))
                 .streaming()
+                .process(exchange -> System.out.println("aa"))
                 .filter(header(Exchange.FILE_NAME).not().endsWith(".xml"))
+                .process(exchange -> System.out.println("xx"))
                 .log(LoggingLevel.INFO, correlation() + "Ignoring non-XML file ${header." + Exchange.FILE_NAME + "}")
                 .setBody(simple("${null}"))
                 .stop()
@@ -148,8 +150,11 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .end()
                 .choice()
                 .when(header(Exchange.FILE_NAME).startsWith("_"))
+                .process(exchange -> System.out.println("bb"))
                 .to("direct:processCommonFile")
                 .otherwise()
+
+                .process(exchange -> System.out.println("cc"))
                 .setHeader(NB_SERVICE_JOURNEYS_IN_FILE,
                         xpath("count(/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:TimetableFrame/netex:vehicleJourneys/netex:ServiceJourney)", Integer.class, XML_NAMESPACE_NETEX))
                 .bean(DatasetStatHelper.class, "addServiceJourneys(${header.NB_SERVICE_JOURNEYS_IN_FILE})")

@@ -4,15 +4,17 @@ import org.apache.camel.Header;
 import org.entur.netex.index.api.NetexEntitiesIndex;
 import org.rutebanken.netex.model.Common_VersionFrameStructure;
 import org.rutebanken.netex.model.CompositeFrame;
-import org.rutebanken.netex.model.DataObjectDeliveryStructure;
 import org.rutebanken.netex.model.DayTypeAssignmentsInFrame_RelStructure;
 import org.rutebanken.netex.model.DayTypesInFrame_RelStructure;
 import org.rutebanken.netex.model.Frames_RelStructure;
+import org.rutebanken.netex.model.JourneyInterchangesInFrame_RelStructure;
 import org.rutebanken.netex.model.JourneyPattern;
 import org.rutebanken.netex.model.JourneyPatternsInFrame_RelStructure;
 import org.rutebanken.netex.model.JourneysInFrame_RelStructure;
 import org.rutebanken.netex.model.Line;
 import org.rutebanken.netex.model.LinesInFrame_RelStructure;
+import org.rutebanken.netex.model.NoticeAssignment;
+import org.rutebanken.netex.model.NoticeAssignmentsInFrame_RelStructure;
 import org.rutebanken.netex.model.ObjectFactory;
 import org.rutebanken.netex.model.OperatingDaysInFrame_RelStructure;
 import org.rutebanken.netex.model.OperatingPeriodsInFrame_RelStructure;
@@ -25,6 +27,7 @@ import org.rutebanken.netex.model.ScheduledStopPointsInFrame_RelStructure;
 import org.rutebanken.netex.model.ServiceCalendarFrame;
 import org.rutebanken.netex.model.ServiceFrame;
 import org.rutebanken.netex.model.ServiceJourney;
+import org.rutebanken.netex.model.ServiceJourneyInterchange;
 import org.rutebanken.netex.model.StopAssignment_VersionStructure;
 import org.rutebanken.netex.model.StopAssignmentsInFrame_RelStructure;
 import org.rutebanken.netex.model.TimetableFrame;
@@ -44,7 +47,7 @@ public class PublicationDeliveryUpdater {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PublicationDeliveryUpdater.class);
 
-    private ObjectFactory objectFactory = new ObjectFactory();
+    private final ObjectFactory objectFactory = new ObjectFactory();
 
 
     public PublicationDeliveryStructure update(@Header(PUBLICATION_DELIVERY_TEMPLATE) PublicationDeliveryStructure templatePublicationDeliveryStructure,
@@ -105,9 +108,22 @@ public class PublicationDeliveryUpdater {
 
         JourneysInFrame_RelStructure journeysInFrameRelStructure = objectFactory.createJourneysInFrame_RelStructure();
         journeysInFrameRelStructure.getVehicleJourneyOrDatedVehicleJourneyOrNormalDatedVehicleJourney().add(serviceJourney);
+        journeysInFrameRelStructure.getVehicleJourneyOrDatedVehicleJourneyOrNormalDatedVehicleJourney().add(lineEntities.getDatedServiceJourneyIndex().get(serviceJourneyId));
         timetableFrame.setVehicleJourneys(journeysInFrameRelStructure);
 
+        Collection<ServiceJourneyInterchange> serviceJourneyInterchanges = lineEntities.getServiceJourneyInterchangeByServiceJourneyRefIndex().get(serviceJourneyId);
+        if (!serviceJourneyInterchanges.isEmpty()) {
+            JourneyInterchangesInFrame_RelStructure journeyInterchangesInFrameRelStructure = objectFactory.createJourneyInterchangesInFrame_RelStructure();
+            journeyInterchangesInFrameRelStructure.getServiceJourneyPatternInterchangeOrServiceJourneyInterchange().addAll(serviceJourneyInterchanges);
+            timetableFrame.setJourneyInterchanges(journeyInterchangesInFrameRelStructure);
+        }
 
+        Collection<NoticeAssignment> noticeAssignments = lineEntities.getNoticeAssignmentIndex().getAll();
+        if (!noticeAssignments.isEmpty()) {
+            NoticeAssignmentsInFrame_RelStructure noticeAssignmentsInFrameRelStructure = objectFactory.createNoticeAssignmentsInFrame_RelStructure();
+            noticeAssignmentsInFrameRelStructure.getNoticeAssignment_().addAll(noticeAssignments.stream().map(this::wrapAsJAXBElement).collect(Collectors.toList()));
+            timetableFrame.setNoticeAssignments(noticeAssignmentsInFrameRelStructure);
+        }
 
         // service calendar frame
 
@@ -115,7 +131,7 @@ public class PublicationDeliveryUpdater {
         getFrames(publicationDeliveryStructure).add(wrapAsJAXBElement(serviceCalendarFrame));
 
         DayTypesInFrame_RelStructure dayTypesInFrameRelStructure = objectFactory.createDayTypesInFrame_RelStructure();
-        dayTypesInFrameRelStructure.getDayType_().addAll(serviceJourneyReferencedEntities.getDayTypes().stream().map(dayType -> wrapAsJAXBElement(dayType)).collect(Collectors.toList()));
+        dayTypesInFrameRelStructure.getDayType_().addAll(serviceJourneyReferencedEntities.getDayTypes().stream().map(this::wrapAsJAXBElement).collect(Collectors.toList()));
         serviceCalendarFrame.setDayTypes(dayTypesInFrameRelStructure);
 
         DayTypeAssignmentsInFrame_RelStructure dayTypeAssignmentsInFrameRelStructure = objectFactory.createDayTypeAssignmentsInFrame_RelStructure();
@@ -153,6 +169,8 @@ public class PublicationDeliveryUpdater {
 
 
         ServiceFrame serviceFrame = objectFactory.createServiceFrame();
+        serviceFrame.setId(getServiceFrame(templatePublicationDeliveryStructure).getId());
+        serviceFrame.setVersion(getServiceFrame(templatePublicationDeliveryStructure).getVersion());
         compositeFrame.getFrames().getCommonFrame().add(wrapAsJAXBElement(serviceFrame));
 
         PublicationDeliveryStructure.DataObjects dataObjects = objectFactory.createPublicationDeliveryStructureDataObjects();

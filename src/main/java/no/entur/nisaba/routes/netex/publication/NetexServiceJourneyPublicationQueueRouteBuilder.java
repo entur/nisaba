@@ -39,6 +39,7 @@ import java.util.stream.Collectors;
 
 import static no.entur.nisaba.Constants.DATASET_CODESPACE;
 import static no.entur.nisaba.Constants.FILE_HANDLE;
+import static no.entur.nisaba.Constants.GCS_BUCKET_FILE_NAME;
 
 /**
  * Publish service journeys to Kafka.
@@ -98,7 +99,8 @@ public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBu
                 .routeId("download-netex-file");
 
         from("direct:downloadCommonFile")
-                .setHeader(FILE_HANDLE, simple("_${header." + DATASET_CODESPACE + ".toUpperCase()}_shared_data.xml.zip"))
+                .setHeader(Exchange.FILE_NAME, simple("_${header." + DATASET_CODESPACE + ".toUpperCase()}_shared_data.xml.zip"))
+                .setHeader(FILE_HANDLE, simple(GCS_BUCKET_FILE_NAME))
                 .log(LoggingLevel.INFO, correlation() + "Downloading Common file ${header." + FILE_HANDLE + "}")
                 .to("direct:getNisabaBlob")
                 .routeId("download-common-file");
@@ -152,6 +154,7 @@ public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBu
                 .routeId("process-journey-pattern");
 
         from("direct:processServiceJourney")
+                .streamCaching()
                 .log(LoggingLevel.INFO, correlation() + "Processing service journey ${body.id}")
                 // extend pubsub acknowledgment deadline every 500 service journeys
                 .filter(exchange -> exchange.getProperty(Exchange.SPLIT_INDEX, Integer.class) % 500 == 0)
