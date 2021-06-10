@@ -1,5 +1,6 @@
 package no.entur.nisaba.routes.netex.publication;
 
+import com.google.common.collect.Streams;
 import org.apache.camel.Header;
 import org.entur.netex.index.api.NetexEntitiesIndex;
 import org.rutebanken.netex.model.Common_VersionFrameStructure;
@@ -118,7 +119,8 @@ public class PublicationDeliveryUpdater {
             timetableFrame.setJourneyInterchanges(journeyInterchangesInFrameRelStructure);
         }
 
-        Collection<NoticeAssignment> noticeAssignments = lineEntities.getNoticeAssignmentIndex().getAll();
+        Collection<NoticeAssignment> noticeAssignments = Streams.concat(serviceJourneyReferencedEntities.getNoticeAssignments().stream(),
+        journeyPatternReferencedEntities.getNoticeAssignments().stream()).collect(Collectors.toList());
         if (!noticeAssignments.isEmpty()) {
             NoticeAssignmentsInFrame_RelStructure noticeAssignmentsInFrameRelStructure = objectFactory.createNoticeAssignmentsInFrame_RelStructure();
             noticeAssignmentsInFrameRelStructure.getNoticeAssignment_().addAll(noticeAssignments.stream().map(this::wrapAsJAXBElement).collect(Collectors.toList()));

@@ -1,9 +1,9 @@
 package no.entur.nisaba.routes.netex.publication;
 
-import com.google.common.collect.Multimap;
 import org.entur.netex.index.api.NetexEntitiesIndex;
 import org.rutebanken.netex.model.DayType;
 import org.rutebanken.netex.model.DayTypeAssignment;
+import org.rutebanken.netex.model.NoticeAssignment;
 import org.rutebanken.netex.model.OperatingDay;
 import org.rutebanken.netex.model.OperatingPeriod;
 import org.rutebanken.netex.model.ServiceJourney;
@@ -11,6 +11,7 @@ import org.rutebanken.netex.model.ServiceJourney;
 import java.util.Collection;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class ServiceJourneyReferencedEntities {
 
@@ -18,6 +19,7 @@ public class ServiceJourneyReferencedEntities {
     private Collection<DayTypeAssignment> dayTypeAssignments;
     private Collection<OperatingPeriod> operatingPeriods;
     private Collection<OperatingDay> operatingDays;
+    private Collection<NoticeAssignment> noticeAssignments;
 
 
     public ServiceJourneyReferencedEntities(ServiceJourney serviceJourney, NetexEntitiesIndex netexEntitiesIndex) {
@@ -42,6 +44,25 @@ public class ServiceJourneyReferencedEntities {
                 .collect(Collectors.toSet());
 
 
+        Stream<NoticeAssignment> noticeAssignmentsOnServiceJourney = netexEntitiesIndex
+                .getNoticeAssignmentIndex()
+                .getAll()
+                .stream()
+                .filter(noticeAssignment -> noticeAssignment.getNoticedObjectRef().getRef().equals(serviceJourney.getId()));
+
+        Stream<NoticeAssignment> noticeAssignmentsOnPassingTimes = netexEntitiesIndex
+                .getNoticeAssignmentIndex()
+                .getAll()
+                .stream()
+                .filter(noticeAssignment -> serviceJourney.getPassingTimes()
+                        .getTimetabledPassingTime()
+                        .stream()
+                        .anyMatch(timetabledPassingTime -> noticeAssignment.getNoticedObjectRef()
+                                .getRef()
+                                .equals(timetabledPassingTime.getId())));
+
+        noticeAssignments = Stream.concat(noticeAssignmentsOnServiceJourney, noticeAssignmentsOnPassingTimes).collect(Collectors.toList());
+
     }
 
     public Collection<DayType> getDayTypes() {
@@ -58,6 +79,10 @@ public class ServiceJourneyReferencedEntities {
 
     public Collection<OperatingDay> getOperatingDays() {
         return operatingDays;
+    }
+
+    public Collection<NoticeAssignment> getNoticeAssignments() {
+        return noticeAssignments;
     }
 
 }
