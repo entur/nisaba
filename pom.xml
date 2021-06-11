@@ -31,7 +31,7 @@
         <avro.version>1.10.2</avro.version>
         <confluent-kafka-client.version>6.1.1</confluent-kafka-client.version>
         <google.cloud.bom-version>20.4.0</google.cloud.bom-version>
-        <netex-parser-java.version>1.0.5</netex-parser-java.version>
+        <netex-parser-java.version>1.0.7</netex-parser-java.version>
         <netex-java-model.version>1.0.12</netex-java-model.version>
 
 

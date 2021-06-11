@@ -20,29 +20,29 @@ public class JourneyPatternReferencedEntities {
     private Collection<NoticeAssignment> noticeAssignments;
 
 
-    public JourneyPatternReferencedEntities(JourneyPattern journeyPattern, NetexEntitiesIndex netexEntitiesIndex) {
+    public JourneyPatternReferencedEntities(JourneyPattern journeyPattern, NetexEntitiesIndex netexCommonEntitiesIndex, NetexEntitiesIndex netexLineEntitiesIndex) {
 
 
         scheduledStopPoints = journeyPattern.getPointsInSequence()
                 .getPointInJourneyPatternOrStopPointInJourneyPatternOrTimingPointInJourneyPattern()
                 .stream()
                 .map(pointInLinkSequence -> ((StopPointInJourneyPattern) pointInLinkSequence).getScheduledStopPointRef().getValue().getRef())
-                .map(scheduledStopPointId -> netexEntitiesIndex.getScheduledStopPointIndex().get(scheduledStopPointId))
+                .map(scheduledStopPointId -> netexCommonEntitiesIndex.getScheduledStopPointIndex().get(scheduledStopPointId))
                 .collect(Collectors.toSet());
 
         passengerStopAssignments = scheduledStopPoints.stream()
-                .map(scheduledStopPoint -> netexEntitiesIndex.getPassengerStopAssignmentsByStopPointRefIndex().get(scheduledStopPoint.getId()))
+                .map(scheduledStopPoint -> netexCommonEntitiesIndex.getPassengerStopAssignmentsByStopPointRefIndex().get(scheduledStopPoint.getId()))
                 .flatMap(Collection::stream)
                 .collect(Collectors.toSet());
 
 
-        Stream<NoticeAssignment> noticeAssignmentsOnJourneyPattern = netexEntitiesIndex
+        Stream<NoticeAssignment> noticeAssignmentsOnJourneyPattern = netexLineEntitiesIndex
                 .getNoticeAssignmentIndex()
                 .getAll()
                 .stream()
                 .filter(noticeAssignment -> noticeAssignment.getNoticedObjectRef().getRef().equals(journeyPattern.getId()));
 
-        Stream<NoticeAssignment> noticeAssignmentsOnStopPoints = netexEntitiesIndex.getNoticeAssignmentIndex()
+        Stream<NoticeAssignment> noticeAssignmentsOnStopPoints = netexLineEntitiesIndex.getNoticeAssignmentIndex()
                 .getAll()
                 .stream()
                 .filter(noticeAssignment -> journeyPattern.getPointsInSequence()

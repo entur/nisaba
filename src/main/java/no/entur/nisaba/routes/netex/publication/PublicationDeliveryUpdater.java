@@ -38,6 +38,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.xml.bind.JAXBElement;
 import javax.xml.namespace.QName;
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -45,36 +46,39 @@ import java.util.stream.Collectors;
 import static no.entur.nisaba.Constants.COMMON_FILE_INDEX;
 import static no.entur.nisaba.Constants.JOURNEY_PATTERN_REFERENCES;
 import static no.entur.nisaba.Constants.LINE_FILE_INDEX;
-import static no.entur.nisaba.Constants.PUBLICATION_DELIVERY_TEMPLATE;
+import static no.entur.nisaba.Constants.PUBLICATION_DELIVERY_TIMESTAMP;
 import static no.entur.nisaba.Constants.ROUTE_REFERENCES;
 import static no.entur.nisaba.Constants.SERVICE_JOURNEY_ID;
 
 public class PublicationDeliveryUpdater {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PublicationDeliveryUpdater.class);
+    private static final String NETEX_VERSION = "1.12:NO-NeTEx-networktimetable:1.3";
+    private static final String NETEX_PARTICIPANT_REF = "RB";
 
     private final ObjectFactory objectFactory = new ObjectFactory();
 
 
-    public PublicationDeliveryStructure update(@Header(PUBLICATION_DELIVERY_TEMPLATE) PublicationDeliveryStructure templatePublicationDeliveryStructure,
-                       @Header(COMMON_FILE_INDEX) NetexEntitiesIndex commonEntities,
-                       @Header(LINE_FILE_INDEX) NetexEntitiesIndex lineEntities,
-                       @Header(SERVICE_JOURNEY_ID) String serviceJourneyId,
-                                               @Header(ROUTE_REFERENCES) RouteReferencedEntities routeReferencedEntities,
-                                               @Header(JOURNEY_PATTERN_REFERENCES) JourneyPatternReferencedEntities journeyPatternReferencedEntities) {
+    public PublicationDeliveryStructure update(
+            @Header(COMMON_FILE_INDEX) NetexEntitiesIndex commonEntities,
+            @Header(LINE_FILE_INDEX) NetexEntitiesIndex lineEntities,
+            @Header(SERVICE_JOURNEY_ID) String serviceJourneyId,
+            @Header(ROUTE_REFERENCES) RouteReferencedEntities routeReferencedEntities,
+            @Header(JOURNEY_PATTERN_REFERENCES) JourneyPatternReferencedEntities journeyPatternReferencedEntities,
+            @Header(PUBLICATION_DELIVERY_TIMESTAMP) LocalDateTime publicationDeliveryTimestamp) {
 
-        PublicationDeliveryStructure publicationDeliveryStructure = createPublicationDeliveryStructure(templatePublicationDeliveryStructure);
+        PublicationDeliveryStructure publicationDeliveryStructure = createPublicationDeliveryStructure(lineEntities, publicationDeliveryTimestamp);
 
 
         ServiceJourney serviceJourney = lineEntities.getServiceJourneyIndex().get(serviceJourneyId);
-        ServiceJourneyReferencedEntities serviceJourneyReferencedEntities = new ServiceJourneyReferencedEntities(serviceJourney, commonEntities);
+        ServiceJourneyReferencedEntities serviceJourneyReferencedEntities = new ServiceJourneyReferencedEntities(serviceJourney, commonEntities, lineEntities);
 
         JourneyPattern journeyPattern = lineEntities.getJourneyPatternIndex().get(serviceJourney.getJourneyPatternRef().getValue().getRef());
         Route route = lineEntities.getRouteIndex().get(journeyPattern.getRouteRef().getRef());
 
 
         // resource frame
-        //getFrames(publicationDeliveryStructure).addAll(commonEntities.getResourceFrames().stream().map(this::wrapAsJAXBElement).collect(Collectors.toList()));
+        getFrames(publicationDeliveryStructure).addAll(commonEntities.getResourceFrames().stream().map(this::wrapAsJAXBElement).collect(Collectors.toList()));
 
 
         // service frame
@@ -93,8 +97,6 @@ public class PublicationDeliveryUpdater {
         JourneyPatternsInFrame_RelStructure journeyPatternsInFrameRelStructure = objectFactory.createJourneyPatternsInFrame_RelStructure();
         journeyPatternsInFrameRelStructure.getJourneyPattern_OrJourneyPatternView().add(wrapAsJAXBElement(journeyPattern));
         serviceFrame.setJourneyPatterns(journeyPatternsInFrameRelStructure);
-
-
 
         ScheduledStopPointsInFrame_RelStructure scheduledStopPointsInFrameRelStructure = objectFactory.createScheduledStopPointsInFrame_RelStructure();
         scheduledStopPointsInFrameRelStructure.getScheduledStopPoint().addAll(journeyPatternReferencedEntities.getScheduledStopPoints());
@@ -118,10 +120,14 @@ public class PublicationDeliveryUpdater {
 
         JourneysInFrame_RelStructure journeysInFrameRelStructure = objectFactory.createJourneysInFrame_RelStructure();
         journeysInFrameRelStructure.getVehicleJourneyOrDatedVehicleJourneyOrNormalDatedVehicleJourney().add(serviceJourney);
-        journeysInFrameRelStructure.getVehicleJourneyOrDatedVehicleJourneyOrNormalDatedVehicleJourney().add(lineEntities.getDatedServiceJourneyIndex().get(serviceJourneyId));
+        journeysInFrameRelStructure.getVehicleJourneyOrDatedVehicleJourneyOrNormalDatedVehicleJourney().addAll(lineEntities.getDatedServiceJourneyByServiceJourneyRefIndex().get(serviceJourneyId));
         timetableFrame.setVehicleJourneys(journeysInFrameRelStructure);
 
         Collection<ServiceJourneyInterchange> serviceJourneyInterchanges = lineEntities.getServiceJourneyInterchangeByServiceJourneyRefIndex().get(serviceJourneyId);
+        serviceJourneyInterchanges.forEach(serviceJourneyInterchange -> {
+            serviceJourneyInterchange.getFromJourneyRef().setVersion(null);
+            serviceJourneyInterchange.getToJourneyRef().setVersion(null);
+        });
         if (!serviceJourneyInterchanges.isEmpty()) {
             JourneyInterchangesInFrame_RelStructure journeyInterchangesInFrameRelStructure = objectFactory.createJourneyInterchangesInFrame_RelStructure();
             journeyInterchangesInFrameRelStructure.getServiceJourneyPatternInterchangeOrServiceJourneyInterchange().addAll(serviceJourneyInterchanges);
@@ -129,7 +135,7 @@ public class PublicationDeliveryUpdater {
         }
 
         Collection<NoticeAssignment> noticeAssignments = Streams.concat(serviceJourneyReferencedEntities.getNoticeAssignments().stream(),
-        journeyPatternReferencedEntities.getNoticeAssignments().stream()).collect(Collectors.toList());
+                journeyPatternReferencedEntities.getNoticeAssignments().stream()).collect(Collectors.toList());
         if (!noticeAssignments.isEmpty()) {
             NoticeAssignmentsInFrame_RelStructure noticeAssignmentsInFrameRelStructure = objectFactory.createNoticeAssignmentsInFrame_RelStructure();
             noticeAssignmentsInFrameRelStructure.getNoticeAssignment_().addAll(noticeAssignments.stream().map(this::wrapAsJAXBElement).collect(Collectors.toList()));
@@ -141,13 +147,17 @@ public class PublicationDeliveryUpdater {
         ServiceCalendarFrame serviceCalendarFrame = objectFactory.createServiceCalendarFrame().withId("id").withVersion("version");
         getFrames(publicationDeliveryStructure).add(wrapAsJAXBElement(serviceCalendarFrame));
 
-        DayTypesInFrame_RelStructure dayTypesInFrameRelStructure = objectFactory.createDayTypesInFrame_RelStructure();
-        dayTypesInFrameRelStructure.getDayType_().addAll(serviceJourneyReferencedEntities.getDayTypes().stream().map(this::wrapAsJAXBElement).collect(Collectors.toList()));
-        serviceCalendarFrame.setDayTypes(dayTypesInFrameRelStructure);
+        // if the service journey is used together with DatedServiceJourneys then no day types are defined
+        if (!serviceJourneyReferencedEntities.getDayTypes().isEmpty()) {
+            DayTypesInFrame_RelStructure dayTypesInFrameRelStructure = objectFactory.createDayTypesInFrame_RelStructure();
+            dayTypesInFrameRelStructure.getDayType_().addAll(serviceJourneyReferencedEntities.getDayTypes().stream().map(this::wrapAsJAXBElement).collect(Collectors.toList()));
+            serviceCalendarFrame.setDayTypes(dayTypesInFrameRelStructure);
 
-        DayTypeAssignmentsInFrame_RelStructure dayTypeAssignmentsInFrameRelStructure = objectFactory.createDayTypeAssignmentsInFrame_RelStructure();
-        dayTypeAssignmentsInFrameRelStructure.getDayTypeAssignment().addAll(serviceJourneyReferencedEntities.getDayTypeAssignments());
-        serviceCalendarFrame.setDayTypeAssignments(dayTypeAssignmentsInFrameRelStructure);
+            DayTypeAssignmentsInFrame_RelStructure dayTypeAssignmentsInFrameRelStructure = objectFactory.createDayTypeAssignmentsInFrame_RelStructure();
+            dayTypeAssignmentsInFrameRelStructure.getDayTypeAssignment().addAll(serviceJourneyReferencedEntities.getDayTypeAssignments());
+            serviceCalendarFrame.setDayTypeAssignments(dayTypeAssignmentsInFrameRelStructure);
+
+        }
 
         if (!serviceJourneyReferencedEntities.getOperatingPeriods().isEmpty()) {
             OperatingPeriodsInFrame_RelStructure operatingPeriodsInFrameRelStructure = objectFactory.createOperatingPeriodsInFrame_RelStructure();
@@ -166,33 +176,35 @@ public class PublicationDeliveryUpdater {
 
     }
 
-    private PublicationDeliveryStructure createPublicationDeliveryStructure(PublicationDeliveryStructure templatePublicationDeliveryStructure) {
-
-        CompositeFrame compositeFrame = objectFactory.createCompositeFrame();
-        CompositeFrame templateCompositeFrame = getCompositeFrame(templatePublicationDeliveryStructure);
-        compositeFrame.setId(templateCompositeFrame.getId());
-        compositeFrame.setVersion(templateCompositeFrame.getVersion());
-        compositeFrame.setCodespaces(templateCompositeFrame.getCodespaces());
-        compositeFrame.setValidityConditions(templateCompositeFrame.getValidityConditions());
-        compositeFrame.setFrameDefaults(templateCompositeFrame.getFrameDefaults());
-        Frames_RelStructure frames_relStructure = objectFactory.createFrames_RelStructure();
-        compositeFrame.setFrames(frames_relStructure);
-
-
-        ServiceFrame serviceFrame = objectFactory.createServiceFrame();
-        serviceFrame.setId(getServiceFrame(templatePublicationDeliveryStructure).getId());
-        serviceFrame.setVersion(getServiceFrame(templatePublicationDeliveryStructure).getVersion());
-        compositeFrame.getFrames().getCommonFrame().add(wrapAsJAXBElement(serviceFrame));
-
-        PublicationDeliveryStructure.DataObjects dataObjects = objectFactory.createPublicationDeliveryStructureDataObjects();
-        dataObjects.getCompositeFrameOrCommonFrame().add(wrapAsJAXBElement(compositeFrame));
+    private PublicationDeliveryStructure createPublicationDeliveryStructure(NetexEntitiesIndex netexLineEntitiesIndex, LocalDateTime publicationDeliveryTimestamp) {
 
         PublicationDeliveryStructure publicationDeliveryStructure = objectFactory.createPublicationDeliveryStructure();
+        PublicationDeliveryStructure.DataObjects dataObjects = objectFactory.createPublicationDeliveryStructureDataObjects();
         publicationDeliveryStructure.setDataObjects(dataObjects);
-        publicationDeliveryStructure.setDescription(templatePublicationDeliveryStructure.getDescription());
-        publicationDeliveryStructure.setParticipantRef(templatePublicationDeliveryStructure.getParticipantRef());
-        publicationDeliveryStructure.setPublicationTimestamp(templatePublicationDeliveryStructure.getPublicationTimestamp());
-        publicationDeliveryStructure.setVersion(templatePublicationDeliveryStructure.getVersion());
+        String lineName = netexLineEntitiesIndex.getLineIndex().getAll().stream().findFirst().orElseThrow().getName().getValue();
+        publicationDeliveryStructure.setDescription(objectFactory.createMultilingualString().withValue(lineName));
+        publicationDeliveryStructure.setParticipantRef(NETEX_PARTICIPANT_REF);
+        publicationDeliveryStructure.setPublicationTimestamp(publicationDeliveryTimestamp);
+        publicationDeliveryStructure.setVersion(NETEX_VERSION);
+
+
+        CompositeFrame compositeFrame = objectFactory.createCompositeFrame();
+        CompositeFrame sourceCompositeFrame = netexLineEntitiesIndex.getCompositeFrames().stream().findFirst().orElseThrow();
+        compositeFrame.setId(sourceCompositeFrame.getId());
+        compositeFrame.setVersion(sourceCompositeFrame.getVersion());
+        compositeFrame.setCodespaces(sourceCompositeFrame.getCodespaces());
+        compositeFrame.setValidityConditions(sourceCompositeFrame.getValidityConditions());
+        compositeFrame.setFrameDefaults(sourceCompositeFrame.getFrameDefaults());
+        Frames_RelStructure framesRelStructure = objectFactory.createFrames_RelStructure();
+        compositeFrame.setFrames(framesRelStructure);
+        dataObjects.getCompositeFrameOrCommonFrame().add(wrapAsJAXBElement(compositeFrame));
+
+        ServiceFrame serviceFrame = objectFactory.createServiceFrame();
+        ServiceFrame sourceServiceFrame = netexLineEntitiesIndex.getServiceFrames().stream().findFirst().orElseThrow();
+        serviceFrame.setId(sourceServiceFrame.getId());
+        serviceFrame.setVersion(sourceServiceFrame.getVersion());
+        compositeFrame.getFrames().getCommonFrame().add(wrapAsJAXBElement(serviceFrame));
+
 
         return publicationDeliveryStructure;
 
@@ -210,12 +222,12 @@ public class PublicationDeliveryUpdater {
 
     private ServiceFrame getServiceFrame(PublicationDeliveryStructure publicationDeliveryStructure) {
         List<JAXBElement<? extends Common_VersionFrameStructure>> commonFrame = getFrames(publicationDeliveryStructure);
-        return (ServiceFrame) commonFrame.stream().filter(jaxbElement -> jaxbElement.getValue() instanceof ServiceFrame).findFirst().get().getValue();
+        return (ServiceFrame) commonFrame.stream().filter(jaxbElement -> jaxbElement.getValue() instanceof ServiceFrame).findFirst().orElseThrow().getValue();
     }
 
     private TimetableFrame getTimetableFrame(PublicationDeliveryStructure publicationDeliveryStructure) {
         List<JAXBElement<? extends Common_VersionFrameStructure>> commonFrame = getFrames(publicationDeliveryStructure);
-        return (TimetableFrame) commonFrame.stream().filter(jaxbElement -> jaxbElement.getValue() instanceof TimetableFrame).findFirst().get().getValue();
+        return (TimetableFrame) commonFrame.stream().filter(jaxbElement -> jaxbElement.getValue() instanceof TimetableFrame).findFirst().orElseThrow().getValue();
     }
 
 
@@ -237,7 +249,6 @@ public class PublicationDeliveryUpdater {
         }
         return localPart;
     }
-
 
 
 }
