@@ -156,13 +156,12 @@ public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBu
 
         from("direct:processServiceJourney")
                 .streamCaching()
-                .log(LoggingLevel.INFO, correlation() + "Processing service journey ${body.id}")
+                .log(LoggingLevel.DEBUG, getClass().getName(), correlation() + "Processing ServiceJourney ${body.id}")
                 // extend pubsub acknowledgment deadline every 500 service journeys
                 .filter(exchange -> exchange.getProperty(Exchange.SPLIT_INDEX, Integer.class) % 500 == 0)
                 .process(this::extendAckDeadline)
                 //end filter
                 .end()
-                .log(LoggingLevel.DEBUG, getClass().getName(), correlation() + "Processing ServiceJourney ${body}")
                 .setHeader(Constants.SERVICE_JOURNEY_ID, simple("${body.id}"))
                 .bean(PublicationDeliveryUpdater.class, "update")
                 .marshal(xmlDataFormat)
