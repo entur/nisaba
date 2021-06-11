@@ -42,7 +42,12 @@ import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static no.entur.nisaba.Constants.COMMON_FILE_INDEX;
+import static no.entur.nisaba.Constants.JOURNEY_PATTERN_REFERENCES;
+import static no.entur.nisaba.Constants.LINE_FILE_INDEX;
 import static no.entur.nisaba.Constants.PUBLICATION_DELIVERY_TEMPLATE;
+import static no.entur.nisaba.Constants.ROUTE_REFERENCES;
+import static no.entur.nisaba.Constants.SERVICE_JOURNEY_ID;
 
 public class PublicationDeliveryUpdater {
 
@@ -52,9 +57,11 @@ public class PublicationDeliveryUpdater {
 
 
     public PublicationDeliveryStructure update(@Header(PUBLICATION_DELIVERY_TEMPLATE) PublicationDeliveryStructure templatePublicationDeliveryStructure,
-                       @Header("COMMON_FILE_INDEX") NetexEntitiesIndex commonEntities,
-                       @Header("LINE_FILE_INDEX") NetexEntitiesIndex lineEntities,
-                       @Header("SERVICE_JOURNEY_ID") String serviceJourneyId) {
+                       @Header(COMMON_FILE_INDEX) NetexEntitiesIndex commonEntities,
+                       @Header(LINE_FILE_INDEX) NetexEntitiesIndex lineEntities,
+                       @Header(SERVICE_JOURNEY_ID) String serviceJourneyId,
+                                               @Header(ROUTE_REFERENCES) RouteReferencedEntities routeReferencedEntities,
+                                               @Header(JOURNEY_PATTERN_REFERENCES) JourneyPatternReferencedEntities journeyPatternReferencedEntities) {
 
         PublicationDeliveryStructure publicationDeliveryStructure = createPublicationDeliveryStructure(templatePublicationDeliveryStructure);
 
@@ -63,10 +70,7 @@ public class PublicationDeliveryUpdater {
         ServiceJourneyReferencedEntities serviceJourneyReferencedEntities = new ServiceJourneyReferencedEntities(serviceJourney, commonEntities);
 
         JourneyPattern journeyPattern = lineEntities.getJourneyPatternIndex().get(serviceJourney.getJourneyPatternRef().getValue().getRef());
-        JourneyPatternReferencedEntities journeyPatternReferencedEntities = new JourneyPatternReferencedEntities(journeyPattern, commonEntities);
-
         Route route = lineEntities.getRouteIndex().get(journeyPattern.getRouteRef().getRef());
-        RouteReferencedEntities routeReferencedEntities = new RouteReferencedEntities(route, commonEntities);
 
 
         // resource frame

@@ -48,9 +48,9 @@ public class JourneyPatternReferencedEntities {
                 .filter(noticeAssignment -> journeyPattern.getPointsInSequence()
                         .getPointInJourneyPatternOrStopPointInJourneyPatternOrTimingPointInJourneyPattern()
                         .stream()
-                        .anyMatch(pointInLinkSequence_versionedChildStructure -> noticeAssignment.getNoticedObjectRef()
+                        .anyMatch(stopPointInJourneyPattern -> noticeAssignment.getNoticedObjectRef()
                                 .getRef()
-                                .equals(pointInLinkSequence_versionedChildStructure.getId())));
+                                .equals(stopPointInJourneyPattern.getId())));
 
 
         noticeAssignments = Stream.concat(noticeAssignmentsOnJourneyPattern, noticeAssignmentsOnStopPoints).collect(Collectors.toList());

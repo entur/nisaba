@@ -48,9 +48,7 @@ import static no.entur.nisaba.Constants.GCS_BUCKET_FILE_NAME;
 public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBuilder {
 
     private static final String LINE_FILE = "LINE_FILE";
-    private static final String SERVICE_JOURNEY_ID = "SERVICE_JOURNEY_ID";
-    private static final String COMMON_FILE_INDEX = "COMMON_FILE_INDEX";
-    private static final String LINE_FILE_INDEX = "LINE_FILE_INDEX";
+
     private static final String JOURNEY_PATTERNS = "JOURNEY_PATTERNS";
     private static final String SERVICE_JOURNEYS = "SERVICE_JOURNEYS";
 
@@ -75,7 +73,7 @@ public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBu
                 .process(exchange -> {
                     NetexParser parser = new NetexParser();
                     NetexEntitiesIndex index = parser.parse(exchange.getIn().getBody(InputStream.class));
-                    exchange.getIn().setHeader(LINE_FILE_INDEX, index);
+                    exchange.getIn().setHeader(Constants.LINE_FILE_INDEX, index);
                     log.info("Parsed line file");
                 })
                 .setHeader(LINE_FILE, body())
@@ -85,7 +83,7 @@ public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBu
                 .process(exchange -> {
                     NetexParser parser = new NetexParser();
                     NetexEntitiesIndex index = parser.parse(exchange.getIn().getBody(InputStream.class));
-                    exchange.getIn().setHeader(COMMON_FILE_INDEX, index);
+                    exchange.getIn().setHeader(Constants.COMMON_FILE_INDEX, index);
                     log.info("Parsed common file");
                 })
                 .to("direct:buildTemplatePublicationDelivery")
@@ -120,7 +118,7 @@ public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBu
                 .routeId("build-template-publication-delivery");
 
         from("direct:processLineFile")
-                .split(simple("${header." + LINE_FILE_INDEX + ".routeIndex.all}"))
+                .split(simple("${header." + Constants.LINE_FILE_INDEX + ".routeIndex.all}"))
                 .to("direct:processRoute")
                 .end()
                 .log(LoggingLevel.INFO, correlation() + "Processed line file ${header." + FILE_HANDLE + "}")
@@ -130,12 +128,12 @@ public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBu
                 .log(LoggingLevel.INFO, correlation() + "Processing route ${body.id}")
                 .process(exchange -> {
                     Route route = exchange.getIn().getBody(Route.class);
-                    NetexEntitiesIndex netexEntitiesIndex = exchange.getIn().getHeader(LINE_FILE_INDEX, NetexEntitiesIndex.class);
-                    NetexEntitiesIndex commonNetexEntitiesIndex = exchange.getIn().getHeader(COMMON_FILE_INDEX, NetexEntitiesIndex.class);
-                    List<JourneyPattern> journeyPatterns = netexEntitiesIndex.getJourneyPatternIndex().getAll().stream().filter(journeyPattern -> journeyPattern.getRouteRef().getRef().equals(route.getId())).collect(Collectors.toList());
+                    NetexEntitiesIndex netexLineEntitiesIndex = exchange.getIn().getHeader(Constants.LINE_FILE_INDEX, NetexEntitiesIndex.class);
+                    NetexEntitiesIndex commonNetexEntitiesIndex = exchange.getIn().getHeader(Constants.COMMON_FILE_INDEX, NetexEntitiesIndex.class);
+                    List<JourneyPattern> journeyPatterns = netexLineEntitiesIndex.getJourneyPatternIndex().getAll().stream().filter(journeyPattern -> journeyPattern.getRouteRef().getRef().equals(route.getId())).collect(Collectors.toList());
                     exchange.getIn().setHeader(JOURNEY_PATTERNS, journeyPatterns);
                     RouteReferencedEntities routeReferencedEntities = new RouteReferencedEntities(route, commonNetexEntitiesIndex);
-                    exchange.getIn().setHeader("ROUTE_REFERENCES", routeReferencedEntities);
+                    exchange.getIn().setHeader(Constants.ROUTE_REFERENCES, routeReferencedEntities);
                 })
                 .split(simple("${header." + JOURNEY_PATTERNS + "}"))
                 .to("direct:processJourneyPattern")
@@ -145,9 +143,12 @@ public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBu
                 .log(LoggingLevel.INFO, correlation() + "Processing journey pattern ${body.id}")
                 .process(exchange -> {
                     JourneyPattern journeyPattern = exchange.getIn().getBody(JourneyPattern.class);
-                    NetexEntitiesIndex netexEntitiesIndex = exchange.getIn().getHeader(LINE_FILE_INDEX, NetexEntitiesIndex.class);
-                    List<ServiceJourney> serviceJourneys = netexEntitiesIndex.getServiceJourneyIndex().getAll().stream().filter(serviceJourney -> serviceJourney.getJourneyPatternRef().getValue().getRef().equals(journeyPattern.getId())).collect(Collectors.toList());
+                    NetexEntitiesIndex netexLineEntitiesIndex = exchange.getIn().getHeader(Constants.LINE_FILE_INDEX, NetexEntitiesIndex.class);
+                    NetexEntitiesIndex commonNetexEntitiesIndex = exchange.getIn().getHeader(Constants.COMMON_FILE_INDEX, NetexEntitiesIndex.class);
+                    List<ServiceJourney> serviceJourneys = netexLineEntitiesIndex.getServiceJourneyIndex().getAll().stream().filter(serviceJourney -> serviceJourney.getJourneyPatternRef().getValue().getRef().equals(journeyPattern.getId())).collect(Collectors.toList());
                     exchange.getIn().setHeader(SERVICE_JOURNEYS, serviceJourneys);
+                    JourneyPatternReferencedEntities journeyPatternReferencedEntities = new JourneyPatternReferencedEntities(journeyPattern, commonNetexEntitiesIndex);
+                    exchange.getIn().setHeader(Constants.JOURNEY_PATTERN_REFERENCES, journeyPatternReferencedEntities);
                 })
                 .split(simple("${header." + SERVICE_JOURNEYS + "}"))
                 .to("direct:processServiceJourney")
@@ -162,17 +163,17 @@ public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBu
                 //end filter
                 .end()
                 .log(LoggingLevel.DEBUG, getClass().getName(), correlation() + "Processing ServiceJourney ${body}")
-                .setHeader(SERVICE_JOURNEY_ID, simple("${body.id}"))
+                .setHeader(Constants.SERVICE_JOURNEY_ID, simple("${body.id}"))
                 .bean(PublicationDeliveryUpdater.class, "update")
                 .marshal(xmlDataFormat)
                 .to("file:/tmp/camel/servicejourney?fileName=${date:now:yyyyMMddHHmmssSSS}-transformed.xml")
-                .setHeader(KafkaConstants.KEY, header(SERVICE_JOURNEY_ID))
+                .setHeader(KafkaConstants.KEY, header(Constants.SERVICE_JOURNEY_ID))
                 // explicitly compress the payload due to https://issues.apache.org/jira/browse/KAFKA-4169
                 .marshal().zipFile()
                 .doTry()
                 .to("kafka:{{nisaba.kafka.topic.servicejourney}}?clientId=nisaba-servicejourney&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy").id("to-kafka-topic-servicejourney")
                 .doCatch(RecordTooLargeException.class)
-                .log(LoggingLevel.ERROR, "Cannot serialize service journey ${header." + SERVICE_JOURNEY_ID + "} in Line file ${header." + Exchange.FILE_NAME + "} into Kafka topic, max message size exceeded ${exception.stacktrace} ")
+                .log(LoggingLevel.ERROR, "Cannot serialize service journey ${header." + Constants.SERVICE_JOURNEY_ID + "} in Line file ${header." + Exchange.FILE_NAME + "} into Kafka topic, max message size exceeded ${exception.stacktrace} ")
                 .stop()
                 .routeId("process-service-journey");
     }

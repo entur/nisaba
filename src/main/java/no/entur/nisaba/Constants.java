@@ -47,6 +47,11 @@ public final class Constants {
 
     public static final Namespaces XML_NAMESPACE_NETEX = new Namespaces("netex", "http://www.netex.org.uk/netex");
     public static final String PUBLICATION_DELIVERY_TEMPLATE = "PUBLICATION_DELIVERY_TEMPLATE";
+    public static final String SERVICE_JOURNEY_ID = "SERVICE_JOURNEY_ID";
+    public static final String COMMON_FILE_INDEX = "COMMON_FILE_INDEX";
+    public static final String LINE_FILE_INDEX = "LINE_FILE_INDEX";
+    public static final String ROUTE_REFERENCES = "ROUTE_REFERENCES";
+    public static final String JOURNEY_PATTERN_REFERENCES = "JOURNEY_PATTERN_REFERENCES";
 
     private Constants() {
     }
