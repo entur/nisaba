@@ -1,4 +1,4 @@
-package no.entur.nisaba.routes.netex.publication;
+package no.entur.nisaba.netex;
 
 import com.google.common.collect.Streams;
 import org.apache.camel.Header;
@@ -7,6 +7,7 @@ import org.rutebanken.netex.model.Common_VersionFrameStructure;
 import org.rutebanken.netex.model.CompositeFrame;
 import org.rutebanken.netex.model.DayTypeAssignmentsInFrame_RelStructure;
 import org.rutebanken.netex.model.DayTypesInFrame_RelStructure;
+import org.rutebanken.netex.model.FlexibleLine;
 import org.rutebanken.netex.model.Frames_RelStructure;
 import org.rutebanken.netex.model.JourneyInterchangesInFrame_RelStructure;
 import org.rutebanken.netex.model.JourneyPattern;
@@ -19,8 +20,11 @@ import org.rutebanken.netex.model.NoticeAssignmentsInFrame_RelStructure;
 import org.rutebanken.netex.model.ObjectFactory;
 import org.rutebanken.netex.model.OperatingDaysInFrame_RelStructure;
 import org.rutebanken.netex.model.OperatingPeriodsInFrame_RelStructure;
+import org.rutebanken.netex.model.Operator;
+import org.rutebanken.netex.model.OrganisationsInFrame_RelStructure;
 import org.rutebanken.netex.model.PassengerStopAssignment;
 import org.rutebanken.netex.model.PublicationDeliveryStructure;
+import org.rutebanken.netex.model.ResourceFrame;
 import org.rutebanken.netex.model.Route;
 import org.rutebanken.netex.model.RoutePointsInFrame_RelStructure;
 import org.rutebanken.netex.model.RoutesInFrame_RelStructure;
@@ -40,12 +44,16 @@ import javax.xml.bind.JAXBElement;
 import javax.xml.namespace.QName;
 import java.time.LocalDateTime;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static no.entur.nisaba.Constants.COMMON_FILE_INDEX;
+import static no.entur.nisaba.Constants.DATASET_CODESPACE;
 import static no.entur.nisaba.Constants.JOURNEY_PATTERN_REFERENCES;
 import static no.entur.nisaba.Constants.LINE_FILE_INDEX;
+import static no.entur.nisaba.Constants.LINE_REFERENCES;
 import static no.entur.nisaba.Constants.PUBLICATION_DELIVERY_TIMESTAMP;
 import static no.entur.nisaba.Constants.ROUTE_REFERENCES;
 import static no.entur.nisaba.Constants.SERVICE_JOURNEY_ID;
@@ -55,17 +63,20 @@ public class PublicationDeliveryUpdater {
     private static final Logger LOGGER = LoggerFactory.getLogger(PublicationDeliveryUpdater.class);
     private static final String NETEX_VERSION = "1.12:NO-NeTEx-networktimetable:1.3";
     private static final String NETEX_PARTICIPANT_REF = "RB";
+    private static final String DEFAULT_FRAME_VERSION = "1";
 
     private final ObjectFactory objectFactory = new ObjectFactory();
 
 
     public PublicationDeliveryStructure update(
+            @Header(DATASET_CODESPACE) String codespace,
             @Header(COMMON_FILE_INDEX) NetexEntitiesIndex commonEntities,
             @Header(LINE_FILE_INDEX) NetexEntitiesIndex lineEntities,
             @Header(SERVICE_JOURNEY_ID) String serviceJourneyId,
             @Header(ROUTE_REFERENCES) RouteReferencedEntities routeReferencedEntities,
             @Header(JOURNEY_PATTERN_REFERENCES) JourneyPatternReferencedEntities journeyPatternReferencedEntities,
-            @Header(PUBLICATION_DELIVERY_TIMESTAMP) LocalDateTime publicationDeliveryTimestamp) {
+            @Header(PUBLICATION_DELIVERY_TIMESTAMP) LocalDateTime publicationDeliveryTimestamp,
+            @Header(LINE_REFERENCES) LineReferencedEntities lineReferencedEntities) {
 
         PublicationDeliveryStructure publicationDeliveryStructure = createPublicationDeliveryStructure(lineEntities, publicationDeliveryTimestamp);
 
@@ -78,7 +89,20 @@ public class PublicationDeliveryUpdater {
 
 
         // resource frame
-        getFrames(publicationDeliveryStructure).addAll(commonEntities.getResourceFrames().stream().map(this::wrapAsJAXBElement).collect(Collectors.toList()));
+        ResourceFrame resourceFrame = objectFactory.createResourceFrame();
+        resourceFrame.withId(codespace + ":ResourceFrame:1").withVersion(DEFAULT_FRAME_VERSION);
+        OrganisationsInFrame_RelStructure organisationsInFrameRelStructure = objectFactory.createOrganisationsInFrame_RelStructure();
+
+        Set<Operator> operators = new HashSet<>();
+        operators.add(lineReferencedEntities.getOperator());
+        Operator serviceJourneyOperator = serviceJourneyReferencedEntities.getOperator();
+        if (serviceJourneyOperator != null) {
+            operators.add(serviceJourneyOperator);
+        }
+        organisationsInFrameRelStructure.getOrganisation_().addAll(operators.stream().map(this::wrapAsJAXBElement).collect(Collectors.toList()));
+        organisationsInFrameRelStructure.getOrganisation_().add(wrapAsJAXBElement(lineReferencedEntities.getAuthority()));
+        resourceFrame.setOrganisations(organisationsInFrameRelStructure);
+        getFrames(publicationDeliveryStructure).add(wrapAsJAXBElement(resourceFrame));
 
 
         // service frame
@@ -88,7 +112,12 @@ public class PublicationDeliveryUpdater {
         LinesInFrame_RelStructure linesInFrameRelStructure = objectFactory.createLinesInFrame_RelStructure();
         List<JAXBElement<Line>> lines = lineEntities.getLineIndex().getAll().stream().map(this::wrapAsJAXBElement).collect(Collectors.toList());
         linesInFrameRelStructure.getLine_().addAll(lines);
+        List<JAXBElement<FlexibleLine>> flexibleLines = lineEntities.getFlexibleLineIndex().getAll().stream().map(this::wrapAsJAXBElement).collect(Collectors.toList());
+        linesInFrameRelStructure.getLine_().addAll(flexibleLines);
+
         serviceFrame.setLines(linesInFrameRelStructure);
+        serviceFrame.setNetwork(lineReferencedEntities.getNetwork());
+
 
         RoutesInFrame_RelStructure routesInFrameRelStructure = objectFactory.createRoutesInFrame_RelStructure();
         routesInFrameRelStructure.getRoute_().add(wrapAsJAXBElement(route));
@@ -115,7 +144,7 @@ public class PublicationDeliveryUpdater {
 
         // timetable frame
 
-        TimetableFrame timetableFrame = objectFactory.createTimetableFrame().withId("id").withVersion("version");
+        TimetableFrame timetableFrame = objectFactory.createTimetableFrame().withId(codespace + ":TimetableFrame:1").withVersion(DEFAULT_FRAME_VERSION);
         getFrames(publicationDeliveryStructure).add(wrapAsJAXBElement(timetableFrame));
 
         JourneysInFrame_RelStructure journeysInFrameRelStructure = objectFactory.createJourneysInFrame_RelStructure();
@@ -144,7 +173,7 @@ public class PublicationDeliveryUpdater {
 
         // service calendar frame
 
-        ServiceCalendarFrame serviceCalendarFrame = objectFactory.createServiceCalendarFrame().withId("id").withVersion("version");
+        ServiceCalendarFrame serviceCalendarFrame = objectFactory.createServiceCalendarFrame().withId(codespace + ":ServiceCalendarFrame:1").withVersion(DEFAULT_FRAME_VERSION);
         getFrames(publicationDeliveryStructure).add(wrapAsJAXBElement(serviceCalendarFrame));
 
         // if the service journey is used together with DatedServiceJourneys then no day types are defined
@@ -181,7 +210,14 @@ public class PublicationDeliveryUpdater {
         PublicationDeliveryStructure publicationDeliveryStructure = objectFactory.createPublicationDeliveryStructure();
         PublicationDeliveryStructure.DataObjects dataObjects = objectFactory.createPublicationDeliveryStructureDataObjects();
         publicationDeliveryStructure.setDataObjects(dataObjects);
-        String lineName = netexLineEntitiesIndex.getLineIndex().getAll().stream().findFirst().orElseThrow().getName().getValue();
+
+        String lineName = "";
+        if (!netexLineEntitiesIndex.getLineIndex().getAll().isEmpty()) {
+            lineName = netexLineEntitiesIndex.getLineIndex().getAll().stream().findFirst().orElseThrow().getName().getValue();
+        } else {
+            lineName = netexLineEntitiesIndex.getFlexibleLineIndex().getAll().stream().findFirst().orElseThrow().getName().getValue();
+        }
+
         publicationDeliveryStructure.setDescription(objectFactory.createMultilingualString().withValue(lineName));
         publicationDeliveryStructure.setParticipantRef(NETEX_PARTICIPANT_REF);
         publicationDeliveryStructure.setPublicationTimestamp(publicationDeliveryTimestamp);

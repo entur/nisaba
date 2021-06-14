@@ -50,8 +50,12 @@ public final class Constants {
     public static final String SERVICE_JOURNEY_ID = "SERVICE_JOURNEY_ID";
     public static final String COMMON_FILE_INDEX = "COMMON_FILE_INDEX";
     public static final String LINE_FILE_INDEX = "LINE_FILE_INDEX";
+
+
+    public static final String LINE_REFERENCES = "LINE_REFERENCES";
     public static final String ROUTE_REFERENCES = "ROUTE_REFERENCES";
-    public static final String JOURNEY_PATTERN_REFERENCES = "JOURNEY_PATTERN_REFERENCES";
+        public static final String JOURNEY_PATTERN_REFERENCES = "JOURNEY_PATTERN_REFERENCES";
+
     public static final String PUBLICATION_DELIVERY_TIMESTAMP = "PUBLICATION_DELIVERY_TIMESTAMP";
 
     private Constants() {

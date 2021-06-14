@@ -1,4 +1,4 @@
-package no.entur.nisaba.routes.netex.publication;
+package no.entur.nisaba.netex;
 
 import org.entur.netex.index.api.NetexEntitiesIndex;
 import org.rutebanken.netex.model.DayType;
@@ -7,6 +7,7 @@ import org.rutebanken.netex.model.DayTypeRefs_RelStructure;
 import org.rutebanken.netex.model.NoticeAssignment;
 import org.rutebanken.netex.model.OperatingDay;
 import org.rutebanken.netex.model.OperatingPeriod;
+import org.rutebanken.netex.model.Operator;
 import org.rutebanken.netex.model.ServiceJourney;
 
 import java.util.Collection;
@@ -22,6 +23,8 @@ public class ServiceJourneyReferencedEntities {
     private Collection<OperatingPeriod> operatingPeriods = new HashSet<>();
     private Collection<OperatingDay> operatingDays = new HashSet<>();
     private Collection<NoticeAssignment> noticeAssignments;
+
+    private Operator operator;
 
 
     public ServiceJourneyReferencedEntities(ServiceJourney serviceJourney, NetexEntitiesIndex netexCommonEntitiesIndex, NetexEntitiesIndex netexLineEntitiesIndex) {
@@ -75,6 +78,8 @@ public class ServiceJourneyReferencedEntities {
 
         noticeAssignments = Stream.concat(noticeAssignmentsOnServiceJourney, noticeAssignmentsOnPassingTimes).collect(Collectors.toList());
 
+        operator = netexCommonEntitiesIndex.getOperatorIndex().get(serviceJourney.getOperatorRef().getRef());
+
     }
 
     public Collection<DayType> getDayTypes() {
@@ -95,6 +100,10 @@ public class ServiceJourneyReferencedEntities {
 
     public Collection<NoticeAssignment> getNoticeAssignments() {
         return noticeAssignments;
+    }
+
+    public Operator getOperator() {
+        return operator;
     }
 
 }

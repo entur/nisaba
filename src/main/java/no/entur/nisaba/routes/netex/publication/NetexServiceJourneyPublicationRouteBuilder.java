@@ -17,6 +17,10 @@
 package no.entur.nisaba.routes.netex.publication;
 
 import no.entur.nisaba.Constants;
+import no.entur.nisaba.netex.JourneyPatternReferencedEntities;
+import no.entur.nisaba.netex.LineReferencedEntities;
+import no.entur.nisaba.netex.PublicationDeliveryUpdater;
+import no.entur.nisaba.netex.RouteReferencedEntities;
 import no.entur.nisaba.routes.BaseRouteBuilder;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
@@ -36,6 +40,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static no.entur.nisaba.Constants.COMMON_FILE_INDEX;
 import static no.entur.nisaba.Constants.DATASET_CODESPACE;
 import static no.entur.nisaba.Constants.FILE_HANDLE;
 import static no.entur.nisaba.Constants.GCS_BUCKET_FILE_NAME;
@@ -45,7 +50,7 @@ import static no.entur.nisaba.Constants.PUBLICATION_DELIVERY_TIMESTAMP;
  * Publish service journeys to Kafka.
  */
 @Component
-public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBuilder {
+public class NetexServiceJourneyPublicationRouteBuilder extends BaseRouteBuilder {
 
     private static final String LINE_FILE = "LINE_FILE";
 
@@ -63,6 +68,7 @@ public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBu
 
         from("google-pubsub:{{nisaba.pubsub.project.id}}:NetexServiceJourneyPublicationQueue?synchronousPull={{nisaba.pubsub.queue.servicejourney.synchronous:true}}")
                 .streamCaching()
+                .log(LoggingLevel.DEBUG, correlation() + "Received PubSub message")
 
                 .to("direct:downloadNetexFile")
                 .filter(body().isNull())
@@ -75,12 +81,10 @@ public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBu
                 .setHeader(Constants.LINE_FILE_INDEX, method(NetexParser.class, "parse(${body})"))
                 .log(LoggingLevel.DEBUG, correlation() + "Parsed line file")
 
-                .to("direct:downloadCommonFile")
-                .unmarshal().zipFile()
-                .setHeader(Constants.COMMON_FILE_INDEX, method(NetexParser.class, "parse(${body})"))
-                .log(LoggingLevel.DEBUG, correlation() + "Parsed common file")
+                .to("direct:downloadCommonFiles")
+                .log(LoggingLevel.DEBUG, correlation() + "Parsed common files")
 
-                .to("direct:processLineFile")
+                .to("direct:processLine")
 
                 .routeId("pubsub-process-service-journey");
 
@@ -90,20 +94,56 @@ public class NetexServiceJourneyPublicationQueueRouteBuilder extends BaseRouteBu
                 .to("direct:getNisabaBlob")
                 .routeId("download-netex-file");
 
-        from("direct:downloadCommonFile")
+        from("direct:downloadCommonFiles")
+
+                // downloading common file for non-flexible lines
                 .setHeader(Exchange.FILE_NAME, simple("_${header." + DATASET_CODESPACE + ".toUpperCase()}_shared_data.xml.zip"))
                 .setHeader(FILE_HANDLE, simple(GCS_BUCKET_FILE_NAME))
                 .log(LoggingLevel.INFO, correlation() + "Downloading Common file ${header." + FILE_HANDLE + "}")
                 .to("direct:getNisabaBlob")
-                .routeId("download-common-file");
+                .filter(body().isNotNull())
+                .unmarshal().zipFile()
+                .setHeader(Constants.COMMON_FILE_INDEX, method(NetexParser.class, "parse(${body})"))
+                .log(LoggingLevel.DEBUG, correlation() + "Parsed common file ${header." + FILE_HANDLE + "}")
+                // end filter
+                .end()
 
-        from("direct:processLineFile")
+                // downloading common file for flexible lines
+                .setHeader(Exchange.FILE_NAME, simple("_${header." + DATASET_CODESPACE + ".toUpperCase()}_flexible_shared_data.xml.zip"))
+                .setHeader(FILE_HANDLE, simple(GCS_BUCKET_FILE_NAME))
+                .log(LoggingLevel.INFO, correlation() + "Downloading Common file ${header." + FILE_HANDLE + "}")
+                .to("direct:getNisabaBlob")
+                .filter(body().isNotNull())
+                .unmarshal().zipFile()
+                .choice()
+                .when(header(COMMON_FILE_INDEX).isNotNull())
+                .setHeader(Constants.COMMON_FILE_INDEX, method(NetexParser.class, "parse(${body}, ${header." + COMMON_FILE_INDEX + "})"))
+                .log(LoggingLevel.DEBUG, correlation() + "Aggregated common file ${header." + Exchange.FILE_NAME + "} to previous index")
+                .otherwise()
+                .setHeader(Constants.COMMON_FILE_INDEX, method(NetexParser.class, "parse(${body})"))
+                .log(LoggingLevel.DEBUG, correlation() + "Created new index for common file ${header." + Exchange.FILE_NAME + "}")
+                // end choice
+                .end()
+                .log(LoggingLevel.DEBUG, correlation() + "Parsed common file ${header." + Exchange.FILE_NAME + "}")
+                //end filter
+                .end()
+                .routeId("download-common-files");
+
+        from("direct:processLine")
                 .setHeader(PUBLICATION_DELIVERY_TIMESTAMP, LocalDateTime::now)
+                .process(exchange -> {
+                    NetexEntitiesIndex lineNetexEntitiesIndex = exchange.getIn().getHeader(Constants.LINE_FILE_INDEX, NetexEntitiesIndex.class);
+                    NetexEntitiesIndex commonNetexEntitiesIndex = exchange.getIn().getHeader(Constants.COMMON_FILE_INDEX, NetexEntitiesIndex.class);
+                    LineReferencedEntities lineReferencedEntities = new LineReferencedEntities.LineReferencedEntitiesBuilder()
+                            .withNetexLineEntitiesIndex(lineNetexEntitiesIndex)
+                            .withNetexCommonEntitiesIndex(commonNetexEntitiesIndex)
+                            .build();
+                    exchange.getIn().setHeader(Constants.LINE_REFERENCES, lineReferencedEntities);
+                })
                 .split(simple("${header." + Constants.LINE_FILE_INDEX + ".routeIndex.all}"))
                 .to("direct:processRoute")
                 .end()
-                .log(LoggingLevel.INFO, correlation() + "Processed line file ${header." + FILE_HANDLE + "}")
-                .routeId("process-line-file");
+                .routeId("process-line");
 
         from("direct:processRoute")
                 .log(LoggingLevel.INFO, correlation() + "Processing route ${body.id}")

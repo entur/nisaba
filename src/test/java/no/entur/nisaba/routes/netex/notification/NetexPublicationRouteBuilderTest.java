@@ -52,6 +52,7 @@ class NetexPublicationRouteBuilderTest extends NisabaRouteBuilderIntegrationTest
     private static final String CODESPACE_RUT = "rut";
     private static final String CODESPACE_GOA = "goa";
     private static final String CODESPACE_ATB = "atb";
+    private static final String CODESPACE_ATU = "atu";
 
     @Produce("google-pubsub:{{nisaba.pubsub.project.id}}:NetexExportNotificationQueue")
     protected ProducerTemplate exportNotificationQueueProducerTemplate;
@@ -171,6 +172,30 @@ class NetexPublicationRouteBuilderTest extends NisabaRouteBuilderIntegrationTest
 
         context.start();
         exportNotificationQueueProducerTemplate.sendBody(CODESPACE_ATB);
+        mockNisabaServiceJourneyTopic.assertIsSatisfied();
+
+        mockNisabaServiceJourneyTopic.getReceivedExchanges().forEach(this::validatePublicationDelivery);
+
+    }
+
+    @Test
+    void testPublishServiceJourneyWithFlexibleLines() throws Exception {
+
+        AdviceWith.adviceWith(context, "notify-consumers", a -> a.weaveById("to-kafka-topic-event").replace().to("mock:nisabaEventTopic"));
+        AdviceWith.adviceWith(context, "publish-common-file", a -> a.weaveById("to-kafka-topic-common").replace().to("mock:nisabaCommonTopic"));
+        AdviceWith.adviceWith(context, "process-service-journey", a -> a.weaveById("to-kafka-topic-servicejourney").replace().to("mock:nisabaServiceJourneyTopic"));
+        AdviceWith.adviceWith(context, "netex-export-notification-queue", a -> a.weaveByToUri("direct:retrieveDatasetCreationTime").replace().to("mock:retrieveDatasetCreationTime"));
+
+
+        mockRetrieveDatasetCreationTime.whenAnyExchangeReceived(exchange -> exchange.getIn().setHeader(Constants.DATASET_CREATION_TIME, LocalDateTime.now()));
+        mockNisabaServiceJourneyTopic.expectedMessageCount(10);
+        mockNisabaServiceJourneyTopic.setResultWaitTime(20000);
+
+        mardukInMemoryBlobStoreRepository.uploadBlob(BLOBSTORE_PATH_OUTBOUND + "netex/rb_" + CODESPACE_ATU + "-" + CURRENT_AGGREGATED_NETEX_FILENAME,
+                getClass().getResourceAsStream("/no/entur/nisaba/netex/import/rb_atu-aggregated-netex.zip"));
+
+        context.start();
+        exportNotificationQueueProducerTemplate.sendBody(CODESPACE_ATU);
         mockNisabaServiceJourneyTopic.assertIsSatisfied();
 
         mockNisabaServiceJourneyTopic.getReceivedExchanges().forEach(this::validatePublicationDelivery);

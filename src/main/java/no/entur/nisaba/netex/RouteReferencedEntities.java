@@ -1,4 +1,4 @@
-package no.entur.nisaba.routes.netex.publication;
+package no.entur.nisaba.netex;
 
 import org.entur.netex.index.api.NetexEntitiesIndex;
 import org.rutebanken.netex.model.Route;

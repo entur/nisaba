@@ -1,8 +1,9 @@
-package no.entur.nisaba.routes.netex.publication;
+package no.entur.nisaba.netex;
 
 import org.entur.netex.index.api.NetexEntitiesIndex;
 import org.rutebanken.netex.model.JourneyPattern;
 import org.rutebanken.netex.model.NoticeAssignment;
+import org.rutebanken.netex.model.Operator;
 import org.rutebanken.netex.model.PassengerStopAssignment;
 import org.rutebanken.netex.model.ScheduledStopPoint;
 import org.rutebanken.netex.model.StopPointInJourneyPattern;
@@ -15,8 +16,6 @@ public class JourneyPatternReferencedEntities {
 
     private Collection<ScheduledStopPoint> scheduledStopPoints;
     private Collection<PassengerStopAssignment> passengerStopAssignments;
-
-
     private Collection<NoticeAssignment> noticeAssignments;
 
 
@@ -54,6 +53,8 @@ public class JourneyPatternReferencedEntities {
 
 
         noticeAssignments = Stream.concat(noticeAssignmentsOnJourneyPattern, noticeAssignmentsOnStopPoints).collect(Collectors.toList());
+
+
 
     }
 

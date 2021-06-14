@@ -30,7 +30,7 @@
 
     <logger name="com.google.cloud.spring.core.DefaultCredentialsProvider" level="ERROR"/>
 
-    <logger name="no.entur.nisaba.routes.netex.publication.NetexServiceJourneyPublicationQueueRouteBuilder" level="DEBUG"/>
+    <logger name="no.entur.nisaba.routes.netex.publication.NetexServiceJourneyPublicationRouteBuilder" level="DEBUG"/>
 
 
 
