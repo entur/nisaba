@@ -98,8 +98,8 @@ public class NetexServiceJourneyPublicationRouteBuilder extends BaseRouteBuilder
 
         from("direct:downloadCommonFiles")
 
-                // downloading common file for non-flexible lines
-                .setHeader(FILE_HANDLE, simple("${header." + DATASET_IMPORT_KEY + "}/_${header." + DATASET_CODESPACE + ".toUpperCase()}_shared_data.xml.zip"))
+                // downloading the common file for flexible lines
+                .setHeader(FILE_HANDLE, simple("${header." + DATASET_IMPORT_KEY + "}/_${header." + DATASET_CODESPACE + ".toUpperCase()}_flexible_shared_data.xml.zip"))
                 .log(LoggingLevel.INFO, correlation() + "Downloading Common file ${header." + FILE_HANDLE + "}")
                 .to("direct:getNisabaBlob")
                 .filter(body().isNotNull())
@@ -109,8 +109,9 @@ public class NetexServiceJourneyPublicationRouteBuilder extends BaseRouteBuilder
                 // end filter
                 .end()
 
-                // downloading common file for flexible lines
-                .setHeader(FILE_HANDLE, simple("${header." + DATASET_IMPORT_KEY + "}/_${header." + DATASET_CODESPACE + ".toUpperCase()}_flexible_shared_data.xml.zip"))
+                // downloading the common file for non-flexible lines and merge with index for flexible lines.
+                // if entities in the two files have the same id, the entities from the non-flexible lines (chouette) will overwrite those from the flexible lines (uttu)
+                .setHeader(FILE_HANDLE, simple("${header." + DATASET_IMPORT_KEY + "}/_${header." + DATASET_CODESPACE + ".toUpperCase()}_shared_data.xml.zip"))
                 .log(LoggingLevel.INFO, correlation() + "Downloading Common file ${header." + FILE_HANDLE + "}")
                 .to("direct:getNisabaBlob")
                 .filter(body().isNotNull())
@@ -127,6 +128,8 @@ public class NetexServiceJourneyPublicationRouteBuilder extends BaseRouteBuilder
                 .log(LoggingLevel.DEBUG, correlation() + "Parsed common file ${header." + FILE_HANDLE + "}")
                 //end filter
                 .end()
+
+
                 .routeId("download-common-files");
 
         from("direct:processLine")
