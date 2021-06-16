@@ -36,6 +36,7 @@ import org.rutebanken.netex.model.ServiceJourneyInterchange;
 import org.rutebanken.netex.model.StopAssignment_VersionStructure;
 import org.rutebanken.netex.model.StopAssignmentsInFrame_RelStructure;
 import org.rutebanken.netex.model.TimetableFrame;
+import org.rutebanken.netex.model.TypesOfValueInFrame_RelStructure;
 import org.rutebanken.netex.model.VersionOfObjectRefStructure;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -102,6 +103,13 @@ public class PublicationDeliveryUpdater {
         organisationsInFrameRelStructure.getOrganisation_().addAll(operators.stream().map(this::wrapAsJAXBElement).collect(Collectors.toList()));
         organisationsInFrameRelStructure.getOrganisation_().add(wrapAsJAXBElement(lineReferencedEntities.getAuthority()));
         resourceFrame.setOrganisations(organisationsInFrameRelStructure);
+
+        if (lineReferencedEntities.getBranding() != null) {
+            TypesOfValueInFrame_RelStructure typesOfValueInFrameRelStructure = objectFactory.createTypesOfValueInFrame_RelStructure();
+            typesOfValueInFrameRelStructure.getValueSetOrTypeOfValue().add(wrapAsJAXBElement(lineReferencedEntities.getBranding()));
+            resourceFrame.setTypesOfValue(typesOfValueInFrameRelStructure);
+        }
+
         getFrames(publicationDeliveryStructure).add(wrapAsJAXBElement(resourceFrame));
 
 
@@ -211,7 +219,7 @@ public class PublicationDeliveryUpdater {
         PublicationDeliveryStructure.DataObjects dataObjects = objectFactory.createPublicationDeliveryStructureDataObjects();
         publicationDeliveryStructure.setDataObjects(dataObjects);
 
-        String lineName = "";
+        String lineName;
         if (!netexLineEntitiesIndex.getLineIndex().getAll().isEmpty()) {
             lineName = netexLineEntitiesIndex.getLineIndex().getAll().stream().findFirst().orElseThrow().getName().getValue();
         } else {

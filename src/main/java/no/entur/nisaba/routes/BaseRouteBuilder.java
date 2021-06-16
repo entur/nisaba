@@ -32,7 +32,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-
 /**
  * Defines common route behavior.
  */
@@ -117,11 +116,6 @@ public abstract class BaseRouteBuilder extends RouteBuilder {
     }
 
     public void extendAckDeadline(Exchange exchange) throws IOException {
-        if (log.isDebugEnabled()) {
-            String correlation = simple(correlation(), String.class).evaluate(exchange, String.class);
-            String fileName = exchange.getIn().getHeader(Exchange.FILE_NAME, String.class);
-            log.debug("{} Extending PubSub ack deadline for file {}", correlation, fileName);
-        }
         String ackId = exchange.getIn().getHeader(GooglePubsubConstants.ACK_ID, String.class);
         GooglePubsubEndpoint fromEndpoint = (GooglePubsubEndpoint) exchange.getFromEndpoint();
         String subscriptionName = ProjectSubscriptionName.format(fromEndpoint.getProjectId(), fromEndpoint.getDestinationName());

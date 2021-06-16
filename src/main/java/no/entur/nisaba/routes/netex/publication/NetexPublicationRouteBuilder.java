@@ -27,8 +27,10 @@ import org.springframework.stereotype.Component;
 
 import java.util.HashSet;
 
-import static no.entur.nisaba.Constants.DATASET_CODESPACE;
+import static no.entur.nisaba.Constants.DATASET_CONTENT;
 import static no.entur.nisaba.Constants.FILE_HANDLE;
+import static no.entur.nisaba.Constants.NETEX_FILE_CONTENT;
+import static no.entur.nisaba.Constants.NETEX_FILE_NAME;
 import static no.entur.nisaba.Constants.XML_NAMESPACE_NETEX;
 
 /**
@@ -41,6 +43,7 @@ public class NetexPublicationRouteBuilder extends BaseRouteBuilder {
     private static final String NB_SERVICE_JOURNEYS_IN_FILE = "NB_SERVICE_JOURNEYS_IN_FILE";
     private static final String LINE_FILE_NAMES = "LINE_FILE_NAMES";
 
+
     @Override
     public void configure() throws Exception {
         super.configure();
@@ -50,8 +53,7 @@ public class NetexPublicationRouteBuilder extends BaseRouteBuilder {
                 .streamCaching()
                 .log(LoggingLevel.INFO, correlation() + "Publishing Dataset")
                 .bean(DatasetStatHelper.class, "init")
-                .setBody(header(DATASET_CODESPACE))
-                .to("direct:downloadNetexDataset")
+                .setBody(header(DATASET_CONTENT))
                 .to("direct:processFiles")
                 .log(LoggingLevel.INFO, correlation() + "Processed ${header." + LINE_FILE_NAMES + ".size()}  files")
                 .filter(simple("${properties:nisaba.publish.enabled:true}"))
@@ -73,40 +75,51 @@ public class NetexPublicationRouteBuilder extends BaseRouteBuilder {
                 .accumulateInCollection(HashSet.class)
                 .pick(body()))
                 .streaming()
-                .log(LoggingLevel.INFO, correlation() + "Processing file ${header." + Exchange.FILE_NAME + "}")
 
-                .choice()
-                .when(header(Exchange.FILE_NAME).not().endsWith(".xml"))
-                .to("direct:processUnknownFile")
-                .when(header(Exchange.FILE_NAME).startsWith("_"))
-                .to("direct:processCommonFile")
-                .otherwise()
-                .to("direct:processLineFile")
-                .end()
-                .setBody(simple(Constants.GCS_BUCKET_FILE_NAME))
-                .routeId("process-files");
+                .setHeader(NETEX_FILE_CONTENT, body())
+                .setHeader(NETEX_FILE_NAME, header(Exchange.FILE_NAME))
 
-        from("direct:processUnknownFile")
-                .streamCaching()
-                .log(LoggingLevel.INFO, correlation() + "Ignoring non-XML file ${header." + Exchange.FILE_NAME + "}")
+                .log(LoggingLevel.INFO, correlation() + "Processing file ${header." + NETEX_FILE_NAME + "}")
+
+                .filter(header(NETEX_FILE_NAME).not().endsWith(".xml"))
+                .log(LoggingLevel.INFO, correlation() + "Ignoring non-XML file ${header." + NETEX_FILE_NAME + "}")
                 .setBody(simple("${null}"))
                 .stop()
-                .routeId("process-unknown-file");
+                // end filter
+                .end()
+
+
+                .marshal().zipFile()
+                .to("direct:uploadNetexFile")
+
+                .setBody(header(NETEX_FILE_CONTENT))
+
+                .choice()
+                .when(header(NETEX_FILE_NAME).startsWith("_"))
+                .to("direct:processCommonFile")
+                .setBody(simple("${null}"))
+                .otherwise()
+                .to("direct:processLineFile")
+                .setBody(simple(Constants.GCS_BUCKET_FILE_NAME))
+                //end choice
+                .end()
+
+
+                .routeId("process-files");
 
         from("direct:processLineFile")
                 .streamCaching()
-                .log(LoggingLevel.INFO, correlation() + "Processing line file ${header." + Exchange.FILE_NAME + "}")
+                .log(LoggingLevel.INFO, correlation() + "Processing line file ${header." + NETEX_FILE_NAME + "}")
                 .setHeader(NB_SERVICE_JOURNEYS_IN_FILE,
                         xpath("count(/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:TimetableFrame/netex:vehicleJourneys/netex:ServiceJourney)", Integer.class, XML_NAMESPACE_NETEX))
                 .bean(DatasetStatHelper.class, "addServiceJourneys(${header.NB_SERVICE_JOURNEYS_IN_FILE})")
-                .marshal().zipFile()
-                .to("direct:uploadNetexFile")
-                .log(LoggingLevel.INFO, correlation() + "Processed line file ${header." + Exchange.FILE_NAME + "}")
+
+                .log(LoggingLevel.INFO, correlation() + "Processed line file ${header." + NETEX_FILE_NAME + "}")
                 .routeId("process-line-file");
 
         from("direct:uploadNetexFile")
                 .setHeader(FILE_HANDLE, simple(Constants.GCS_BUCKET_FILE_NAME))
-                .log(LoggingLevel.INFO, correlation() + "Uploading NeTEx file ${header." + Exchange.FILE_NAME + "} to GCS file ${header." + FILE_HANDLE + "}")
+                .log(LoggingLevel.INFO, correlation() + "Uploading NeTEx file ${header." + NETEX_FILE_NAME + "} to GCS file ${header." + FILE_HANDLE + "}")
                 .to("direct:uploadNisabaBlob")
                 .routeId("upload-netex-file");
 

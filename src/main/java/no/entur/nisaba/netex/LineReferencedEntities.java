@@ -2,6 +2,8 @@ package no.entur.nisaba.netex;
 
 import org.entur.netex.index.api.NetexEntitiesIndex;
 import org.rutebanken.netex.model.Authority;
+import org.rutebanken.netex.model.Branding;
+import org.rutebanken.netex.model.BrandingRefStructure;
 import org.rutebanken.netex.model.FlexibleLine;
 import org.rutebanken.netex.model.Line;
 import org.rutebanken.netex.model.Network;
@@ -9,9 +11,15 @@ import org.rutebanken.netex.model.Operator;
 
 import java.util.Optional;
 
+/**
+ * NeTEx entities referenced by a Line or FlexibleLine.
+ */
 public class LineReferencedEntities {
 
     private Operator operator;
+
+
+    private Branding branding;
     private Network network;
     private Authority authority;
 
@@ -31,14 +39,15 @@ public class LineReferencedEntities {
         return authority;
     }
 
+    public Branding getBranding() {
+        return branding;
+    }
+
+
     public static class LineReferencedEntitiesBuilder {
 
         private NetexEntitiesIndex netexCommonEntitiesIndex;
         private NetexEntitiesIndex netexLineEntitiesIndex;
-
-
-        public LineReferencedEntitiesBuilder() {
-        }
 
         public LineReferencedEntitiesBuilder withNetexCommonEntitiesIndex(NetexEntitiesIndex netexCommonEntitiesIndex) {
             this.netexCommonEntitiesIndex = netexCommonEntitiesIndex;
@@ -76,26 +85,42 @@ public class LineReferencedEntities {
 
             lineReferencedEntities.authority = netexCommonEntitiesIndex.getAuthorityIndex().get(lineReferencedEntities.network.getTransportOrganisationRef().getValue().getRef());
 
+            BrandingRefStructure brandingRef = lineReferencedEntities.operator.getBrandingRef();
+            if(brandingRef != null) {
+                lineReferencedEntities.branding = netexCommonEntitiesIndex.getBrandingIndex().get(brandingRef.getRef());
+            }
+
+
+
             return lineReferencedEntities;
         }
 
+        /**
+         * Return the network referenced by the <RepresentedByGroupRef>.
+         * RepresentedByGroupRef can reference a network either directly or indirectly (through a group of lines)
+         * @param networkOrGroupOfLinesRef
+         * @param netexCommonEntitiesIndex
+         * @return
+         */
+        private static Network findNetwork(String networkOrGroupOfLinesRef, NetexEntitiesIndex netexCommonEntitiesIndex) {
+            Network network = netexCommonEntitiesIndex.getNetworkIndex().get(networkOrGroupOfLinesRef);
+            if (network != null) {
+                return network;
+            } else {
+                return netexCommonEntitiesIndex.getNetworkIndex()
+                        .getAll()
+                        .stream()
+                        .filter(n -> n.getGroupsOfLines()
+                                .getGroupOfLines()
+                                .stream()
+                                .anyMatch(groupOfLine -> groupOfLine.getId().equals(networkOrGroupOfLinesRef)))
+                        .findFirst()
+                        .orElseThrow();
+            }
+
     }
 
-    private static Network findNetwork(String networkOrGroupOfLinesRef, NetexEntitiesIndex netexCommonEntitiesIndex) {
-        Network network = netexCommonEntitiesIndex.getNetworkIndex().get(networkOrGroupOfLinesRef);
-        if (network != null) {
-            return network;
-        } else {
-            return netexCommonEntitiesIndex.getNetworkIndex()
-                    .getAll()
-                    .stream()
-                    .filter(n -> n.getGroupsOfLines()
-                            .getGroupOfLines()
-                            .stream()
-                            .anyMatch(groupOfLine -> groupOfLine.getId().equals(networkOrGroupOfLinesRef)))
-                    .findFirst()
-                    .orElseThrow();
-        }
+
     }
 
 

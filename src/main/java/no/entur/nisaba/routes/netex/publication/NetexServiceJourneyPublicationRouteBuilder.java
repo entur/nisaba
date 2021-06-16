@@ -42,8 +42,9 @@ import java.util.stream.Collectors;
 
 import static no.entur.nisaba.Constants.COMMON_FILE_INDEX;
 import static no.entur.nisaba.Constants.DATASET_CODESPACE;
+import static no.entur.nisaba.Constants.DATASET_IMPORT_KEY;
 import static no.entur.nisaba.Constants.FILE_HANDLE;
-import static no.entur.nisaba.Constants.GCS_BUCKET_FILE_NAME;
+import static no.entur.nisaba.Constants.NETEX_FILE_NAME;
 import static no.entur.nisaba.Constants.PUBLICATION_DELIVERY_TIMESTAMP;
 
 /**
@@ -68,7 +69,8 @@ public class NetexServiceJourneyPublicationRouteBuilder extends BaseRouteBuilder
 
         from("google-pubsub:{{nisaba.pubsub.project.id}}:NetexServiceJourneyPublicationQueue?synchronousPull={{nisaba.pubsub.queue.servicejourney.synchronous:true}}")
                 .streamCaching()
-                .log(LoggingLevel.DEBUG, correlation() + "Received PubSub message")
+                .log(LoggingLevel.INFO, correlation() + "Processing file ${body}")
+                .setHeader(NETEX_FILE_NAME, body())
 
                 .to("direct:downloadNetexFile")
                 .filter(body().isNull())
@@ -97,8 +99,7 @@ public class NetexServiceJourneyPublicationRouteBuilder extends BaseRouteBuilder
         from("direct:downloadCommonFiles")
 
                 // downloading common file for non-flexible lines
-                .setHeader(Exchange.FILE_NAME, simple("_${header." + DATASET_CODESPACE + ".toUpperCase()}_shared_data.xml.zip"))
-                .setHeader(FILE_HANDLE, simple(GCS_BUCKET_FILE_NAME))
+                .setHeader(FILE_HANDLE, simple("${header." + DATASET_IMPORT_KEY + "}/_${header." + DATASET_CODESPACE + ".toUpperCase()}_shared_data.xml.zip"))
                 .log(LoggingLevel.INFO, correlation() + "Downloading Common file ${header." + FILE_HANDLE + "}")
                 .to("direct:getNisabaBlob")
                 .filter(body().isNotNull())
@@ -109,8 +110,7 @@ public class NetexServiceJourneyPublicationRouteBuilder extends BaseRouteBuilder
                 .end()
 
                 // downloading common file for flexible lines
-                .setHeader(Exchange.FILE_NAME, simple("_${header." + DATASET_CODESPACE + ".toUpperCase()}_flexible_shared_data.xml.zip"))
-                .setHeader(FILE_HANDLE, simple(GCS_BUCKET_FILE_NAME))
+                .setHeader(FILE_HANDLE, simple("${header." + DATASET_IMPORT_KEY + "}/_${header." + DATASET_CODESPACE + ".toUpperCase()}_flexible_shared_data.xml.zip"))
                 .log(LoggingLevel.INFO, correlation() + "Downloading Common file ${header." + FILE_HANDLE + "}")
                 .to("direct:getNisabaBlob")
                 .filter(body().isNotNull())
@@ -118,13 +118,13 @@ public class NetexServiceJourneyPublicationRouteBuilder extends BaseRouteBuilder
                 .choice()
                 .when(header(COMMON_FILE_INDEX).isNotNull())
                 .setHeader(Constants.COMMON_FILE_INDEX, method(NetexParser.class, "parse(${body}, ${header." + COMMON_FILE_INDEX + "})"))
-                .log(LoggingLevel.DEBUG, correlation() + "Aggregated common file ${header." + Exchange.FILE_NAME + "} to previous index")
+                .log(LoggingLevel.DEBUG, correlation() + "Aggregated common file ${header." + FILE_HANDLE + "} to previous index")
                 .otherwise()
                 .setHeader(Constants.COMMON_FILE_INDEX, method(NetexParser.class, "parse(${body})"))
-                .log(LoggingLevel.DEBUG, correlation() + "Created new index for common file ${header." + Exchange.FILE_NAME + "}")
+                .log(LoggingLevel.DEBUG, correlation() + "Created new index for common file ${header." + FILE_HANDLE + "}")
                 // end choice
                 .end()
-                .log(LoggingLevel.DEBUG, correlation() + "Parsed common file ${header." + Exchange.FILE_NAME + "}")
+                .log(LoggingLevel.DEBUG, correlation() + "Parsed common file ${header." + FILE_HANDLE + "}")
                 //end filter
                 .end()
                 .routeId("download-common-files");
@@ -146,7 +146,7 @@ public class NetexServiceJourneyPublicationRouteBuilder extends BaseRouteBuilder
                 .routeId("process-line");
 
         from("direct:processRoute")
-                .log(LoggingLevel.INFO, correlation() + "Processing route ${body.id}")
+                .log(LoggingLevel.INFO, correlation() + "Processing Route ${body.id}")
                 .process(exchange -> {
                     Route route = exchange.getIn().getBody(Route.class);
                     NetexEntitiesIndex netexLineEntitiesIndex = exchange.getIn().getHeader(Constants.LINE_FILE_INDEX, NetexEntitiesIndex.class);
@@ -161,7 +161,7 @@ public class NetexServiceJourneyPublicationRouteBuilder extends BaseRouteBuilder
                 .routeId("process-route");
 
         from("direct:processJourneyPattern")
-                .log(LoggingLevel.INFO, correlation() + "Processing journey pattern ${body.id}")
+                .log(LoggingLevel.INFO, correlation() + "Processing JourneyPattern ${body.id}")
                 .process(exchange -> {
                     JourneyPattern journeyPattern = exchange.getIn().getBody(JourneyPattern.class);
                     NetexEntitiesIndex netexLineEntitiesIndex = exchange.getIn().getHeader(Constants.LINE_FILE_INDEX, NetexEntitiesIndex.class);
@@ -180,6 +180,7 @@ public class NetexServiceJourneyPublicationRouteBuilder extends BaseRouteBuilder
                 .log(LoggingLevel.DEBUG, getClass().getName(), correlation() + "Processing ServiceJourney ${body.id}")
                 // extend pubsub acknowledgment deadline every 500 service journeys
                 .filter(exchange -> exchange.getProperty(Exchange.SPLIT_INDEX, Integer.class) % 500 == 0)
+                .log(LoggingLevel.DEBUG, getClass().getName(), correlation() + "Extending PubSub ack deadline for file ${header." + NETEX_FILE_NAME + "}")
                 .process(this::extendAckDeadline)
                 //end filter
                 .end()
@@ -193,7 +194,7 @@ public class NetexServiceJourneyPublicationRouteBuilder extends BaseRouteBuilder
                 .doTry()
                 .to("kafka:{{nisaba.kafka.topic.servicejourney}}?clientId=nisaba-servicejourney&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy").id("to-kafka-topic-servicejourney")
                 .doCatch(RecordTooLargeException.class)
-                .log(LoggingLevel.ERROR, "Cannot serialize service journey ${header." + Constants.SERVICE_JOURNEY_ID + "} in Line file ${header." + Exchange.FILE_NAME + "} into Kafka topic, max message size exceeded ${exception.stacktrace} ")
+                .log(LoggingLevel.ERROR, "Cannot serialize service journey ${header." + Constants.SERVICE_JOURNEY_ID + "} in Line file ${header." + NETEX_FILE_NAME + "} into Kafka topic, max message size exceeded ${exception.stacktrace} ")
                 .stop()
                 .routeId("process-service-journey");
     }

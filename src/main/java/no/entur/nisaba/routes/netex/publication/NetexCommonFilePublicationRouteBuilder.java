@@ -19,7 +19,6 @@ package no.entur.nisaba.routes.netex.publication;
 import no.entur.nisaba.domain.ListRangeSplitter;
 import no.entur.nisaba.event.DatasetStatHelper;
 import no.entur.nisaba.routes.BaseRouteBuilder;
-import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.ValueBuilder;
 import org.apache.kafka.common.errors.RecordTooLargeException;
@@ -28,7 +27,9 @@ import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
 
 import static no.entur.nisaba.Constants.FILE_HANDLE;
+import static no.entur.nisaba.Constants.NETEX_FILE_NAME;
 import static no.entur.nisaba.Constants.XML_NAMESPACE_NETEX;
+
 
 /**
  * Publish shared NeTEx objects (common files) to Kafka.
@@ -44,7 +45,6 @@ public class NetexCommonFilePublicationRouteBuilder extends BaseRouteBuilder {
 
     private static final String SPLIT_LOWER_BOUND = "SPLIT_LOWER_BOUND";
     private static final String SPLIT_UPPER_BOUND = "SPLIT_UPPER_BOUND";
-    private static final String ORIGINAL_COMMON_FILE = "ORIGINAL_COMMON_FILE";
 
     private final int rangeSize;
     private final int rangeSizeForServiceLinks;
@@ -63,34 +63,18 @@ public class NetexCommonFilePublicationRouteBuilder extends BaseRouteBuilder {
         // so that the number of common files is known before sending the notification event.
         from("direct:processCommonFile")
                 .streamCaching()
-                .log(LoggingLevel.INFO, correlation() + "Processing common file ${header." + Exchange.FILE_NAME + "}")
-                .setHeader(ORIGINAL_COMMON_FILE, body())
-                .marshal().zipFile()
-                .to("direct:uploadNetexFile")
-                .setBody(header(ORIGINAL_COMMON_FILE))
+                .log(LoggingLevel.INFO, correlation() + "Processing common file ${header." + NETEX_FILE_NAME + "}")
                 .convertBodyTo(Document.class)
                 .setHeader(COMMON_FILE, body())
 
-                // do not split the common file for flexible lines
-                .filter(header(Exchange.FILE_NAME).contains("_flexible_shared_data.xml"))
-                .log(LoggingLevel.INFO, correlation() + "Processing common flexible line file ${header." + Exchange.FILE_NAME + "}")
-                .to("xslt-saxon:filterCommonFlexibleLineFile.xsl")
-                .setHeader(COMMON_FILE_PART, constant("Flexible lines"))
-                .to("direct:publishCommonFile")
-                .log(LoggingLevel.INFO, correlation() + "Processed common flexible line file ${header." + Exchange.FILE_NAME + "}")
-                .stop()
-                .end()
-
-                // For other common files: remove scheduledStopPoints, stopAssignments, routePoints and serviceLinks and create separate PublicationDeliveries for each of them
-
-                // The common file stripped of scheduledStopPoints, stopAssignments, routePoints and serviceLinks (keeping notices and destination displays)
+                // The common file stripped of every elements except notices and destination displays)
 
                 .setBody(header(COMMON_FILE))
                 .setHeader(COMMON_FILE_PART, constant("Filtered common file"))
-                .log(LoggingLevel.INFO, correlation() + "Processing filtered common file ${header." + Exchange.FILE_NAME + "}")
+                .log(LoggingLevel.INFO, correlation() + "Processing filtered common file ${header." + NETEX_FILE_NAME + "}")
                 .to("xslt-saxon:filterCommonFile.xsl")
                 .to("direct:publishCommonFile")
-                .log(LoggingLevel.INFO, correlation() + "Processed filtered common file ${header." + Exchange.FILE_NAME + "}")
+                .log(LoggingLevel.INFO, correlation() + "Processed filtered common file ${header." + NETEX_FILE_NAME + "}")
 
                 // Service Links
 
@@ -101,14 +85,13 @@ public class NetexCommonFilePublicationRouteBuilder extends BaseRouteBuilder {
                 .setHeader(COMMON_FILE_NB_ITEMS,
                         countNodes("/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:ServiceFrame/netex:serviceLinks/netex:ServiceLink"))
                 .to("direct:splitCommonFile")
-
-                .log(LoggingLevel.INFO, correlation() + "Processed common file ${header." + Exchange.FILE_NAME + "}")
+                .log(LoggingLevel.INFO, correlation() + "Processed common file ${header." + NETEX_FILE_NAME + "}")
                 .routeId("process-common-file");
 
         // split items in the common files in smaller PublicationDeliveries so that each message does not exceed the maximum size of a Kafka record
         from("direct:splitCommonFile")
                 .filter(header(COMMON_FILE_NB_ITEMS).isGreaterThan(0))
-                .log(LoggingLevel.INFO, correlation() + "Processing ${header." + COMMON_FILE_PART + "} in common file ${header." + Exchange.FILE_NAME + "}")
+                .log(LoggingLevel.INFO, correlation() + "Processing ${header." + COMMON_FILE_PART + "} in common file ${header." + NETEX_FILE_NAME + "}")
                 .bean(new ListRangeSplitter(), "split(${header." + COMMON_FILE_NB_ITEMS + "}, ${header." + COMMON_FILE_RANGE_SIZE + "})")
                 .log(LoggingLevel.INFO, correlation() + "Splitting ${header." + COMMON_FILE_NB_ITEMS + "} ${header." + COMMON_FILE_PART + "} into ${body.size} PublicationDeliveries")
                 .split(body())

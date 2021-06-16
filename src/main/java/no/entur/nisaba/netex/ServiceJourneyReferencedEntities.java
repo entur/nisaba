@@ -8,6 +8,7 @@ import org.rutebanken.netex.model.NoticeAssignment;
 import org.rutebanken.netex.model.OperatingDay;
 import org.rutebanken.netex.model.OperatingPeriod;
 import org.rutebanken.netex.model.Operator;
+import org.rutebanken.netex.model.OperatorRefStructure;
 import org.rutebanken.netex.model.ServiceJourney;
 
 import java.util.Collection;
@@ -78,8 +79,10 @@ public class ServiceJourneyReferencedEntities {
 
         noticeAssignments = Stream.concat(noticeAssignmentsOnServiceJourney, noticeAssignmentsOnPassingTimes).collect(Collectors.toList());
 
-        operator = netexCommonEntitiesIndex.getOperatorIndex().get(serviceJourney.getOperatorRef().getRef());
-
+        OperatorRefStructure operatorRef = serviceJourney.getOperatorRef();
+        if(operatorRef != null) {
+            operator = netexCommonEntitiesIndex.getOperatorIndex().get(operatorRef.getRef());
+        }
     }
 
     public Collection<DayType> getDayTypes() {

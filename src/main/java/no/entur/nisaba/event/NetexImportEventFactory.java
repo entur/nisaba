@@ -44,7 +44,7 @@ public class NetexImportEventFactory {
 
 
     public NetexImportEvent createNetexImportEvent(@Header(value = Constants.DATASET_CODESPACE) String codespace,
-                                                   @Header(value = Constants.DATASET_CREATION_TIME) LocalDateTime creationDate,
+                                                   @Header(value = Constants.DATASET_LATEST_CREATION_TIME) LocalDateTime creationDate,
                                                    @Header(value = Constants.DATASET_IMPORT_KEY) String importKey,
                                                    @Header(value = Constants.DATASET_CHOUETTE_IMPORT_KEY) String chouetteImportKey,
                                                    @Header(value = Constants.DATASET_STAT) DatasetStat datasetStat,

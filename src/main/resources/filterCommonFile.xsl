@@ -34,7 +34,7 @@
             match="netex:serviceLinks">
     </xsl:template>
 
-    <!-- Remove ServiceFrame -->
+    <!-- Remove ServiceCalendarFrame -->
     <xsl:template
             match="netex:ServiceCalendarFrame">
     </xsl:template>

@@ -84,7 +84,7 @@ class NetexPublicationRouteBuilderTest extends NisabaRouteBuilderIntegrationTest
         AdviceWith.adviceWith(context, "process-service-journey", a -> a.weaveById("to-kafka-topic-servicejourney").replace().to("mock:nisabaServiceJourneyTopic"));
         AdviceWith.adviceWith(context, "netex-export-notification-queue", a -> a.weaveByToUri("direct:retrieveDatasetCreationTime").replace().to("mock:retrieveDatasetCreationTime"));
 
-        mockRetrieveDatasetCreationTime.whenAnyExchangeReceived(exchange -> exchange.getIn().setHeader(Constants.DATASET_CREATION_TIME, LocalDateTime.now()));
+        mockRetrieveDatasetCreationTime.whenAnyExchangeReceived(exchange -> exchange.getIn().setHeader(Constants.DATASET_LATEST_CREATION_TIME, LocalDateTime.now()));
         mockProcessCommonFile.expectedMessageCount(1);
         mockProcessCommonFile.whenAnyExchangeReceived(e -> e.getIn().setHeader(DATASET_STAT, new DatasetStat()));
         mockNisabaServiceJourneyTopic.expectedMessageCount(24);
@@ -109,7 +109,7 @@ class NetexPublicationRouteBuilderTest extends NisabaRouteBuilderIntegrationTest
         AdviceWith.adviceWith(context, "process-service-journey", a -> a.weaveById("to-kafka-topic-servicejourney").replace().to("mock:nisabaServiceJourneyTopic"));
         AdviceWith.adviceWith(context, "netex-export-notification-queue", a -> a.weaveByToUri("direct:retrieveDatasetCreationTime").replace().to("mock:retrieveDatasetCreationTime"));
 
-        mockRetrieveDatasetCreationTime.whenAnyExchangeReceived(exchange -> exchange.getIn().setHeader(Constants.DATASET_CREATION_TIME, LocalDateTime.now()));
+        mockRetrieveDatasetCreationTime.whenAnyExchangeReceived(exchange -> exchange.getIn().setHeader(Constants.DATASET_LATEST_CREATION_TIME, LocalDateTime.now()));
         mockProcessCommonFile.expectedMessageCount(1);
         mockProcessCommonFile.whenAnyExchangeReceived(e -> e.getIn().setHeader(DATASET_STAT, new DatasetStat()));
         mockNisabaServiceJourneyTopic.expectedMessageCount(24);
@@ -135,7 +135,7 @@ class NetexPublicationRouteBuilderTest extends NisabaRouteBuilderIntegrationTest
         AdviceWith.adviceWith(context, "process-service-journey", a -> a.weaveById("to-kafka-topic-servicejourney").replace().to("mock:nisabaServiceJourneyTopic"));
         AdviceWith.adviceWith(context, "netex-export-notification-queue", a -> a.weaveByToUri("direct:retrieveDatasetCreationTime").replace().to("mock:retrieveDatasetCreationTime"));
 
-        mockRetrieveDatasetCreationTime.whenAnyExchangeReceived(exchange -> exchange.getIn().setHeader(Constants.DATASET_CREATION_TIME, LocalDateTime.now()));
+        mockRetrieveDatasetCreationTime.whenAnyExchangeReceived(exchange -> exchange.getIn().setHeader(Constants.DATASET_LATEST_CREATION_TIME, LocalDateTime.now()));
         mockProcessCommonFile.expectedMessageCount(1);
         mockProcessCommonFile.whenAnyExchangeReceived(e -> e.getIn().setHeader(DATASET_STAT, new DatasetStat()));
         mockNisabaServiceJourneyTopic.expectedMessageCount(24);
@@ -161,7 +161,7 @@ class NetexPublicationRouteBuilderTest extends NisabaRouteBuilderIntegrationTest
         AdviceWith.adviceWith(context, "netex-export-notification-queue", a -> a.weaveByToUri("direct:retrieveDatasetCreationTime").replace().to("mock:retrieveDatasetCreationTime"));
 
 
-        mockRetrieveDatasetCreationTime.whenAnyExchangeReceived(exchange -> exchange.getIn().setHeader(Constants.DATASET_CREATION_TIME, LocalDateTime.now()));
+        mockRetrieveDatasetCreationTime.whenAnyExchangeReceived(exchange -> exchange.getIn().setHeader(Constants.DATASET_LATEST_CREATION_TIME, LocalDateTime.now()));
         mockProcessCommonFile.expectedMessageCount(1);
         mockProcessCommonFile.whenAnyExchangeReceived(e -> e.getIn().setHeader(DATASET_STAT, new DatasetStat()));
         mockNisabaServiceJourneyTopic.expectedMessageCount(24);
@@ -187,7 +187,7 @@ class NetexPublicationRouteBuilderTest extends NisabaRouteBuilderIntegrationTest
         AdviceWith.adviceWith(context, "netex-export-notification-queue", a -> a.weaveByToUri("direct:retrieveDatasetCreationTime").replace().to("mock:retrieveDatasetCreationTime"));
 
 
-        mockRetrieveDatasetCreationTime.whenAnyExchangeReceived(exchange -> exchange.getIn().setHeader(Constants.DATASET_CREATION_TIME, LocalDateTime.now()));
+        mockRetrieveDatasetCreationTime.whenAnyExchangeReceived(exchange -> exchange.getIn().setHeader(Constants.DATASET_LATEST_CREATION_TIME, LocalDateTime.now()));
         mockNisabaServiceJourneyTopic.expectedMessageCount(10);
         mockNisabaServiceJourneyTopic.setResultWaitTime(20000);
 

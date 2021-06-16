@@ -17,7 +17,6 @@
 package no.entur.nisaba.routes.netex.notification;
 
 import no.entur.nisaba.Constants;
-import no.entur.nisaba.event.DatasetStatHelper;
 import no.entur.nisaba.event.NetexImportEventKeyFactory;
 import no.entur.nisaba.routes.BaseRouteBuilder;
 import org.apache.camel.Exchange;
@@ -29,15 +28,15 @@ import org.apache.camel.support.builder.PredicateBuilder;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
-import java.util.HashSet;
 import java.util.TreeSet;
 
 import static no.entur.nisaba.Constants.BLOBSTORE_PATH_OUTBOUND;
 import static no.entur.nisaba.Constants.DATASET_ALL_CREATION_TIMES;
 import static no.entur.nisaba.Constants.DATASET_CHOUETTE_IMPORT_KEY;
 import static no.entur.nisaba.Constants.DATASET_CODESPACE;
-import static no.entur.nisaba.Constants.DATASET_CREATION_TIME;
+import static no.entur.nisaba.Constants.DATASET_CONTENT;
 import static no.entur.nisaba.Constants.DATASET_IMPORT_KEY;
+import static no.entur.nisaba.Constants.DATASET_LATEST_CREATION_TIME;
 import static no.entur.nisaba.Constants.DATASET_PUBLISHED_FILE_NAME;
 import static no.entur.nisaba.Constants.FILE_HANDLE;
 import static no.entur.nisaba.Constants.XML_NAMESPACE_NETEX;
@@ -69,13 +68,15 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .stop()
                 //end filter
                 .end()
+                .setHeader(DATASET_CONTENT, body())
                 .log(LoggingLevel.INFO, correlation() + "NeTEx export file downloaded")
                 .to("direct:retrieveDatasetCreationTime")
-                .setHeader(DATASET_IMPORT_KEY, bean(NetexImportEventKeyFactory.class, "createNetexImportEventKey(${header." + DATASET_CODESPACE + "}, ${header." + DATASET_CREATION_TIME + "})"))
+                .setHeader(DATASET_IMPORT_KEY, bean(NetexImportEventKeyFactory.class, "createNetexImportEventKey(${header." + DATASET_CODESPACE + "}, ${header." + DATASET_LATEST_CREATION_TIME + "})"))
                 .to("direct:notifyConsumersIfNew")
                 .routeId("netex-export-notification-queue");
 
         from("direct:downloadNetexDataset")
+                .streamCaching()
                 .log(LoggingLevel.INFO, correlation() + "Downloading NeTEx dataset")
                 .setHeader(FILE_HANDLE, header(DATASET_PUBLISHED_FILE_NAME))
                 .to("direct:getMardukBlob")
@@ -98,8 +99,8 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .to("direct:parseCreatedAttribute")
                 .end()
                 .setHeader(DATASET_ALL_CREATION_TIMES, body())
-                .setHeader(DATASET_CREATION_TIME, simple("${body.last}"))
-                .log(LoggingLevel.INFO, correlation() + "The dataset was created on ${header." + DATASET_CREATION_TIME + "}")
+                .setHeader(DATASET_LATEST_CREATION_TIME, simple("${body.last}"))
+                .log(LoggingLevel.INFO, correlation() + "The dataset was created on ${header." + DATASET_LATEST_CREATION_TIME + "}")
                 .routeId("retrieve-dataset-creation-time");
 
         from("direct:parseCreatedAttribute")
