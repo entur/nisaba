@@ -38,8 +38,6 @@ import org.rutebanken.netex.model.StopAssignmentsInFrame_RelStructure;
 import org.rutebanken.netex.model.TimetableFrame;
 import org.rutebanken.netex.model.TypesOfValueInFrame_RelStructure;
 import org.rutebanken.netex.model.VersionOfObjectRefStructure;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.xml.bind.JAXBElement;
 import javax.xml.namespace.QName;
@@ -59,9 +57,8 @@ import static no.entur.nisaba.Constants.PUBLICATION_DELIVERY_TIMESTAMP;
 import static no.entur.nisaba.Constants.ROUTE_REFERENCES;
 import static no.entur.nisaba.Constants.SERVICE_JOURNEY_ID;
 
-public class PublicationDeliveryUpdater {
+public class PublicationDeliveryBuilder {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(PublicationDeliveryUpdater.class);
     private static final String NETEX_VERSION = "1.12:NO-NeTEx-networktimetable:1.3";
     private static final String NETEX_PARTICIPANT_REF = "RB";
     private static final String DEFAULT_FRAME_VERSION = "1";
@@ -69,7 +66,7 @@ public class PublicationDeliveryUpdater {
     private final ObjectFactory objectFactory = new ObjectFactory();
 
 
-    public PublicationDeliveryStructure update(
+    public PublicationDeliveryStructure build(
             @Header(DATASET_CODESPACE) String codespace,
             @Header(COMMON_FILE_INDEX) NetexEntitiesIndex commonEntities,
             @Header(LINE_FILE_INDEX) NetexEntitiesIndex lineEntities,
@@ -115,7 +112,12 @@ public class PublicationDeliveryUpdater {
 
         // service frame
 
-        ServiceFrame serviceFrame = getServiceFrame(publicationDeliveryStructure);
+        ServiceFrame serviceFrame = objectFactory.createServiceFrame();
+        ServiceFrame sourceServiceFrame = lineEntities.getServiceFrames().stream().findFirst().orElseThrow();
+        serviceFrame.setId(sourceServiceFrame.getId());
+        serviceFrame.setVersion(sourceServiceFrame.getVersion());
+        getFrames(publicationDeliveryStructure).add(wrapAsJAXBElement(serviceFrame));
+
 
         LinesInFrame_RelStructure linesInFrameRelStructure = objectFactory.createLinesInFrame_RelStructure();
         List<JAXBElement<Line>> lines = lineEntities.getLineIndex().getAll().stream().map(this::wrapAsJAXBElement).collect(Collectors.toList());
@@ -243,13 +245,6 @@ public class PublicationDeliveryUpdater {
         compositeFrame.setFrames(framesRelStructure);
         dataObjects.getCompositeFrameOrCommonFrame().add(wrapAsJAXBElement(compositeFrame));
 
-        ServiceFrame serviceFrame = objectFactory.createServiceFrame();
-        ServiceFrame sourceServiceFrame = netexLineEntitiesIndex.getServiceFrames().stream().findFirst().orElseThrow();
-        serviceFrame.setId(sourceServiceFrame.getId());
-        serviceFrame.setVersion(sourceServiceFrame.getVersion());
-        compositeFrame.getFrames().getCommonFrame().add(wrapAsJAXBElement(serviceFrame));
-
-
         return publicationDeliveryStructure;
 
 
@@ -264,25 +259,14 @@ public class PublicationDeliveryUpdater {
         return getCompositeFrame(publicationDeliveryStructure).getFrames().getCommonFrame();
     }
 
-    private ServiceFrame getServiceFrame(PublicationDeliveryStructure publicationDeliveryStructure) {
-        List<JAXBElement<? extends Common_VersionFrameStructure>> commonFrame = getFrames(publicationDeliveryStructure);
-        return (ServiceFrame) commonFrame.stream().filter(jaxbElement -> jaxbElement.getValue() instanceof ServiceFrame).findFirst().orElseThrow().getValue();
-    }
-
-    private TimetableFrame getTimetableFrame(PublicationDeliveryStructure publicationDeliveryStructure) {
-        List<JAXBElement<? extends Common_VersionFrameStructure>> commonFrame = getFrames(publicationDeliveryStructure);
-        return (TimetableFrame) commonFrame.stream().filter(jaxbElement -> jaxbElement.getValue() instanceof TimetableFrame).findFirst().orElseThrow().getValue();
-    }
-
-
-    public <E> JAXBElement<E> wrapAsJAXBElement(E entity) {
+    private <E> JAXBElement<E> wrapAsJAXBElement(E entity) {
         if (entity == null) {
             return null;
         }
         return new JAXBElement(new QName("http://www.netex.org.uk/netex", getEntityName(entity)), entity.getClass(), null, entity);
     }
 
-    public static <E> String getEntityName(E entity) {
+    private static <E> String getEntityName(E entity) {
         String localPart = entity.getClass().getSimpleName();
 
         if (entity instanceof VersionOfObjectRefStructure) {

@@ -19,7 +19,7 @@ package no.entur.nisaba.routes.netex.publication;
 import no.entur.nisaba.Constants;
 import no.entur.nisaba.netex.JourneyPatternReferencedEntities;
 import no.entur.nisaba.netex.LineReferencedEntities;
-import no.entur.nisaba.netex.PublicationDeliveryUpdater;
+import no.entur.nisaba.netex.PublicationDeliveryBuilder;
 import no.entur.nisaba.netex.RouteReferencedEntities;
 import no.entur.nisaba.routes.BaseRouteBuilder;
 import org.apache.camel.Exchange;
@@ -188,7 +188,7 @@ public class NetexServiceJourneyPublicationRouteBuilder extends BaseRouteBuilder
                 //end filter
                 .end()
                 .setHeader(Constants.SERVICE_JOURNEY_ID, simple("${body.id}"))
-                .bean(PublicationDeliveryUpdater.class, "update")
+                .bean(PublicationDeliveryBuilder.class, "build")
                 .marshal(xmlDataFormat)
                 .to("file:/tmp/camel/servicejourney?fileName=${header.SERVICE_JOURNEY_ID}_${date:now:yyyyMMddHHmmssSSS}-transformed.xml")
                 .setHeader(KafkaConstants.KEY, header(Constants.SERVICE_JOURNEY_ID))

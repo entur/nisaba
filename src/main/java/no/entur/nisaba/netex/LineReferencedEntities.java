@@ -17,8 +17,6 @@ import java.util.Optional;
 public class LineReferencedEntities {
 
     private Operator operator;
-
-
     private Branding branding;
     private Network network;
     private Authority authority;
@@ -86,10 +84,9 @@ public class LineReferencedEntities {
             lineReferencedEntities.authority = netexCommonEntitiesIndex.getAuthorityIndex().get(lineReferencedEntities.network.getTransportOrganisationRef().getValue().getRef());
 
             BrandingRefStructure brandingRef = lineReferencedEntities.operator.getBrandingRef();
-            if(brandingRef != null) {
+            if (brandingRef != null) {
                 lineReferencedEntities.branding = netexCommonEntitiesIndex.getBrandingIndex().get(brandingRef.getRef());
             }
-
 
 
             return lineReferencedEntities;
@@ -98,6 +95,7 @@ public class LineReferencedEntities {
         /**
          * Return the network referenced by the <RepresentedByGroupRef>.
          * RepresentedByGroupRef can reference a network either directly or indirectly (through a group of lines)
+         *
          * @param networkOrGroupOfLinesRef
          * @param netexCommonEntitiesIndex
          * @return
@@ -118,7 +116,7 @@ public class LineReferencedEntities {
                         .orElseThrow();
             }
 
-    }
+        }
 
 
     }
