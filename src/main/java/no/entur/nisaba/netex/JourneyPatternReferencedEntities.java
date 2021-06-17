@@ -5,6 +5,7 @@ import org.rutebanken.netex.model.JourneyPattern;
 import org.rutebanken.netex.model.NoticeAssignment;
 import org.rutebanken.netex.model.PassengerStopAssignment;
 import org.rutebanken.netex.model.ScheduledStopPoint;
+import org.rutebanken.netex.model.ScheduledStopPointRefStructure;
 import org.rutebanken.netex.model.StopPointInJourneyPattern;
 
 import java.util.Collection;
@@ -24,8 +25,8 @@ public class JourneyPatternReferencedEntities {
         scheduledStopPoints = journeyPattern.getPointsInSequence()
                 .getPointInJourneyPatternOrStopPointInJourneyPatternOrTimingPointInJourneyPattern()
                 .stream()
-                .map(pointInLinkSequence -> ((StopPointInJourneyPattern) pointInLinkSequence).getScheduledStopPointRef().getValue().getRef())
-                .map(scheduledStopPointId -> netexCommonEntitiesIndex.getScheduledStopPointIndex().get(scheduledStopPointId))
+                .map(pointInLinkSequence -> ((StopPointInJourneyPattern) pointInLinkSequence).getScheduledStopPointRef().getValue())
+                .map(scheduledStopPointRef -> getScheduledStopPointAndUpdateVersion(netexCommonEntitiesIndex, scheduledStopPointRef))
                 .collect(Collectors.toSet());
 
         passengerStopAssignments = scheduledStopPoints.stream()
@@ -54,6 +55,12 @@ public class JourneyPatternReferencedEntities {
         noticeAssignments = Stream.concat(noticeAssignmentsOnJourneyPattern, noticeAssignmentsOnStopPoints).collect(Collectors.toList());
 
 
+    }
+
+    private ScheduledStopPoint getScheduledStopPointAndUpdateVersion(NetexEntitiesIndex netexCommonEntitiesIndex, ScheduledStopPointRefStructure scheduledStopPointRef) {
+        ScheduledStopPoint scheduledStopPoint = netexCommonEntitiesIndex.getScheduledStopPointIndex().get(scheduledStopPointRef.getRef());
+        scheduledStopPointRef.setVersion(scheduledStopPoint.getVersion());
+        return scheduledStopPoint;
     }
 
     public Collection<ScheduledStopPoint> getScheduledStopPoints() {

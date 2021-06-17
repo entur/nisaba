@@ -3,6 +3,7 @@ package no.entur.nisaba.netex;
 import org.entur.netex.index.api.NetexEntitiesIndex;
 import org.rutebanken.netex.model.DayType;
 import org.rutebanken.netex.model.DayTypeAssignment;
+import org.rutebanken.netex.model.DayTypeRefStructure;
 import org.rutebanken.netex.model.DayTypeRefs_RelStructure;
 import org.rutebanken.netex.model.NoticeAssignment;
 import org.rutebanken.netex.model.OperatingDay;
@@ -11,6 +12,7 @@ import org.rutebanken.netex.model.Operator;
 import org.rutebanken.netex.model.OperatorRefStructure;
 import org.rutebanken.netex.model.ServiceJourney;
 
+import javax.xml.bind.JAXBElement;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Objects;
@@ -32,8 +34,9 @@ public class ServiceJourneyReferencedEntities {
 
         DayTypeRefs_RelStructure dayTypeRefs = serviceJourney.getDayTypes();
         // ServiceJourneys used together with DatedServiceJourneys do not have day types.
-        if(dayTypeRefs != null) {
-            dayTypes = dayTypeRefs.getDayTypeRef().stream().map(jaxbElement -> netexCommonEntitiesIndex.getDayTypeIndex().get(jaxbElement.getValue().getRef())).collect(Collectors.toSet());
+        if (dayTypeRefs != null) {
+
+            dayTypes = dayTypeRefs.getDayTypeRef().stream().map(dayTypeRef -> getDayTypeAndUpdateVersion(netexCommonEntitiesIndex, dayTypeRef)).collect(Collectors.toSet());
 
             dayTypeAssignments = this.dayTypes.stream()
                     .map(dayType -> netexCommonEntitiesIndex.getDayTypeAssignmentsByDayTypeIdIndex().get(dayType.getId()))
@@ -56,7 +59,7 @@ public class ServiceJourneyReferencedEntities {
         netexLineEntitiesIndex.getDatedServiceJourneyByServiceJourneyRefIndex()
                 .get(serviceJourney.getId())
                 .stream()
-                .map(datedServiceJourney ->  datedServiceJourney.getOperatingDayRef().getRef())
+                .map(datedServiceJourney -> datedServiceJourney.getOperatingDayRef().getRef())
                 .forEach(operatingDayId -> operatingDays.add(netexCommonEntitiesIndex.getOperatingDayIndex().get(operatingDayId)));
 
 
@@ -80,9 +83,16 @@ public class ServiceJourneyReferencedEntities {
         noticeAssignments = Stream.concat(noticeAssignmentsOnServiceJourney, noticeAssignmentsOnPassingTimes).collect(Collectors.toList());
 
         OperatorRefStructure operatorRef = serviceJourney.getOperatorRef();
-        if(operatorRef != null) {
+        if (operatorRef != null) {
             operator = netexCommonEntitiesIndex.getOperatorIndex().get(operatorRef.getRef());
+            operatorRef.setVersion(operator.getVersion());
         }
+    }
+
+    private DayType getDayTypeAndUpdateVersion(NetexEntitiesIndex netexCommonEntitiesIndex, JAXBElement<? extends DayTypeRefStructure> dayTypeRef) {
+        DayType dayType = netexCommonEntitiesIndex.getDayTypeIndex().get(dayTypeRef.getValue().getRef());
+        dayTypeRef.getValue().setVersion(dayType.getVersion());
+        return dayType;
     }
 
     public Collection<DayType> getDayTypes() {

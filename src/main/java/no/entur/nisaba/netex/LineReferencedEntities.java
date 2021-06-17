@@ -1,13 +1,16 @@
 package no.entur.nisaba.netex;
 
+import no.entur.nisaba.exceptions.NisabaException;
 import org.entur.netex.index.api.NetexEntitiesIndex;
 import org.rutebanken.netex.model.Authority;
 import org.rutebanken.netex.model.Branding;
 import org.rutebanken.netex.model.BrandingRefStructure;
 import org.rutebanken.netex.model.FlexibleLine;
+import org.rutebanken.netex.model.GroupOfLinesRefStructure;
 import org.rutebanken.netex.model.Line;
 import org.rutebanken.netex.model.Network;
 import org.rutebanken.netex.model.Operator;
+import org.rutebanken.netex.model.OperatorRefStructure;
 
 import java.util.Optional;
 
@@ -16,6 +19,10 @@ import java.util.Optional;
  */
 public class LineReferencedEntities {
 
+    private Line line;
+    private FlexibleLine flexibleLine;
+
+
     private Operator operator;
     private Branding branding;
     private Network network;
@@ -23,6 +30,14 @@ public class LineReferencedEntities {
 
 
     private LineReferencedEntities() {
+    }
+
+    public Line getLine() {
+        return line;
+    }
+
+    public FlexibleLine getFlexibleLine() {
+        return flexibleLine;
     }
 
     public Operator getOperator() {
@@ -62,23 +77,31 @@ public class LineReferencedEntities {
 
             LineReferencedEntities lineReferencedEntities = new LineReferencedEntities();
 
+            if (netexLineEntitiesIndex.getLineIndex().getAll().size() > 1) {
+                throw new NisabaException("The PublicationDelivery contains more than one line");
+            }
+            if (netexLineEntitiesIndex.getFlexibleLineIndex().getAll().size() > 1) {
+                throw new NisabaException("The PublicationDelivery contains more than one flexible line");
+            }
             Optional<Line> optionalLine = netexLineEntitiesIndex.getLineIndex().getAll().stream().findFirst();
+            Optional<FlexibleLine> optionalFlexibleLine = netexLineEntitiesIndex.getFlexibleLineIndex().getAll().stream().findFirst();
+            if (optionalLine.isPresent() && optionalFlexibleLine.isPresent()) {
+                throw new NisabaException("The PublicationDelivery contains both a line and a flexible line");
+            }
+            if (optionalLine.isEmpty() && optionalFlexibleLine.isEmpty()) {
+                throw new NisabaException("The PublicationDelivery contains neither a line nor a flexible line");
+            }
+
             if (optionalLine.isPresent()) {
-                lineReferencedEntities.operator = optionalLine.map(line -> line.getOperatorRef().getRef()).map(operatorRef -> netexCommonEntitiesIndex.getOperatorIndex().get(operatorRef)).orElseThrow();
-                lineReferencedEntities.network = optionalLine.map(line -> line.getRepresentedByGroupRef().getRef())
-                        .map(networkOrGroupOfLinesRef -> findNetwork(networkOrGroupOfLinesRef, netexCommonEntitiesIndex)).orElseThrow();
+                Line line = optionalLine.get();
+                lineReferencedEntities.line = line;
+                lineReferencedEntities.operator = getOperatorAndUpdateVersion(line.getOperatorRef());
+                lineReferencedEntities.network = getNetworkAndUpdateVersion(line.getRepresentedByGroupRef());
             } else {
-                Optional<FlexibleLine> optionalFlexibleLine = netexLineEntitiesIndex.getFlexibleLineIndex()
-                        .getAll()
-                        .stream()
-                        .findFirst();
-                lineReferencedEntities.operator = optionalFlexibleLine
-                        .map(flexibleLine -> flexibleLine.getOperatorRef().getRef())
-                        .map(operatorRef -> netexCommonEntitiesIndex.getOperatorIndex().get(operatorRef)).orElseThrow();
-
-                lineReferencedEntities.network = optionalFlexibleLine.map(flexibleLine -> flexibleLine.getRepresentedByGroupRef().getRef())
-                        .map(networkOrGroupOfLinesRef -> findNetwork(networkOrGroupOfLinesRef, netexCommonEntitiesIndex)).orElseThrow();
-
+                FlexibleLine flexibleLine = optionalFlexibleLine.get();
+                lineReferencedEntities.flexibleLine = flexibleLine;
+                lineReferencedEntities.operator = getOperatorAndUpdateVersion(flexibleLine.getOperatorRef());
+                lineReferencedEntities.network = getNetworkAndUpdateVersion(flexibleLine.getRepresentedByGroupRef());
             }
 
             lineReferencedEntities.authority = netexCommonEntitiesIndex.getAuthorityIndex().get(lineReferencedEntities.network.getTransportOrganisationRef().getValue().getRef());
@@ -90,6 +113,18 @@ public class LineReferencedEntities {
 
 
             return lineReferencedEntities;
+        }
+
+        private Network getNetworkAndUpdateVersion(GroupOfLinesRefStructure networkOrGroupOfLinesRef) {
+            Network network = findNetwork(networkOrGroupOfLinesRef.getRef(), netexCommonEntitiesIndex);
+            networkOrGroupOfLinesRef.setVersion(network.getVersion());
+            return network;
+        }
+
+        private Operator getOperatorAndUpdateVersion(OperatorRefStructure operatorRef) {
+            Operator operator = netexCommonEntitiesIndex.getOperatorIndex().get(operatorRef.getRef());
+            operatorRef.setVersion(operator.getVersion());
+            return operator;
         }
 
         /**

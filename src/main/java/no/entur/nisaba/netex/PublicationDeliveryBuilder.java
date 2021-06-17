@@ -76,7 +76,6 @@ public class PublicationDeliveryBuilder {
             @Header(PUBLICATION_DELIVERY_TIMESTAMP) LocalDateTime publicationDeliveryTimestamp,
             @Header(LINE_REFERENCES) LineReferencedEntities lineReferencedEntities) {
 
-        PublicationDeliveryStructure publicationDeliveryStructure = createPublicationDeliveryStructure(lineEntities, publicationDeliveryTimestamp);
 
 
         ServiceJourney serviceJourney = lineEntities.getServiceJourneyIndex().get(serviceJourneyId);
@@ -84,6 +83,10 @@ public class PublicationDeliveryBuilder {
 
         JourneyPattern journeyPattern = lineEntities.getJourneyPatternIndex().get(serviceJourney.getJourneyPatternRef().getValue().getRef());
         Route route = lineEntities.getRouteIndex().get(journeyPattern.getRouteRef().getRef());
+
+
+        // publication delivery
+        PublicationDeliveryStructure publicationDeliveryStructure = createPublicationDeliveryStructure(lineReferencedEntities, lineEntities, publicationDeliveryTimestamp);
 
 
         // resource frame
@@ -215,17 +218,17 @@ public class PublicationDeliveryBuilder {
 
     }
 
-    private PublicationDeliveryStructure createPublicationDeliveryStructure(NetexEntitiesIndex netexLineEntitiesIndex, LocalDateTime publicationDeliveryTimestamp) {
+    private PublicationDeliveryStructure createPublicationDeliveryStructure(LineReferencedEntities lineReferencedEntities, NetexEntitiesIndex netexLineEntitiesIndex, LocalDateTime publicationDeliveryTimestamp) {
 
         PublicationDeliveryStructure publicationDeliveryStructure = objectFactory.createPublicationDeliveryStructure();
         PublicationDeliveryStructure.DataObjects dataObjects = objectFactory.createPublicationDeliveryStructureDataObjects();
         publicationDeliveryStructure.setDataObjects(dataObjects);
 
         String lineName;
-        if (!netexLineEntitiesIndex.getLineIndex().getAll().isEmpty()) {
-            lineName = netexLineEntitiesIndex.getLineIndex().getAll().stream().findFirst().orElseThrow().getName().getValue();
+        if (lineReferencedEntities.getLine() != null) {
+            lineName = lineReferencedEntities.getLine().getName().getValue();
         } else {
-            lineName = netexLineEntitiesIndex.getFlexibleLineIndex().getAll().stream().findFirst().orElseThrow().getName().getValue();
+            lineName = lineReferencedEntities.getFlexibleLine().getName().getValue();
         }
 
         publicationDeliveryStructure.setDescription(objectFactory.createMultilingualString().withValue(lineName));
