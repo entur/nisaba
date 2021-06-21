@@ -34,8 +34,7 @@ import static no.entur.nisaba.Constants.NETEX_FILE_NAME;
 import static no.entur.nisaba.Constants.XML_NAMESPACE_NETEX;
 
 /**
- * Receive a notification when a new NeTEx export is available in the blob store and send an event in a Kafka topic
- * if this is the first time the dataset is published.
+ * Publish service journeys in a Kafka topic.
  */
 @Component
 public class NetexPublicationRouteBuilder extends BaseRouteBuilder {

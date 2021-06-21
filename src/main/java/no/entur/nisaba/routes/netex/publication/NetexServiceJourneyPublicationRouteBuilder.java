@@ -65,6 +65,7 @@ public class NetexServiceJourneyPublicationRouteBuilder extends BaseRouteBuilder
         JAXBContext context = JAXBContext
                 .newInstance(PublicationDeliveryStructure.class);
         JaxbDataFormat xmlDataFormat = new JaxbDataFormat();
+        xmlDataFormat.setPrettyPrint(false);
         xmlDataFormat.setContext(context);
 
         from("google-pubsub:{{nisaba.pubsub.project.id}}:NetexServiceJourneyPublicationQueue?synchronousPull={{nisaba.pubsub.queue.servicejourney.synchronous:true}}")
@@ -192,10 +193,8 @@ public class NetexServiceJourneyPublicationRouteBuilder extends BaseRouteBuilder
                 .marshal(xmlDataFormat)
                 .to("file:/tmp/camel/servicejourney?fileName=${header.SERVICE_JOURNEY_ID}_${date:now:yyyyMMddHHmmssSSS}-transformed.xml")
                 .setHeader(KafkaConstants.KEY, header(Constants.SERVICE_JOURNEY_ID))
-                // explicitly compress the payload due to https://issues.apache.org/jira/browse/KAFKA-4169
-                .marshal().zipFile()
                 .doTry()
-                .to("kafka:{{nisaba.kafka.topic.servicejourney}}?clientId=nisaba-servicejourney&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy").id("to-kafka-topic-servicejourney")
+                .to("kafka:{{nisaba.kafka.topic.servicejourney}}?clientId=nisaba-servicejourney&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy&compressionCodec=gzip").id("to-kafka-topic-servicejourney")
                 .doCatch(RecordTooLargeException.class)
                 .log(LoggingLevel.ERROR, "Cannot serialize service journey ${header." + Constants.SERVICE_JOURNEY_ID + "} in Line file ${header." + NETEX_FILE_NAME + "} into Kafka topic, max message size exceeded ${exception.stacktrace} ")
                 .stop()

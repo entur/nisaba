@@ -80,8 +80,18 @@ class NetexPublicationRouteBuilderTest extends NisabaRouteBuilderIntegrationTest
     void testPublishServiceJourney() throws Exception {
 
         AdviceWith.adviceWith(context, "notify-consumers", a -> a.weaveById("to-kafka-topic-event").replace().to("mock:nisabaEventTopic"));
-        AdviceWith.adviceWith(context, "publish-common-file", a -> a.weaveById("to-kafka-topic-common").replace().to("mock:nisabaCommonTopic"));
-        AdviceWith.adviceWith(context, "process-service-journey", a -> a.weaveById("to-kafka-topic-servicejourney").replace().to("mock:nisabaServiceJourneyTopic"));
+
+        AdviceWith.adviceWith(context, "publish-common-file", a -> {
+            a.weaveById("to-kafka-topic-common").before().convertBodyTo(byte[].class);
+            a.weaveById("to-kafka-topic-common").replace().to("mock:nisabaCommonTopic");
+        });
+        AdviceWith.adviceWith(context, "process-service-journey", a -> {
+            a.weaveById("to-kafka-topic-servicejourney").before().convertBodyTo(byte[].class);
+            a.weaveById("to-kafka-topic-servicejourney").replace().to("mock:nisabaServiceJourneyTopic");
+
+        });
+
+
         AdviceWith.adviceWith(context, "netex-export-notification-queue", a -> a.weaveByToUri("direct:retrieveDatasetCreationTime").replace().to("mock:retrieveDatasetCreationTime"));
 
         mockRetrieveDatasetCreationTime.whenAnyExchangeReceived(exchange -> exchange.getIn().setHeader(Constants.DATASET_LATEST_CREATION_TIME, LocalDateTime.now()));
@@ -105,8 +115,16 @@ class NetexPublicationRouteBuilderTest extends NisabaRouteBuilderIntegrationTest
     void testPublishServiceJourneyWithDatedServiceJourneys() throws Exception {
 
         AdviceWith.adviceWith(context, "notify-consumers", a -> a.weaveById("to-kafka-topic-event").replace().to("mock:nisabaEventTopic"));
-        AdviceWith.adviceWith(context, "publish-common-file", a -> a.weaveById("to-kafka-topic-common").replace().to("mock:nisabaCommonTopic"));
-        AdviceWith.adviceWith(context, "process-service-journey", a -> a.weaveById("to-kafka-topic-servicejourney").replace().to("mock:nisabaServiceJourneyTopic"));
+
+        AdviceWith.adviceWith(context, "publish-common-file", a -> {
+            a.weaveById("to-kafka-topic-common").before().convertBodyTo(byte[].class);
+            a.weaveById("to-kafka-topic-common").replace().to("mock:nisabaCommonTopic");
+        });
+        AdviceWith.adviceWith(context, "process-service-journey", a -> {
+            a.weaveById("to-kafka-topic-servicejourney").before().convertBodyTo(byte[].class);
+            a.weaveById("to-kafka-topic-servicejourney").replace().to("mock:nisabaServiceJourneyTopic");
+
+        });
         AdviceWith.adviceWith(context, "netex-export-notification-queue", a -> a.weaveByToUri("direct:retrieveDatasetCreationTime").replace().to("mock:retrieveDatasetCreationTime"));
 
         mockRetrieveDatasetCreationTime.whenAnyExchangeReceived(exchange -> exchange.getIn().setHeader(Constants.DATASET_LATEST_CREATION_TIME, LocalDateTime.now()));
@@ -114,6 +132,7 @@ class NetexPublicationRouteBuilderTest extends NisabaRouteBuilderIntegrationTest
         mockProcessCommonFile.whenAnyExchangeReceived(e -> e.getIn().setHeader(DATASET_STAT, new DatasetStat()));
         mockNisabaServiceJourneyTopic.expectedMessageCount(24);
         mockNisabaServiceJourneyTopic.setResultWaitTime(30000);
+        mockNisabaServiceJourneyTopic.whenAnyExchangeReceived(exchange -> exchange.getIn().getBody());
 
         mardukInMemoryBlobStoreRepository.uploadBlob(BLOBSTORE_PATH_OUTBOUND + "netex/rb_" + CODESPACE_GOA + "-" + CURRENT_AGGREGATED_NETEX_FILENAME,
                 getClass().getResourceAsStream("/no/entur/nisaba/netex/import/rb_goa-aggregated-netex.zip"));
@@ -131,8 +150,16 @@ class NetexPublicationRouteBuilderTest extends NisabaRouteBuilderIntegrationTest
     void testPublishServiceJourneyWithNotices() throws Exception {
 
         AdviceWith.adviceWith(context, "notify-consumers", a -> a.weaveById("to-kafka-topic-event").replace().to("mock:nisabaEventTopic"));
-        AdviceWith.adviceWith(context, "publish-common-file", a -> a.weaveById("to-kafka-topic-common").replace().to("mock:nisabaCommonTopic"));
-        AdviceWith.adviceWith(context, "process-service-journey", a -> a.weaveById("to-kafka-topic-servicejourney").replace().to("mock:nisabaServiceJourneyTopic"));
+
+        AdviceWith.adviceWith(context, "publish-common-file", a -> {
+            a.weaveById("to-kafka-topic-common").before().convertBodyTo(byte[].class);
+            a.weaveById("to-kafka-topic-common").replace().to("mock:nisabaCommonTopic");
+        });
+        AdviceWith.adviceWith(context, "process-service-journey", a -> {
+            a.weaveById("to-kafka-topic-servicejourney").before().convertBodyTo(byte[].class);
+            a.weaveById("to-kafka-topic-servicejourney").replace().to("mock:nisabaServiceJourneyTopic");
+
+        });
         AdviceWith.adviceWith(context, "netex-export-notification-queue", a -> a.weaveByToUri("direct:retrieveDatasetCreationTime").replace().to("mock:retrieveDatasetCreationTime"));
 
         mockRetrieveDatasetCreationTime.whenAnyExchangeReceived(exchange -> exchange.getIn().setHeader(Constants.DATASET_LATEST_CREATION_TIME, LocalDateTime.now()));
@@ -156,8 +183,16 @@ class NetexPublicationRouteBuilderTest extends NisabaRouteBuilderIntegrationTest
     void testPublishServiceJourneyWithInterchanges() throws Exception {
 
         AdviceWith.adviceWith(context, "notify-consumers", a -> a.weaveById("to-kafka-topic-event").replace().to("mock:nisabaEventTopic"));
-        AdviceWith.adviceWith(context, "publish-common-file", a -> a.weaveById("to-kafka-topic-common").replace().to("mock:nisabaCommonTopic"));
-        AdviceWith.adviceWith(context, "process-service-journey", a -> a.weaveById("to-kafka-topic-servicejourney").replace().to("mock:nisabaServiceJourneyTopic"));
+
+        AdviceWith.adviceWith(context, "publish-common-file", a -> {
+            a.weaveById("to-kafka-topic-common").before().convertBodyTo(byte[].class);
+            a.weaveById("to-kafka-topic-common").replace().to("mock:nisabaCommonTopic");
+        });
+        AdviceWith.adviceWith(context, "process-service-journey", a -> {
+            a.weaveById("to-kafka-topic-servicejourney").before().convertBodyTo(byte[].class);
+            a.weaveById("to-kafka-topic-servicejourney").replace().to("mock:nisabaServiceJourneyTopic");
+
+        });
         AdviceWith.adviceWith(context, "netex-export-notification-queue", a -> a.weaveByToUri("direct:retrieveDatasetCreationTime").replace().to("mock:retrieveDatasetCreationTime"));
 
 
@@ -182,8 +217,16 @@ class NetexPublicationRouteBuilderTest extends NisabaRouteBuilderIntegrationTest
     void testPublishServiceJourneyWithFlexibleLines() throws Exception {
 
         AdviceWith.adviceWith(context, "notify-consumers", a -> a.weaveById("to-kafka-topic-event").replace().to("mock:nisabaEventTopic"));
-        AdviceWith.adviceWith(context, "publish-common-file", a -> a.weaveById("to-kafka-topic-common").replace().to("mock:nisabaCommonTopic"));
-        AdviceWith.adviceWith(context, "process-service-journey", a -> a.weaveById("to-kafka-topic-servicejourney").replace().to("mock:nisabaServiceJourneyTopic"));
+
+        AdviceWith.adviceWith(context, "publish-common-file", a -> {
+            a.weaveById("to-kafka-topic-common").before().convertBodyTo(byte[].class);
+            a.weaveById("to-kafka-topic-common").replace().to("mock:nisabaCommonTopic");
+        });
+        AdviceWith.adviceWith(context, "process-service-journey", a -> {
+            a.weaveById("to-kafka-topic-servicejourney").before().convertBodyTo(byte[].class);
+            a.weaveById("to-kafka-topic-servicejourney").replace().to("mock:nisabaServiceJourneyTopic");
+
+        });
         AdviceWith.adviceWith(context, "netex-export-notification-queue", a -> a.weaveByToUri("direct:retrieveDatasetCreationTime").replace().to("mock:retrieveDatasetCreationTime"));
 
 
@@ -206,9 +249,16 @@ class NetexPublicationRouteBuilderTest extends NisabaRouteBuilderIntegrationTest
     void testPublishCommonFile() throws Exception {
 
         AdviceWith.adviceWith(context, "notify-consumers", a -> a.weaveById("to-kafka-topic-event").replace().to("mock:nisabaEventTopic"));
-        AdviceWith.adviceWith(context, "publish-common-file", a -> a.weaveById("to-kafka-topic-common").replace().to("mock:nisabaCommonTopic"));
-        AdviceWith.adviceWith(context, "process-service-journey", a -> a.weaveById("to-kafka-topic-servicejourney").replace().to("mock:nisabaServiceJourneyTopic"));
 
+        AdviceWith.adviceWith(context, "publish-common-file", a -> {
+            a.weaveById("to-kafka-topic-common").before().convertBodyTo(byte[].class);
+            a.weaveById("to-kafka-topic-common").replace().to("mock:nisabaCommonTopic");
+        });
+        AdviceWith.adviceWith(context, "process-service-journey", a -> {
+            a.weaveById("to-kafka-topic-servicejourney").before().convertBodyTo(byte[].class);
+            a.weaveById("to-kafka-topic-servicejourney").replace().to("mock:nisabaServiceJourneyTopic");
+
+        });
         // expect filtered common file + scheduled stop points + stop assignments + route points + service links
         mockNisabaCommonTopic.expectedMessageCount(10);
         mockNisabaCommonTopic.setResultWaitTime(100000);
@@ -223,17 +273,29 @@ class NetexPublicationRouteBuilderTest extends NisabaRouteBuilderIntegrationTest
         mockNisabaCommonTopic.assertIsSatisfied();
         mockProcessLineFile.assertIsSatisfied();
 
-        mockNisabaCommonTopic.getReceivedExchanges().forEach(this::validatePublicationDelivery);
+        mockNisabaCommonTopic.getReceivedExchanges().forEach(this::validateCompressedPublicationDelivery);
 
     }
 
-    private void validatePublicationDelivery(Exchange exchange) {
+    private void validateCompressedPublicationDelivery(Exchange exchange) {
         byte[] body = exchange.getIn().getBody(byte[].class);
         String netex = "";
         try (ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(body))) {
             zis.getNextEntry();
             netex = new String(zis.readAllBytes());
 
+            NeTExValidator neTExValidator = NeTExValidator.getNeTExValidator();
+            neTExValidator.validate(new StreamSource(new StringReader(netex)));
+        } catch (IOException | SAXException e) {
+            System.err.print(netex);
+            Assertions.fail(e);
+        }
+    }
+
+    private void validatePublicationDelivery(Exchange exchange) {
+        byte[] body = exchange.getIn().getBody(byte[].class);
+        String netex = new String(body);
+        try {
             NeTExValidator neTExValidator = NeTExValidator.getNeTExValidator();
             neTExValidator.validate(new StreamSource(new StringReader(netex)));
         } catch (IOException | SAXException e) {
