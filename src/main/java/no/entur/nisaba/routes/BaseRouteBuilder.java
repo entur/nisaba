@@ -32,7 +32,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-
 /**
  * Defines common route behavior.
  */
@@ -72,10 +71,13 @@ public abstract class BaseRouteBuilder extends RouteBuilder {
                     pubSubAttributes.entrySet().stream().filter(entry -> !entry.getKey().startsWith("CamelGooglePubsub")).forEach(entry -> exchange.getIn().setHeader(entry.getKey(), entry.getValue()));
                 });
 
-        // Copy only the correlationId and codespace headers from the Camel message into the PubSub message by default.
+        // Copy only the import key, correlationId and codespace headers from the Camel message into the PubSub message by default.
         interceptSendToEndpoint("google-pubsub:*").process(
                 exchange -> {
                     Map<String, String> pubSubAttributes = new HashMap<>(exchange.getIn().getHeader(GooglePubsubConstants.ATTRIBUTES, new HashMap<>(), Map.class));
+                    if (exchange.getIn().getHeader(Constants.DATASET_IMPORT_KEY) != null) {
+                        pubSubAttributes.put(Constants.DATASET_IMPORT_KEY, exchange.getIn().getHeader(Constants.DATASET_IMPORT_KEY, String.class));
+                    }
                     if (exchange.getIn().getHeader(Constants.CORRELATION_ID) != null) {
                         pubSubAttributes.put(Constants.CORRELATION_ID, exchange.getIn().getHeader(Constants.CORRELATION_ID, String.class));
                     }
@@ -114,11 +116,6 @@ public abstract class BaseRouteBuilder extends RouteBuilder {
     }
 
     public void extendAckDeadline(Exchange exchange) throws IOException {
-        if (log.isDebugEnabled()) {
-            String correlation = simple(correlation(), String.class).evaluate(exchange, String.class);
-            String fileName = exchange.getIn().getHeader(Exchange.FILE_NAME, String.class);
-            log.debug("{} Extending PubSub ack deadline for file {}", correlation, fileName);
-        }
         String ackId = exchange.getIn().getHeader(GooglePubsubConstants.ACK_ID, String.class);
         GooglePubsubEndpoint fromEndpoint = (GooglePubsubEndpoint) exchange.getFromEndpoint();
         String subscriptionName = ProjectSubscriptionName.format(fromEndpoint.getProjectId(), fromEndpoint.getDestinationName());

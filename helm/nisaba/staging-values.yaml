@@ -1,5 +1,5 @@
 env: staging
-replicas: 6
+replicas: 2
 
 netex:
   publish:
