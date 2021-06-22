@@ -16,6 +16,8 @@ import java.util.Optional;
 
 /**
  * NeTEx entities referenced by a Line or FlexibleLine.
+ * The entities are looked up either in the current PublicationDelivery or in in the common files.
+ * When found in the common files, the NeTEx version is added back to the reference in the current PublicationDelivery.
  */
 public class LineReferencedEntities {
 
@@ -150,12 +152,7 @@ public class LineReferencedEntities {
                         .findFirst()
                         .orElseThrow();
             }
-
         }
-
-
     }
-
-
 }
 

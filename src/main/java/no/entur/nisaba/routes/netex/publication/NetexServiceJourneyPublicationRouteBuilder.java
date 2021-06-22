@@ -157,7 +157,10 @@ public class NetexServiceJourneyPublicationRouteBuilder extends BaseRouteBuilder
                     NetexEntitiesIndex commonNetexEntitiesIndex = exchange.getIn().getHeader(Constants.COMMON_FILE_INDEX, NetexEntitiesIndex.class);
                     List<JourneyPattern> journeyPatterns = netexLineEntitiesIndex.getJourneyPatternIndex().getAll().stream().filter(journeyPattern -> journeyPattern.getRouteRef().getRef().equals(route.getId())).collect(Collectors.toList());
                     exchange.getIn().setHeader(JOURNEY_PATTERNS, journeyPatterns);
-                    RouteReferencedEntities routeReferencedEntities = new RouteReferencedEntities(route, commonNetexEntitiesIndex);
+                    RouteReferencedEntities routeReferencedEntities = new RouteReferencedEntities.RouteReferencedEntitiesBuilder()
+                            .withRoute(route)
+                            .withNetexCommonEntitiesIndex(commonNetexEntitiesIndex)
+                            .build();
                     exchange.getIn().setHeader(Constants.ROUTE_REFERENCES, routeReferencedEntities);
                 })
                 .split(simple("${header." + JOURNEY_PATTERNS + "}"))
@@ -172,7 +175,11 @@ public class NetexServiceJourneyPublicationRouteBuilder extends BaseRouteBuilder
                     NetexEntitiesIndex commonNetexEntitiesIndex = exchange.getIn().getHeader(Constants.COMMON_FILE_INDEX, NetexEntitiesIndex.class);
                     List<ServiceJourney> serviceJourneys = netexLineEntitiesIndex.getServiceJourneyIndex().getAll().stream().filter(serviceJourney -> serviceJourney.getJourneyPatternRef().getValue().getRef().equals(journeyPattern.getId())).collect(Collectors.toList());
                     exchange.getIn().setHeader(SERVICE_JOURNEYS, serviceJourneys);
-                    JourneyPatternReferencedEntities journeyPatternReferencedEntities = new JourneyPatternReferencedEntities(journeyPattern, commonNetexEntitiesIndex, netexLineEntitiesIndex);
+                    JourneyPatternReferencedEntities journeyPatternReferencedEntities = new JourneyPatternReferencedEntities.JourneyPatternReferencedEntitiesBuilder()
+                            .withJourneyPattern(journeyPattern)
+                            .withNetexCommonEntitiesIndex(commonNetexEntitiesIndex)
+                            .withNetexLineEntitiesIndex(netexLineEntitiesIndex)
+                            .build();
                     exchange.getIn().setHeader(Constants.JOURNEY_PATTERN_REFERENCES, journeyPatternReferencedEntities);
                 })
                 .split(simple("${header." + SERVICE_JOURNEYS + "}"))

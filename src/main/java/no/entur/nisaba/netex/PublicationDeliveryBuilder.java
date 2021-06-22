@@ -77,12 +77,16 @@ public class PublicationDeliveryBuilder {
             @Header(LINE_REFERENCES) LineReferencedEntities lineReferencedEntities) {
 
 
-
         ServiceJourney serviceJourney = lineEntities.getServiceJourneyIndex().get(serviceJourneyId);
-        ServiceJourneyReferencedEntities serviceJourneyReferencedEntities = new ServiceJourneyReferencedEntities(serviceJourney, commonEntities, lineEntities);
 
-        JourneyPattern journeyPattern = lineEntities.getJourneyPatternIndex().get(serviceJourney.getJourneyPatternRef().getValue().getRef());
-        Route route = lineEntities.getRouteIndex().get(journeyPattern.getRouteRef().getRef());
+        ServiceJourneyReferencedEntities serviceJourneyReferencedEntities = new ServiceJourneyReferencedEntities.ServiceJourneyReferencedEntitiesBuilder()
+                .withServiceJourney(serviceJourney)
+                .withNetexCommonEntitiesIndex(commonEntities)
+                .withNetexLineEntitiesIndex(lineEntities)
+                .build();
+
+        JourneyPattern journeyPattern = journeyPatternReferencedEntities.getJourneyPattern();
+        Route route = routeReferencedEntities.getRoute();
 
 
         // publication delivery
