@@ -198,7 +198,6 @@ public class NetexServiceJourneyPublicationRouteBuilder extends BaseRouteBuilder
                 .setHeader(Constants.SERVICE_JOURNEY_ID, simple("${body.id}"))
                 .bean(PublicationDeliveryBuilder.class, "build")
                 .marshal(xmlDataFormat)
-                .to("file:/tmp/camel/servicejourney?fileName=${header.SERVICE_JOURNEY_ID}_${date:now:yyyyMMddHHmmssSSS}-transformed.xml")
                 .setHeader(KafkaConstants.KEY, header(Constants.SERVICE_JOURNEY_ID))
                 .doTry()
                 .to("kafka:{{nisaba.kafka.topic.servicejourney}}?clientId=nisaba-servicejourney&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy&compressionCodec=gzip").id("to-kafka-topic-servicejourney")

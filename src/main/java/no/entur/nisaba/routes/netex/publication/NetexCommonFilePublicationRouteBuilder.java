@@ -110,7 +110,6 @@ public class NetexCommonFilePublicationRouteBuilder extends BaseRouteBuilder {
 
         from("direct:publishCommonFile")
                 .filter(simple("${properties:nisaba.publish.enabled:true}"))
-                .to("file:/tmp/camel/servicejourney?fileName=common_${date:now:yyyyMMddHHmmssSSS}-transformed.xml")
                 // explicitly compress the payload due to https://issues.apache.org/jira/browse/KAFKA-4169
                 .marshal().zipFile()
                 .doTry()
