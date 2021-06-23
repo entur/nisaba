@@ -145,6 +145,7 @@ public class LineReferencedEntities {
                 return netexCommonEntitiesIndex.getNetworkIndex()
                         .getAll()
                         .stream()
+                        .filter(n -> n.getGroupsOfLines() != null)
                         .filter(n -> n.getGroupsOfLines()
                                 .getGroupOfLines()
                                 .stream()
