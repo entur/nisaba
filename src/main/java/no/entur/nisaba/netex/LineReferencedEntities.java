@@ -97,22 +97,29 @@ public class LineReferencedEntities {
             if (optionalLine.isPresent()) {
                 Line line = optionalLine.get();
                 lineReferencedEntities.line = line;
-                lineReferencedEntities.operator = getOperatorAndUpdateVersion(line.getOperatorRef());
+                if (line.getOperatorRef() != null) {
+                    lineReferencedEntities.operator = getOperatorAndUpdateVersion(line.getOperatorRef());
+                }
                 lineReferencedEntities.network = getNetworkAndUpdateVersion(line.getRepresentedByGroupRef());
             } else {
                 FlexibleLine flexibleLine = optionalFlexibleLine.get();
                 lineReferencedEntities.flexibleLine = flexibleLine;
-                lineReferencedEntities.operator = getOperatorAndUpdateVersion(flexibleLine.getOperatorRef());
+
+                if (flexibleLine.getOperatorRef() != null) {
+                    lineReferencedEntities.operator = getOperatorAndUpdateVersion(flexibleLine.getOperatorRef());
+                }
+
                 lineReferencedEntities.network = getNetworkAndUpdateVersion(flexibleLine.getRepresentedByGroupRef());
             }
 
             lineReferencedEntities.authority = netexCommonEntitiesIndex.getAuthorityIndex().get(lineReferencedEntities.network.getTransportOrganisationRef().getValue().getRef());
 
-            BrandingRefStructure brandingRef = lineReferencedEntities.operator.getBrandingRef();
-            if (brandingRef != null) {
-                lineReferencedEntities.branding = netexCommonEntitiesIndex.getBrandingIndex().get(brandingRef.getRef());
+            if (lineReferencedEntities.operator != null) {
+                BrandingRefStructure brandingRef = lineReferencedEntities.operator.getBrandingRef();
+                if (brandingRef != null) {
+                    lineReferencedEntities.branding = netexCommonEntitiesIndex.getBrandingIndex().get(brandingRef.getRef());
+                }
             }
-
 
             return lineReferencedEntities;
         }

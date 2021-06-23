@@ -99,7 +99,10 @@ public class PublicationDeliveryBuilder {
         OrganisationsInFrame_RelStructure organisationsInFrameRelStructure = objectFactory.createOrganisationsInFrame_RelStructure();
 
         Set<Operator> operators = new HashSet<>();
-        operators.add(lineReferencedEntities.getOperator());
+        Operator lineOperator = lineReferencedEntities.getOperator();
+        if (lineOperator != null) {
+            operators.add(lineOperator);
+        }
         Operator serviceJourneyOperator = serviceJourneyReferencedEntities.getOperator();
         if (serviceJourneyOperator != null) {
             operators.add(serviceJourneyOperator);
