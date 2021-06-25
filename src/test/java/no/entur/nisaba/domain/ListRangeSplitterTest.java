@@ -31,27 +31,27 @@ class ListRangeSplitterTest {
     void testLessThanOneFullRange() {
         List<ListRangeSplitter.Range> split = listRangeSplitter.split(100, RANGE_SIZE);
         Assertions.assertEquals(1, split.size());
-        Assertions.assertEquals(1, split.get(0).getLowerBound());
-        Assertions.assertEquals(100, split.get(0).getUpperBound());
+        Assertions.assertEquals(0, split.get(0).getLowerBound());
+        Assertions.assertEquals(99, split.get(0).getUpperBound());
     }
 
     @Test
     void testMoreThanOneRange() {
         List<ListRangeSplitter.Range> split = listRangeSplitter.split(250, RANGE_SIZE);
         Assertions.assertEquals(2, split.size());
-        Assertions.assertEquals(1, split.get(0).getLowerBound());
-        Assertions.assertEquals(200, split.get(0).getUpperBound());
-        Assertions.assertEquals(201, split.get(1).getLowerBound());
-        Assertions.assertEquals(250, split.get(1).getUpperBound());
+        Assertions.assertEquals(0, split.get(0).getLowerBound());
+        Assertions.assertEquals(199, split.get(0).getUpperBound());
+        Assertions.assertEquals(200, split.get(1).getLowerBound());
+        Assertions.assertEquals(249, split.get(1).getUpperBound());
     }
 
     @Test
     void testNoPartialRange() {
         List<ListRangeSplitter.Range> split = listRangeSplitter.split(400, RANGE_SIZE);
         Assertions.assertEquals(2, split.size());
-        Assertions.assertEquals(1, split.get(0).getLowerBound());
-        Assertions.assertEquals(200, split.get(0).getUpperBound());
-        Assertions.assertEquals(201, split.get(1).getLowerBound());
-        Assertions.assertEquals(400, split.get(1).getUpperBound());
+        Assertions.assertEquals(0, split.get(0).getLowerBound());
+        Assertions.assertEquals(199, split.get(0).getUpperBound());
+        Assertions.assertEquals(200, split.get(1).getLowerBound());
+        Assertions.assertEquals(399, split.get(1).getUpperBound());
     }
 }

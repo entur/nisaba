@@ -10,7 +10,7 @@ import org.rutebanken.netex.model.VersionFrameDefaultsStructure;
 
 import java.time.LocalDateTime;
 
-import static no.entur.nisaba.netex.JaxbUtils.wrapAsJAXBElement;
+import static no.entur.nisaba.netex.NetexUtils.wrapAsJAXBElement;
 
 public class PublicationDeliveryStructureBuilder {
 
@@ -29,7 +29,7 @@ public class PublicationDeliveryStructureBuilder {
     private ValidityConditions_RelStructure validityConditions;
     private Codespaces_RelStructure codespaces;
 
-    PublicationDeliveryStructureBuilder() {
+    public PublicationDeliveryStructureBuilder() {
 
     }
 

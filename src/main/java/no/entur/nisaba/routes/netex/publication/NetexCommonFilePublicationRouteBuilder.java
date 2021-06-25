@@ -16,19 +16,26 @@
 
 package no.entur.nisaba.routes.netex.publication;
 
+import no.entur.nisaba.Constants;
 import no.entur.nisaba.domain.ListRangeSplitter;
 import no.entur.nisaba.event.DatasetStatHelper;
+import no.entur.nisaba.netex.NoticeAndDestinationDisplayPublicationDeliveryBuilder;
+import no.entur.nisaba.netex.ServiceLinkPublicationDeliveryBuilder;
 import no.entur.nisaba.routes.BaseRouteBuilder;
 import org.apache.camel.LoggingLevel;
-import org.apache.camel.builder.ValueBuilder;
 import org.apache.kafka.common.errors.RecordTooLargeException;
+import org.entur.netex.NetexParser;
+import org.entur.netex.index.api.NetexEntitiesIndex;
+import org.rutebanken.netex.model.ServiceLink;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import org.w3c.dom.Document;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import static no.entur.nisaba.Constants.COMMON_FILE_INDEX;
 import static no.entur.nisaba.Constants.FILE_HANDLE;
 import static no.entur.nisaba.Constants.NETEX_FILE_NAME;
-import static no.entur.nisaba.Constants.XML_NAMESPACE_NETEX;
 
 
 /**
@@ -39,12 +46,8 @@ public class NetexCommonFilePublicationRouteBuilder extends BaseRouteBuilder {
 
     private static final String COMMON_FILE = "COMMON_FILE";
     private static final String COMMON_FILE_PART = "COMMON_FILE_PART";
-    private static final String COMMON_FILE_XSLT = "COMMON_FILE_XSLT";
-    private static final String COMMON_FILE_NB_ITEMS = "COMMON_FILE_NB_ITEMS";
+    private static final String NB_SERVICE_LINKS = "COMMON_FILE_NB_ITEMS";
     private static final String COMMON_FILE_RANGE_SIZE = "COMMON_FILE_RANGE_SIZE";
-
-    private static final String SPLIT_LOWER_BOUND = "SPLIT_LOWER_BOUND";
-    private static final String SPLIT_UPPER_BOUND = "SPLIT_UPPER_BOUND";
 
     private final int rangeSizeForServiceLinks;
 
@@ -62,55 +65,57 @@ public class NetexCommonFilePublicationRouteBuilder extends BaseRouteBuilder {
         from("direct:processCommonFile")
                 .streamCaching()
                 .log(LoggingLevel.INFO, correlation() + "Processing common file ${header." + NETEX_FILE_NAME + "}")
-                .convertBodyTo(Document.class)
                 .setHeader(COMMON_FILE, body())
+                .setHeader(Constants.COMMON_FILE_INDEX, method(NetexParser.class, "parse(${body})"))
 
-                // The common file stripped of every elements except notices and destination displays)
+                // Publish a common file containing all notices and destination displays
 
                 .setBody(header(COMMON_FILE))
                 .setHeader(COMMON_FILE_PART, constant("Filtered common file"))
                 .log(LoggingLevel.INFO, correlation() + "Processing filtered common file ${header." + NETEX_FILE_NAME + "}")
-                .to("xslt-saxon:filterCommonFile.xsl")
+                .bean(NoticeAndDestinationDisplayPublicationDeliveryBuilder.class, "build")
+                .marshal("netexJaxbDataFormat")
                 .to("direct:publishCommonFile")
                 .log(LoggingLevel.INFO, correlation() + "Processed filtered common file ${header." + NETEX_FILE_NAME + "}")
 
-                // Service Links
+                // Publish common files containing service links
 
                 .setBody(header(COMMON_FILE))
+                .process( exchange -> {
+                    List<ServiceLink> serviceLinks = new ArrayList<>(exchange.getIn().getHeader(COMMON_FILE_INDEX, NetexEntitiesIndex.class).getServiceLinkIndex().getAll());
+                    exchange.getIn().setHeader(Constants.SERVICE_LINKS, serviceLinks);
+                })
+                .setHeader(NB_SERVICE_LINKS, simple("${header." + Constants.SERVICE_LINKS + ".size}"))
                 .setHeader(COMMON_FILE_PART, constant("Service Links"))
-                .setHeader(COMMON_FILE_XSLT, constant("filterServiceLink.xsl"))
                 .setHeader(COMMON_FILE_RANGE_SIZE, constant(rangeSizeForServiceLinks))
-                .setHeader(COMMON_FILE_NB_ITEMS,
-                        countNodes("/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:ServiceFrame/netex:serviceLinks/netex:ServiceLink"))
-                .to("direct:splitCommonFile")
+                .to("direct:splitServiceLinks")
                 .log(LoggingLevel.INFO, correlation() + "Processed common file ${header." + NETEX_FILE_NAME + "}")
                 .routeId("process-common-file");
 
-        // split items in the common files in smaller PublicationDeliveries so that each message does not exceed the maximum size of a Kafka record
-        from("direct:splitCommonFile")
-                .filter(header(COMMON_FILE_NB_ITEMS).isGreaterThan(0))
-                .log(LoggingLevel.INFO, correlation() + "Processing ${header." + COMMON_FILE_PART + "} in common file ${header." + NETEX_FILE_NAME + "}")
-                .bean(new ListRangeSplitter(), "split(${header." + COMMON_FILE_NB_ITEMS + "}, ${header." + COMMON_FILE_RANGE_SIZE + "})")
-                .log(LoggingLevel.INFO, correlation() + "Splitting ${header." + COMMON_FILE_NB_ITEMS + "} ${header." + COMMON_FILE_PART + "} into ${body.size} PublicationDeliveries")
+        // split ServiceLinks in the common files in smaller PublicationDeliveries so that each message does not exceed the maximum size of a Kafka record
+        from("direct:splitServiceLinks")
+                .filter(header(NB_SERVICE_LINKS).isGreaterThan(0))
+                .log(LoggingLevel.INFO, correlation() + "Processing ServiceLinks in common file ${header." + NETEX_FILE_NAME + "}")
+                .bean(new ListRangeSplitter(), "split(${header." + NB_SERVICE_LINKS + "}, ${header." + COMMON_FILE_RANGE_SIZE + "})")
+                .log(LoggingLevel.INFO, correlation() + "Splitting ${header." + NB_SERVICE_LINKS + "} ServiceLinks into ${body.size} PublicationDeliveries")
                 .split(body())
-                .log(LoggingLevel.INFO, correlation() + "Processing ${header." + COMMON_FILE_PART + "} from position ${body.lowerBound} to position ${body.upperBound}")
-                .setHeader(SPLIT_LOWER_BOUND, simple("${body.lowerBound}"))
-                .setHeader(SPLIT_UPPER_BOUND, simple("${body.upperBound}"))
+                .log(LoggingLevel.INFO, correlation() + "Processing ServiceLinks from position ${body.lowerBound} to position ${body.upperBound}")
+                .setHeader(Constants.SERVICE_LINKS_SUB_LIST, simple("${header." + Constants.SERVICE_LINKS + ".subList(${body.lowerBound},${body.upperBound})}"))
                 .setBody(header(COMMON_FILE))
-                .toD("xslt-saxon:${header." + COMMON_FILE_XSLT + "}")
+                .bean(ServiceLinkPublicationDeliveryBuilder.class, "build")
+                .marshal("netexJaxbDataFormat")
                 .to("direct:publishCommonFile")
                 // end split
                 .end()
-                .log(LoggingLevel.INFO, correlation() + "Processed ${header." + COMMON_FILE_PART + "} in common file ${header." + FILE_HANDLE + "}")
+                .log(LoggingLevel.INFO, correlation() + "Processed ServiceLinks in common file ${header." + FILE_HANDLE + "}")
                 // end filter
                 .end()
-                .routeId("split-common-file");
+                .routeId("split-service-links");
 
         from("direct:publishCommonFile")
                 .streamCaching()
                 .filter(simple("${properties:nisaba.publish.enabled:true}"))
                 // explicitly compress the payload due to https://issues.apache.org/jira/browse/KAFKA-4169
-                .to("file:/tmp/camel/servicejourney?fileName=common_${date:now:yyyyMMddHHmmssSSS}-transformed.xml")
                 .marshal().zipFile()
                 .doTry()
                 .to("kafka:{{nisaba.kafka.topic.common}}?clientId=nisaba-common&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy&valueSerializer=org.apache.kafka.common.serialization.ByteArraySerializer").id("to-kafka-topic-common")
@@ -123,15 +128,4 @@ public class NetexCommonFilePublicationRouteBuilder extends BaseRouteBuilder {
                 .routeId("publish-common-file");
 
     }
-
-    /**
-     * Count the number of nodes matching the given XPath query.
-     *
-     * @param xpathQuery the XPath query.
-     * @return the number of nodes matching the XPath query.
-     */
-    private ValueBuilder countNodes(String xpathQuery) {
-        return xpath("count(" + xpathQuery + ")", Integer.class, XML_NAMESPACE_NETEX);
-    }
-
 }

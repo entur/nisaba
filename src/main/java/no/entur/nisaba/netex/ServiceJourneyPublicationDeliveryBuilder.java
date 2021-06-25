@@ -3,7 +3,6 @@ package no.entur.nisaba.netex;
 import com.google.common.collect.Streams;
 import org.apache.camel.Header;
 import org.entur.netex.index.api.NetexEntitiesIndex;
-import org.rutebanken.netex.model.Common_VersionFrameStructure;
 import org.rutebanken.netex.model.CompositeFrame;
 import org.rutebanken.netex.model.DayTypeAssignmentsInFrame_RelStructure;
 import org.rutebanken.netex.model.DayTypesInFrame_RelStructure;
@@ -47,18 +46,19 @@ import java.util.stream.Collectors;
 
 import static no.entur.nisaba.Constants.COMMON_FILE_INDEX;
 import static no.entur.nisaba.Constants.DATASET_CODESPACE;
-import static no.entur.nisaba.Constants.DATE_TIME_FORMATTER;
 import static no.entur.nisaba.Constants.JOURNEY_PATTERN_REFERENCES;
 import static no.entur.nisaba.Constants.LINE_FILE_INDEX;
 import static no.entur.nisaba.Constants.LINE_REFERENCES;
 import static no.entur.nisaba.Constants.PUBLICATION_DELIVERY_TIMESTAMP;
 import static no.entur.nisaba.Constants.ROUTE_REFERENCES;
 import static no.entur.nisaba.Constants.SERVICE_JOURNEY_ID;
-import static no.entur.nisaba.netex.JaxbUtils.wrapAsJAXBElement;
+import static no.entur.nisaba.netex.NetexUtils.getFrames;
+import static no.entur.nisaba.netex.NetexUtils.wrapAsJAXBElement;
 
-public class PublicationDeliveryBuilder {
+public class ServiceJourneyPublicationDeliveryBuilder {
 
     private static final String DEFAULT_FRAME_VERSION = "1";
+    private static final String DEFAULT_FRAME_ID = "1";
 
     private final ObjectFactory objectFactory = new ObjectFactory();
 
@@ -112,7 +112,7 @@ public class PublicationDeliveryBuilder {
         if (serviceJourneyOperator != null) {
             operators.add(serviceJourneyOperator);
         }
-        organisationsInFrameRelStructure.getOrganisation_().addAll(operators.stream().map(JaxbUtils::wrapAsJAXBElement).collect(Collectors.toList()));
+        organisationsInFrameRelStructure.getOrganisation_().addAll(operators.stream().map(NetexUtils::wrapAsJAXBElement).collect(Collectors.toList()));
         organisationsInFrameRelStructure.getOrganisation_().add(wrapAsJAXBElement(lineReferencedEntities.getAuthority()));
         resourceFrame.setOrganisations(organisationsInFrameRelStructure);
 
@@ -124,25 +124,20 @@ public class PublicationDeliveryBuilder {
 
         getFrames(publicationDeliveryStructure).add(wrapAsJAXBElement(resourceFrame));
 
-
         // service frame
-
         ServiceFrame serviceFrame = objectFactory.createServiceFrame();
-        ServiceFrame sourceServiceFrame = lineEntities.getServiceFrames().stream().findFirst().orElseThrow();
-        serviceFrame.setId(sourceServiceFrame.getId());
-        serviceFrame.setVersion(sourceServiceFrame.getVersion());
+        serviceFrame.setId(codespace + ":ServiceFrame:" + DEFAULT_FRAME_ID);
+        serviceFrame.setVersion(DEFAULT_FRAME_VERSION);
         getFrames(publicationDeliveryStructure).add(wrapAsJAXBElement(serviceFrame));
 
-
         LinesInFrame_RelStructure linesInFrameRelStructure = objectFactory.createLinesInFrame_RelStructure();
-        List<JAXBElement<Line>> lines = lineEntities.getLineIndex().getAll().stream().map(JaxbUtils::wrapAsJAXBElement).collect(Collectors.toList());
+        List<JAXBElement<Line>> lines = lineEntities.getLineIndex().getAll().stream().map(NetexUtils::wrapAsJAXBElement).collect(Collectors.toList());
         linesInFrameRelStructure.getLine_().addAll(lines);
-        List<JAXBElement<FlexibleLine>> flexibleLines = lineEntities.getFlexibleLineIndex().getAll().stream().map(JaxbUtils::wrapAsJAXBElement).collect(Collectors.toList());
+        List<JAXBElement<FlexibleLine>> flexibleLines = lineEntities.getFlexibleLineIndex().getAll().stream().map(NetexUtils::wrapAsJAXBElement).collect(Collectors.toList());
         linesInFrameRelStructure.getLine_().addAll(flexibleLines);
 
         serviceFrame.setLines(linesInFrameRelStructure);
         serviceFrame.setNetwork(lineReferencedEntities.getNetwork());
-
 
         RoutesInFrame_RelStructure routesInFrameRelStructure = objectFactory.createRoutesInFrame_RelStructure();
         routesInFrameRelStructure.getRoute_().add(wrapAsJAXBElement(route));
@@ -159,7 +154,7 @@ public class PublicationDeliveryBuilder {
         StopAssignmentsInFrame_RelStructure stopAssignmentsInFrameRelStructure = objectFactory.createStopAssignmentsInFrame_RelStructure();
         Collection<PassengerStopAssignment> passengerStopAssignments = journeyPatternReferencedEntities.getPassengerStopAssignments();
 
-        Collection<? extends JAXBElement<? extends StopAssignment_VersionStructure>> wrappedPassengerStopAssignments = passengerStopAssignments.stream().map(JaxbUtils::wrapAsJAXBElement).collect(Collectors.toList());
+        Collection<? extends JAXBElement<? extends StopAssignment_VersionStructure>> wrappedPassengerStopAssignments = passengerStopAssignments.stream().map(NetexUtils::wrapAsJAXBElement).collect(Collectors.toList());
         stopAssignmentsInFrameRelStructure.getStopAssignment().addAll(wrappedPassengerStopAssignments);
         serviceFrame.setStopAssignments(stopAssignmentsInFrameRelStructure);
 
@@ -168,7 +163,6 @@ public class PublicationDeliveryBuilder {
         serviceFrame.setRoutePoints(routePointsInFrameRelStructure);
 
         // timetable frame
-
         TimetableFrame timetableFrame = objectFactory.createTimetableFrame().withId(codespace + ":TimetableFrame:1").withVersion(DEFAULT_FRAME_VERSION);
         getFrames(publicationDeliveryStructure).add(wrapAsJAXBElement(timetableFrame));
 
@@ -192,19 +186,18 @@ public class PublicationDeliveryBuilder {
                 journeyPatternReferencedEntities.getNoticeAssignments().stream()).collect(Collectors.toList());
         if (!noticeAssignments.isEmpty()) {
             NoticeAssignmentsInFrame_RelStructure noticeAssignmentsInFrameRelStructure = objectFactory.createNoticeAssignmentsInFrame_RelStructure();
-            noticeAssignmentsInFrameRelStructure.getNoticeAssignment_().addAll(noticeAssignments.stream().map(JaxbUtils::wrapAsJAXBElement).collect(Collectors.toList()));
+            noticeAssignmentsInFrameRelStructure.getNoticeAssignment_().addAll(noticeAssignments.stream().map(NetexUtils::wrapAsJAXBElement).collect(Collectors.toList()));
             timetableFrame.setNoticeAssignments(noticeAssignmentsInFrameRelStructure);
         }
 
         // service calendar frame
-
         ServiceCalendarFrame serviceCalendarFrame = objectFactory.createServiceCalendarFrame().withId(codespace + ":ServiceCalendarFrame:1").withVersion(DEFAULT_FRAME_VERSION);
         getFrames(publicationDeliveryStructure).add(wrapAsJAXBElement(serviceCalendarFrame));
 
         // if the service journey is used together with DatedServiceJourneys then no day types are defined
         if (!serviceJourneyReferencedEntities.getDayTypes().isEmpty()) {
             DayTypesInFrame_RelStructure dayTypesInFrameRelStructure = objectFactory.createDayTypesInFrame_RelStructure();
-            dayTypesInFrameRelStructure.getDayType_().addAll(serviceJourneyReferencedEntities.getDayTypes().stream().map(JaxbUtils::wrapAsJAXBElement).collect(Collectors.toList()));
+            dayTypesInFrameRelStructure.getDayType_().addAll(serviceJourneyReferencedEntities.getDayTypes().stream().map(NetexUtils::wrapAsJAXBElement).collect(Collectors.toList()));
             serviceCalendarFrame.setDayTypes(dayTypesInFrameRelStructure);
 
             DayTypeAssignmentsInFrame_RelStructure dayTypeAssignmentsInFrameRelStructure = objectFactory.createDayTypeAssignmentsInFrame_RelStructure();
@@ -231,14 +224,7 @@ public class PublicationDeliveryBuilder {
     }
 
 
-    private CompositeFrame getCompositeFrame(PublicationDeliveryStructure publicationDeliveryStructure) {
-        Common_VersionFrameStructure commonVersionFrameStructure = publicationDeliveryStructure.getDataObjects().getCompositeFrameOrCommonFrame().get(0).getValue();
-        return ((CompositeFrame) commonVersionFrameStructure);
-    }
 
-    private List<JAXBElement<? extends Common_VersionFrameStructure>> getFrames(PublicationDeliveryStructure publicationDeliveryStructure) {
-        return getCompositeFrame(publicationDeliveryStructure).getFrames().getCommonFrame();
-    }
 
 
 }

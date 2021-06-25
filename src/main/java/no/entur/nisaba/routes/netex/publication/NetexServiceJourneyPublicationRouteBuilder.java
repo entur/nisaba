@@ -19,7 +19,7 @@ package no.entur.nisaba.routes.netex.publication;
 import no.entur.nisaba.Constants;
 import no.entur.nisaba.netex.JourneyPatternReferencedEntities;
 import no.entur.nisaba.netex.LineReferencedEntities;
-import no.entur.nisaba.netex.PublicationDeliveryBuilder;
+import no.entur.nisaba.netex.ServiceJourneyPublicationDeliveryBuilder;
 import no.entur.nisaba.netex.RouteReferencedEntities;
 import no.entur.nisaba.routes.BaseRouteBuilder;
 import org.apache.camel.Exchange;
@@ -33,7 +33,6 @@ import org.rutebanken.netex.model.Route;
 import org.rutebanken.netex.model.ServiceJourney;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -42,7 +41,6 @@ import static no.entur.nisaba.Constants.DATASET_CODESPACE;
 import static no.entur.nisaba.Constants.DATASET_IMPORT_KEY;
 import static no.entur.nisaba.Constants.FILE_HANDLE;
 import static no.entur.nisaba.Constants.NETEX_FILE_NAME;
-import static no.entur.nisaba.Constants.PUBLICATION_DELIVERY_TIMESTAMP;
 
 /**
  * Publish service journeys to Kafka.
@@ -186,10 +184,9 @@ public class NetexServiceJourneyPublicationRouteBuilder extends BaseRouteBuilder
                 //end filter
                 .end()
                 .setHeader(Constants.SERVICE_JOURNEY_ID, simple("${body.id}"))
-                .bean(PublicationDeliveryBuilder.class, "build")
+                .bean(ServiceJourneyPublicationDeliveryBuilder.class, "build")
                 .marshal("netexJaxbDataFormat")
                 .setHeader(KafkaConstants.KEY, header(Constants.SERVICE_JOURNEY_ID))
-                .to("file:/tmp/camel/servicejourney?fileName=service-journey_${date:now:yyyyMMddHHmmssSSS}-transformed.xml")
                 .doTry()
                 .to("kafka:{{nisaba.kafka.topic.servicejourney}}?clientId=nisaba-servicejourney&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy&compressionCodec=gzip").id("to-kafka-topic-servicejourney")
                 .doCatch(RecordTooLargeException.class)

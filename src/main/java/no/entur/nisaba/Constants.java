@@ -62,6 +62,10 @@ public final class Constants {
     public static final String JOURNEY_PATTERN_REFERENCES = "JOURNEY_PATTERN_REFERENCES";
 
     public static final String PUBLICATION_DELIVERY_TIMESTAMP = "PUBLICATION_DELIVERY_TIMESTAMP";
+    public static final String SPLIT_LOWER_BOUND = "SPLIT_LOWER_BOUND";
+    public static final String SPLIT_UPPER_BOUND = "SPLIT_UPPER_BOUND";
+    public static final String SERVICE_LINKS = "SERVICE_LINKS";
+    public static final String SERVICE_LINKS_SUB_LIST = "SERVICE_LINKS_SUB_LIST";
 
     private Constants() {
     }

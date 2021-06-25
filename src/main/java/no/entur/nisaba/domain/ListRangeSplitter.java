@@ -31,10 +31,10 @@ public class ListRangeSplitter {
         int nbRanges = nbItems / rangeSize;
 
         for (int i = 0; i < nbRanges; i++) {
-            ranges.add(new Range(1 + i * rangeSize, (i + 1) * rangeSize));
+            ranges.add(new Range(i * rangeSize, (i + 1) * rangeSize - 1));
         }
         if (nbItems % rangeSize > 0) {
-            ranges.add(new Range(1 + nbRanges * rangeSize, nbItems));
+            ranges.add(new Range(nbRanges * rangeSize, nbItems - 1));
         }
 
         return ranges;
