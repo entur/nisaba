@@ -124,6 +124,7 @@ public class NetexCommonFilePublicationRouteBuilder extends BaseRouteBuilder {
 
     /**
      * Count the number of nodes matching the given XPath query.
+     *
      * @param xpathQuery the XPath query.
      * @return the number of nodes matching the XPath query.
      */
