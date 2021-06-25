@@ -24,7 +24,6 @@ public class LineReferencedEntities {
     private Line line;
     private FlexibleLine flexibleLine;
 
-
     private Operator operator;
     private Branding branding;
     private Network network;
@@ -40,6 +39,14 @@ public class LineReferencedEntities {
 
     public FlexibleLine getFlexibleLine() {
         return flexibleLine;
+    }
+
+    public String getLineName() {
+        if (line != null) {
+            return line.getName().getValue();
+        } else {
+            return flexibleLine.getName().getValue();
+        }
     }
 
     public Operator getOperator() {

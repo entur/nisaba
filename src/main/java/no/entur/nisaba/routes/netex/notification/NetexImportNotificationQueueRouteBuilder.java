@@ -39,6 +39,7 @@ import static no.entur.nisaba.Constants.DATASET_IMPORT_KEY;
 import static no.entur.nisaba.Constants.DATASET_LATEST_CREATION_TIME;
 import static no.entur.nisaba.Constants.DATASET_PUBLISHED_FILE_NAME;
 import static no.entur.nisaba.Constants.FILE_HANDLE;
+import static no.entur.nisaba.Constants.PUBLICATION_DELIVERY_TIMESTAMP;
 import static no.entur.nisaba.Constants.XML_NAMESPACE_NETEX;
 import static org.apache.camel.builder.Builder.bean;
 
@@ -122,6 +123,7 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .stop()
                 .end()
                 .log(LoggingLevel.INFO, correlation() + "This is a new dataset. Notifying consumers")
+                .setHeader(PUBLICATION_DELIVERY_TIMESTAMP, LocalDateTime::now)
                 .to("direct:publishDataset")
                 .to("direct:notifyConsumers")
                 .log(LoggingLevel.INFO, correlation() + "Dataset processing complete")

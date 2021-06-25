@@ -71,7 +71,7 @@ public abstract class BaseRouteBuilder extends RouteBuilder {
                     pubSubAttributes.entrySet().stream().filter(entry -> !entry.getKey().startsWith("CamelGooglePubsub")).forEach(entry -> exchange.getIn().setHeader(entry.getKey(), entry.getValue()));
                 });
 
-        // Copy only the import key, correlationId and codespace headers from the Camel message into the PubSub message by default.
+        // Copy only the import key, publication delivery timestamp, correlationId and codespace headers from the Camel message into the PubSub message by default.
         interceptSendToEndpoint("google-pubsub:*").process(
                 exchange -> {
                     Map<String, String> pubSubAttributes = new HashMap<>(exchange.getIn().getHeader(GooglePubsubConstants.ATTRIBUTES, new HashMap<>(), Map.class));
@@ -83,6 +83,9 @@ public abstract class BaseRouteBuilder extends RouteBuilder {
                     }
                     if (exchange.getIn().getHeader(Constants.DATASET_CODESPACE) != null) {
                         pubSubAttributes.put(Constants.DATASET_CODESPACE, exchange.getIn().getHeader(Constants.DATASET_CODESPACE, String.class));
+                    }
+                    if (exchange.getIn().getHeader(Constants.PUBLICATION_DELIVERY_TIMESTAMP) != null) {
+                        pubSubAttributes.put(Constants.PUBLICATION_DELIVERY_TIMESTAMP, exchange.getIn().getHeader(Constants.PUBLICATION_DELIVERY_TIMESTAMP, String.class));
                     }
                     exchange.getIn().setHeader(GooglePubsubConstants.ATTRIBUTES, pubSubAttributes);
 

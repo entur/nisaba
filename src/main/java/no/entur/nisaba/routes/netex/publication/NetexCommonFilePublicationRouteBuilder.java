@@ -107,8 +107,10 @@ public class NetexCommonFilePublicationRouteBuilder extends BaseRouteBuilder {
                 .routeId("split-common-file");
 
         from("direct:publishCommonFile")
+                .streamCaching()
                 .filter(simple("${properties:nisaba.publish.enabled:true}"))
                 // explicitly compress the payload due to https://issues.apache.org/jira/browse/KAFKA-4169
+                .to("file:/tmp/camel/servicejourney?fileName=common_${date:now:yyyyMMddHHmmssSSS}-transformed.xml")
                 .marshal().zipFile()
                 .doTry()
                 .to("kafka:{{nisaba.kafka.topic.common}}?clientId=nisaba-common&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy&valueSerializer=org.apache.kafka.common.serialization.ByteArraySerializer").id("to-kafka-topic-common")

@@ -25,17 +25,14 @@ import no.entur.nisaba.routes.BaseRouteBuilder;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.component.kafka.KafkaConstants;
-import org.apache.camel.converter.jaxb.JaxbDataFormat;
 import org.apache.kafka.common.errors.RecordTooLargeException;
 import org.entur.netex.NetexParser;
 import org.entur.netex.index.api.NetexEntitiesIndex;
 import org.rutebanken.netex.model.JourneyPattern;
-import org.rutebanken.netex.model.PublicationDeliveryStructure;
 import org.rutebanken.netex.model.Route;
 import org.rutebanken.netex.model.ServiceJourney;
 import org.springframework.stereotype.Component;
 
-import javax.xml.bind.JAXBContext;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -61,12 +58,6 @@ public class NetexServiceJourneyPublicationRouteBuilder extends BaseRouteBuilder
     @Override
     public void configure() throws Exception {
         super.configure();
-
-        JAXBContext context = JAXBContext
-                .newInstance(PublicationDeliveryStructure.class);
-        JaxbDataFormat xmlDataFormat = new JaxbDataFormat();
-        xmlDataFormat.setPrettyPrint(false);
-        xmlDataFormat.setContext(context);
 
         from("google-pubsub:{{nisaba.pubsub.project.id}}:NetexServiceJourneyPublicationQueue?synchronousPull={{nisaba.pubsub.queue.servicejourney.synchronous:true}}")
                 .streamCaching()
@@ -134,7 +125,6 @@ public class NetexServiceJourneyPublicationRouteBuilder extends BaseRouteBuilder
                 .routeId("download-common-files");
 
         from("direct:processLine")
-                .setHeader(PUBLICATION_DELIVERY_TIMESTAMP, LocalDateTime::now)
                 .process(exchange -> {
                     NetexEntitiesIndex lineNetexEntitiesIndex = exchange.getIn().getHeader(Constants.LINE_FILE_INDEX, NetexEntitiesIndex.class);
                     NetexEntitiesIndex commonNetexEntitiesIndex = exchange.getIn().getHeader(Constants.COMMON_FILE_INDEX, NetexEntitiesIndex.class);
@@ -197,8 +187,9 @@ public class NetexServiceJourneyPublicationRouteBuilder extends BaseRouteBuilder
                 .end()
                 .setHeader(Constants.SERVICE_JOURNEY_ID, simple("${body.id}"))
                 .bean(PublicationDeliveryBuilder.class, "build")
-                .marshal(xmlDataFormat)
+                .marshal("netexJaxbDataFormat")
                 .setHeader(KafkaConstants.KEY, header(Constants.SERVICE_JOURNEY_ID))
+                .to("file:/tmp/camel/servicejourney?fileName=service-journey_${date:now:yyyyMMddHHmmssSSS}-transformed.xml")
                 .doTry()
                 .to("kafka:{{nisaba.kafka.topic.servicejourney}}?clientId=nisaba-servicejourney&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy&compressionCodec=gzip").id("to-kafka-topic-servicejourney")
                 .doCatch(RecordTooLargeException.class)

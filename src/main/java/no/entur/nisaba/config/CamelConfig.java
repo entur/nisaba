@@ -20,18 +20,24 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import no.entur.nisaba.Constants;
 import org.apache.camel.Exchange;
 import org.apache.camel.component.kafka.KafkaConfiguration;
+import org.apache.camel.converter.jaxb.JaxbDataFormat;
 import org.apache.camel.processor.idempotent.kafka.KafkaIdempotentRepository;
+import org.apache.camel.spi.DataFormat;
 import org.apache.camel.spi.HeaderFilterStrategy;
 import org.apache.camel.spi.IdempotentRepository;
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.config.SaslConfigs;
+import org.rutebanken.netex.model.PublicationDeliveryStructure;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.util.StringUtils;
 
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBException;
+import java.util.Map;
 import java.util.Properties;
 
 @Configuration
@@ -106,4 +112,22 @@ public class CamelConfig {
     JavaTimeModule jacksonJavaTimeModule() {
         return new JavaTimeModule();
     }
+
+    /**
+     * Jaxb data format for marshalling NeTEX entities.
+     * @return a Jaxb data format for marshalling NeTEX entities.
+     * @throws JAXBException
+     */
+    @Bean("netexJaxbDataFormat")
+    DataFormat netexJaxbDataFormat() throws JAXBException {
+        JAXBContext context = JAXBContext.newInstance(PublicationDeliveryStructure.class);
+        JaxbDataFormat jaxbDataFormat = new JaxbDataFormat(context);
+        jaxbDataFormat.setPrettyPrint(false);
+        jaxbDataFormat.setNamespacePrefix(Map.of(
+                "http://www.siri.org.uk/siri", "siri",
+                "http://www.opengis.net/gml/3.2", "gml"));
+
+        return jaxbDataFormat;
+    }
+
 }
