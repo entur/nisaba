@@ -46,11 +46,9 @@ public class NetexCommonFilePublicationRouteBuilder extends BaseRouteBuilder {
     private static final String SPLIT_LOWER_BOUND = "SPLIT_LOWER_BOUND";
     private static final String SPLIT_UPPER_BOUND = "SPLIT_UPPER_BOUND";
 
-    private final int rangeSize;
     private final int rangeSizeForServiceLinks;
 
-    public NetexCommonFilePublicationRouteBuilder(@Value("${nisaba.netex.range-size:2000}") int rangeSize, @Value("${nisaba.netex.service-links.range-size:300}") int rangeSizeForServiceLinks) {
-        this.rangeSize = rangeSize;
+    public NetexCommonFilePublicationRouteBuilder(@Value("${nisaba.netex.service-links.range-size:300}") int rangeSizeForServiceLinks) {
         this.rangeSizeForServiceLinks = rangeSizeForServiceLinks;
     }
 

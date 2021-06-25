@@ -14,7 +14,7 @@
  *
  */
 
-package no.entur.nisaba.routes;
+package no.entur.nisaba.pubsub;
 
 import org.apache.camel.CamelContext;
 import org.apache.camel.Endpoint;
@@ -32,11 +32,11 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Profile("google-pubsub-autocreate")
-public class EventNotifier extends EventNotifierSupport {
+public class PubSubAutoCreateEventNotifier extends EventNotifierSupport {
 
     private final EnturGooglePubSubAdmin enturGooglePubSubAdmin;
 
-    public EventNotifier(EnturGooglePubSubAdmin enturGooglePubSubAdmin) {
+    public PubSubAutoCreateEventNotifier(EnturGooglePubSubAdmin enturGooglePubSubAdmin) {
         this.enturGooglePubSubAdmin = enturGooglePubSubAdmin;
     }
 

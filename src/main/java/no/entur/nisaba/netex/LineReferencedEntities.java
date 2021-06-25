@@ -140,9 +140,9 @@ public class LineReferencedEntities {
          * Return the network referenced by the <RepresentedByGroupRef>.
          * RepresentedByGroupRef can reference a network either directly or indirectly (through a group of lines)
          *
-         * @param networkOrGroupOfLinesRef
-         * @param netexCommonEntitiesIndex
-         * @return
+         * @param networkOrGroupOfLinesRef reference to a Network or a group of lines.
+         * @param netexCommonEntitiesIndex index of NeTEx entities found in the common file.
+         * @return the network itself or the network to which the group of lines belong.
          */
         private static Network findNetwork(String networkOrGroupOfLinesRef, NetexEntitiesIndex netexCommonEntitiesIndex) {
             Network network = netexCommonEntitiesIndex.getNetworkIndex().get(networkOrGroupOfLinesRef);
