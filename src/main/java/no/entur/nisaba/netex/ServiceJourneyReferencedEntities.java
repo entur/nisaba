@@ -1,5 +1,6 @@
 package no.entur.nisaba.netex;
 
+import no.entur.nisaba.exceptions.NisabaException;
 import org.entur.netex.index.api.NetexEntitiesIndex;
 import org.rutebanken.netex.model.DayType;
 import org.rutebanken.netex.model.DayTypeAssignment;
@@ -138,8 +139,12 @@ public class ServiceJourneyReferencedEntities {
 
             OperatorRefStructure operatorRef = serviceJourney.getOperatorRef();
             if (operatorRef != null) {
-                serviceJourneyReferencedEntities.operator = netexCommonEntitiesIndex.getOperatorIndex().get(operatorRef.getRef());
-                operatorRef.setVersion(serviceJourneyReferencedEntities.operator.getVersion());
+                Operator operator = netexCommonEntitiesIndex.getOperatorIndex().get(operatorRef.getRef());
+                if(operator == null) {
+                    throw new NisabaException("Unknown operator " + operatorRef.getRef() + " for service journey " + serviceJourney.getId());
+                }
+                serviceJourneyReferencedEntities.operator = operator;
+                operatorRef.setVersion(operator.getVersion());
             }
 
             return serviceJourneyReferencedEntities;
