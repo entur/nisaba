@@ -121,15 +121,19 @@ public class RestNotificationRouteBuilder extends BaseRouteBuilder {
                 .to(commonApiDocEndpoint)
                 .endRest();
 
-        from("kafka:{{nisaba.kafka.topic.event}}?clientId=nisaba-event-reader&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy&valueDeserializer=io.confluent.kafka.serializers.KafkaAvroDeserializer&specificAvroReader=true&seekTo=beginning").id("to-kafka-topic-event")
+        from("kafka:{{nisaba.kafka.topic.event}}?clientId=nisaba-event-reader&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy&valueDeserializer=io.confluent.kafka.serializers.KafkaAvroDeserializer&specificAvroReader=true&seekTo=beginning")
                 .log(LoggingLevel.INFO, correlation() + "Received notification event from ${properties:nisaba.kafka.topic.event}")
+                .to("direct:updateImportDateMap")
+                .routeId("from-kafka-topic-event");
+
+        from("direct:updateImportDateMap")
                 .process(exchange -> {
                             NetexImportEvent netexImportEvent = exchange.getIn().getBody(NetexImportEvent.class);
                             importDates.put(netexImportEvent.getCodespace().toString(), netexImportEvent.getImportDateTime().toString());
-
                         }
                 )
-                .routeId("read-events");
+                .routeId("update-import-date-map");
+
 
     }
 

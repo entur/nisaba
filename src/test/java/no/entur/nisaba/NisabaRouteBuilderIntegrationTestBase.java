@@ -19,12 +19,14 @@ package no.entur.nisaba;
 import com.google.cloud.spring.pubsub.core.PubSubTemplate;
 import no.entur.nisaba.repository.InMemoryBlobStoreRepository;
 import org.apache.camel.EndpointInject;
+import org.apache.camel.builder.AdviceWith;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.model.ModelCamelContext;
 import org.apache.camel.spi.IdempotentRepository;
 import org.apache.camel.support.processor.idempotent.MemoryIdempotentRepository;
 import org.apache.camel.test.spring.junit5.CamelSpringBootTest;
 import org.apache.camel.test.spring.junit5.UseAdviceWith;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -86,6 +88,12 @@ public abstract class NisabaRouteBuilderIntegrationTestBase {
         mardukInMemoryBlobStoreRepository.setContainerName(mardukContainerName);
         nisabaInMemoryBlobStoreRepository.setContainerName(nisabaContainerName);
         nisabaExchangeInMemoryBlobStoreRepository.setContainerName(nisabaExchangeContainerName);
+    }
+
+    @BeforeEach
+    void mockKafkaConsumers() throws Exception {
+        AdviceWith.adviceWith(context, "from-kafka-topic-event", a -> a.replaceFromWith("direct:mock-from-kafka-topic-event"));
+
     }
 
 
