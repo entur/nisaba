@@ -130,6 +130,7 @@ public class RestNotificationRouteBuilder extends BaseRouteBuilder {
                 .process(exchange -> {
                             NetexImportEvent netexImportEvent = exchange.getIn().getBody(NetexImportEvent.class);
                             importDates.put(netexImportEvent.getCodespace().toString(), netexImportEvent.getImportDateTime().toString());
+                            log.debug("Registered import dates : {}", importDates);
                         }
                 )
                 .routeId("update-import-date-map");
