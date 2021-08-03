@@ -25,7 +25,7 @@
         <Response/>
     </PreFlow>
     <HTTPProxyConnection>
-        <BasePath>/timetable-admin/v1/timetable-import-info</BasePath>
+        <BasePath>/timetable-public/v1/timetable-import-info</BasePath>
         <Properties>
             <Property name="response.streaming.enabled">true</Property>
             <Property name="request.streaming.enabled">true</Property>
