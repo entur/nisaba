@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<APIProxy name="timetable-import">
+<APIProxy name="timetable-import-info">
     <Description>timetable-import-info</Description>
     <DisplayName>timetable-import-info</DisplayName>
    <Policies>
