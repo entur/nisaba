@@ -1,14 +1,14 @@
 # Contains main description of bulk of terraform
 terraform {
-  required_version = ">= 0.12"
+  required_version = ">= 0.13.2"
 }
 
 provider "google" {
-  version = "~> 3.43"
+  version = "~> 3.74.0"
 }
 provider "kubernetes" {
   load_config_file = var.load_config_file
-  version = "~> 1.13.3"
+  version = "~> 1.13.4"
 }
 
 # create service account
@@ -28,6 +28,13 @@ resource "google_storage_bucket_iam_member" "storage_marduk_bucket_iam_member" {
 # add service account as member to nisaba bucket
 resource "google_storage_bucket_iam_member" "storage_nisaba_bucket_iam_member" {
   bucket = var.bucket_nisaba_instance_name
+  role = var.service_account_bucket_role
+  member = "serviceAccount:${google_service_account.nisaba_service_account.email}"
+}
+
+# add service account as member to nisaba exchange bucket
+resource "google_storage_bucket_iam_member" "storage_nisaba_exchange_bucket_iam_member" {
+  bucket = var.bucket_nisaba_exchange_instance_name
   role = var.service_account_bucket_role
   member = "serviceAccount:${google_service_account.nisaba_service_account.email}"
 }

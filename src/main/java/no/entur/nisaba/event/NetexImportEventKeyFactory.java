@@ -16,9 +16,6 @@
 
 package no.entur.nisaba.event;
 
-import no.entur.nisaba.Constants;
-import org.apache.camel.Header;
-
 import java.time.LocalDateTime;
 
 import static no.entur.nisaba.Constants.DATE_TIME_FORMATTER;
@@ -33,9 +30,8 @@ public class NetexImportEventKeyFactory {
 
     }
 
-    public static String createNetexImportEventKey(@Header(value = Constants.DATASET_CODESPACE) String codespace,
-                                                   @Header(value = Constants.DATASET_CREATION_TIME) LocalDateTime creationDate) {
-        return codespace + '_' + DATE_TIME_FORMATTER.format(creationDate);
+    public static String createNetexImportEventKey(String codespace, LocalDateTime creationDate) {
+        return codespace + '_' + DATE_TIME_FORMATTER.format(creationDate).replace(':', '_');
     }
 
 }

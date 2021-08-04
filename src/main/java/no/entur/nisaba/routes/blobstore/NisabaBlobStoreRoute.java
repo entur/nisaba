@@ -41,14 +41,14 @@ public class NisabaBlobStoreRoute extends BaseRouteBuilder {
                 .bean(nisabaBlobStoreService, "uploadBlob")
                 .setBody(simple(""))
                 .to(logDebugShowAll())
-                .log(LoggingLevel.INFO, correlation() + "Stored file ${header." + FILE_HANDLE + "} in blob store.")
+                .log(LoggingLevel.INFO, correlation() + "Stored file ${header." + FILE_HANDLE + "} in Nisaba bucket.")
                 .routeId("blobstore-nisaba-upload");
 
         from("direct:getNisabaBlob")
                 .to(logDebugShowAll())
                 .bean(nisabaBlobStoreService, "getBlob")
                 .to(logDebugShowAll())
-                .log(LoggingLevel.INFO, correlation() + "Returning from fetching file ${header." + FILE_HANDLE + "} from blob store.")
+                .log(LoggingLevel.INFO, correlation() + "Returning from fetching file ${header." + FILE_HANDLE + "} from Nisaba bucket.")
                 .routeId("blobstore-nisaba-download");
     }
 }

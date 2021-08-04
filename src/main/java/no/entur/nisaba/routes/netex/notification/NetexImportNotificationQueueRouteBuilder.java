@@ -17,8 +17,6 @@
 package no.entur.nisaba.routes.netex.notification;
 
 import no.entur.nisaba.Constants;
-import no.entur.nisaba.event.DatasetStatHelper;
-import no.entur.nisaba.event.NetexImportEventFactory;
 import no.entur.nisaba.event.NetexImportEventKeyFactory;
 import no.entur.nisaba.routes.BaseRouteBuilder;
 import org.apache.camel.Exchange;
@@ -33,11 +31,16 @@ import java.time.LocalDateTime;
 import java.util.TreeSet;
 
 import static no.entur.nisaba.Constants.BLOBSTORE_PATH_OUTBOUND;
+import static no.entur.nisaba.Constants.DATASET_ALL_CREATION_TIMES;
+import static no.entur.nisaba.Constants.DATASET_CHOUETTE_IMPORT_KEY;
 import static no.entur.nisaba.Constants.DATASET_CODESPACE;
-import static no.entur.nisaba.Constants.DATASET_CREATION_TIME;
+import static no.entur.nisaba.Constants.DATASET_CONTENT;
 import static no.entur.nisaba.Constants.DATASET_IMPORT_KEY;
+import static no.entur.nisaba.Constants.DATASET_LATEST_CREATION_TIME;
+import static no.entur.nisaba.Constants.DATASET_PUBLISHED_FILE_NAME;
 import static no.entur.nisaba.Constants.FILE_HANDLE;
 import static no.entur.nisaba.Constants.XML_NAMESPACE_NETEX;
+import static org.apache.camel.builder.Builder.bean;
 
 /**
  * Receive a notification when a new NeTEx export is available in the blob store and send an event in a Kafka topic
@@ -47,8 +50,6 @@ import static no.entur.nisaba.Constants.XML_NAMESPACE_NETEX;
 public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
 
     private static final String EXPORT_FILE_NAME = "netex/rb_${body}-" + Constants.CURRENT_AGGREGATED_NETEX_FILENAME;
-    private static final String LINE_FILE_NAME = "${header." + DATASET_IMPORT_KEY + "}/${header." + Exchange.FILE_NAME + "}";
-    private static final String NB_SERVICE_JOURNEYS_IN_FILE = "NB_SERVICE_JOURNEYS_IN_FILE";
 
     @Override
     public void configure() throws Exception {
@@ -60,21 +61,24 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .process(this::setCorrelationIdIfMissing)
                 .setHeader(DATASET_CODESPACE, bodyAs(String.class))
                 .log(LoggingLevel.INFO, correlation() + "Received NeTEx export notification")
+                .setHeader(DATASET_PUBLISHED_FILE_NAME, simple(BLOBSTORE_PATH_OUTBOUND + EXPORT_FILE_NAME))
                 .to("direct:downloadNetexDataset")
-                .choice()
-                .when(body().isNull())
+                .filter(body().isNull())
                 .log(LoggingLevel.ERROR, correlation() + "NeTEx export file not found")
                 .stop()
+                //end filter
                 .end()
+                .setHeader(DATASET_CONTENT, body())
                 .log(LoggingLevel.INFO, correlation() + "NeTEx export file downloaded")
                 .to("direct:retrieveDatasetCreationTime")
-                .setHeader(DATASET_IMPORT_KEY, method(NetexImportEventKeyFactory.class, "createNetexImportEventKey"))
+                .setHeader(DATASET_IMPORT_KEY, bean(NetexImportEventKeyFactory.class, "createNetexImportEventKey(${header." + DATASET_CODESPACE + "}, ${header." + DATASET_LATEST_CREATION_TIME + "})"))
                 .to("direct:notifyConsumersIfNew")
                 .routeId("netex-export-notification-queue");
 
         from("direct:downloadNetexDataset")
+                .streamCaching()
                 .log(LoggingLevel.INFO, correlation() + "Downloading NeTEx dataset")
-                .setHeader(FILE_HANDLE, simple(BLOBSTORE_PATH_OUTBOUND + EXPORT_FILE_NAME))
+                .setHeader(FILE_HANDLE, header(DATASET_PUBLISHED_FILE_NAME))
                 .to("direct:getMardukBlob")
                 .routeId("download-netex-dataset");
 
@@ -94,16 +98,17 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .end()
                 .to("direct:parseCreatedAttribute")
                 .end()
-                .setHeader(DATASET_CREATION_TIME, simple("${body.last}"))
-                .log(LoggingLevel.INFO, correlation() + "The dataset was created on ${header." + DATASET_CREATION_TIME + "}")
+                .setHeader(DATASET_ALL_CREATION_TIMES, body())
+                .setHeader(DATASET_LATEST_CREATION_TIME, simple("${body.last}"))
+                .log(LoggingLevel.INFO, correlation() + "The dataset was created on ${header." + DATASET_LATEST_CREATION_TIME + "}")
                 .routeId("retrieve-dataset-creation-time");
 
         from("direct:parseCreatedAttribute")
                 .setBody(xpath("/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/@created", String.class, XML_NAMESPACE_NETEX))
-                .choice()
-                .when(PredicateBuilder.or(body().isNull(), body().isEqualTo("")))
+                .filter(PredicateBuilder.or(body().isNull(), body().isEqualTo("")))
                 .log(LoggingLevel.WARN, correlation() + "'created' attribute not found in file ${header." + Exchange.FILE_NAME + "}")
                 .stop()
+                //end filter
                 .end()
                 .bean(LocalDateTime.class, "parse(${body})")
                 .routeId("parse-created-attribute");
@@ -123,49 +128,39 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .end()
                 .routeId("notify-consumers-if-new");
 
-        from("direct:publishDataset")
-                .streamCaching()
-                .log(LoggingLevel.INFO, correlation() + "Publishing Dataset")
-                .bean(DatasetStatHelper.class, "init")
-                .setBody(header(DATASET_CODESPACE))
-                .to("direct:downloadNetexDataset")
-                .split(new ZipSplitter())
-                .streaming()
-                .filter(header(Exchange.FILE_NAME).not().endsWith(".xml"))
-                .log(LoggingLevel.INFO, correlation() + "Ignoring non-XML file ${header." + Exchange.FILE_NAME + "}")
-                .stop()
-                .end()
-                .choice()
-                .when(header(Exchange.FILE_NAME).startsWith("_"))
-                .to("direct:processCommonFile")
-                .otherwise()
-                .setHeader(NB_SERVICE_JOURNEYS_IN_FILE,
-                        xpath("count(/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/netex:frames/netex:TimetableFrame/netex:vehicleJourneys/netex:ServiceJourney)", Integer.class, XML_NAMESPACE_NETEX))
-                .bean(DatasetStatHelper.class, "addServiceJourneys(${header.NB_SERVICE_JOURNEYS_IN_FILE})")
-                .marshal().zipFile()
-                .to("direct:uploadNetexFile")
-                .setBody(simple(LINE_FILE_NAME))
-                .to("google-pubsub:{{nisaba.pubsub.project.id}}:NetexServiceJourneyPublicationQueue")
-                // end choice
-                .end()
-                // end split
-                .end()
-                .routeId("publish-dataset");
-
-        from("direct:uploadNetexFile")
-                .setHeader(FILE_HANDLE, simple(LINE_FILE_NAME))
-                .log(LoggingLevel.INFO, correlation() + "Uploading NeTEx file ${header." + FILE_HANDLE + "}")
-                .to("direct:uploadNisabaBlob")
-                .routeId("upload-netex-file");
 
         from("direct:notifyConsumers")
                 .log(LoggingLevel.INFO, correlation() + "Notifying Kafka topic ${properties:nisaba.kafka.topic.event}")
-                .bean(NetexImportEventFactory.class, "createNetexImportEvent")
+                .to("direct:findChouetteImportKey")
+                .bean("NetexImportEventFactory", "createNetexImportEvent")
                 .setHeader(KafkaConstants.KEY, header(DATASET_CODESPACE))
                 .to("kafka:{{nisaba.kafka.topic.event}}?clientId=nisaba-event&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy&valueSerializer=io.confluent.kafka.serializers.KafkaAvroSerializer").id("to-kafka-topic-event")
                 .removeHeader(KafkaConstants.KEY)
                 .log(LoggingLevel.INFO, correlation() + "Notified export of ${body.serviceJourneys} service journeys and ${body.commonFiles} common files")
                 .routeId("notify-consumers");
+
+        // A published dataset that contains flexible lines is made of two source datasets,
+        // one created by chouette and one created by Uttu.
+        // The dataset that should be referenced as the original dataset in the Kafka event is the one created by chouette.
+        // To identify it, we look up in the exchange bucket for a file whose name matches any of the creation dates found in the CompositeFrames.
+        // only the file that corresponds to the dataset imported by chouette exists in that bucket.
+        from("direct:findChouetteImportKey")
+                .split(header(DATASET_ALL_CREATION_TIMES)).aggregationStrategy(new FlexibleAggregationStrategy<String>()
+                .storeInHeader(DATASET_CHOUETTE_IMPORT_KEY)
+                .pick(header(DATASET_CHOUETTE_IMPORT_KEY)))
+                .bean(NetexImportEventKeyFactory.class, "createNetexImportEventKey(${header." + DATASET_CODESPACE + "}, ${body})")
+                .setHeader(DATASET_CHOUETTE_IMPORT_KEY, body())
+                .setHeader(FILE_HANDLE, simple("imported/${header." + DATASET_CODESPACE + "}/${body}.zip"))
+                .to("direct:getNisabaExchangeBlob")
+                .filter(body().isNull())
+                .removeHeader(DATASET_CHOUETTE_IMPORT_KEY)
+                //end filter
+                .end()
+                //end split
+                .end()
+                .filter(header(DATASET_CHOUETTE_IMPORT_KEY).isNull())
+                .log(LoggingLevel.WARN, correlation() + "Chouette import key not found")
+                .routeId("find-chouette-import-key");
 
     }
 

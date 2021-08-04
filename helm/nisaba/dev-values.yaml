@@ -1,12 +1,20 @@
 env: dev
-replicas: 6
+replicas: 2
+
+netex:
+  publish:
+    enabled: true
 
 gcp:
   blobstoreProjectId: entur-ror-dev
   pubsubProjectId: entur-ror-dev
-  bucketName: marduk-dev
+
+  marduk:
+    bucketName: marduk-dev
+
   nisaba:
-    bucketName: nisaba-dev
+    bucketName: ror-nisaba-dev
+    exchangeBucketName: ror-nisaba-exchange-dev
 
 monitoringEnabled: true
 
@@ -18,3 +26,6 @@ kafka:
     idempotent: rutedata-dataset-import-event-idempotent-repo-dev
     common: rutedata-dataset-import-common-dev
     servicejourney: rutedata-dataset-import-service-journey-dev
+
+ingress:
+  loadBalancerIP: 35.205.170.68

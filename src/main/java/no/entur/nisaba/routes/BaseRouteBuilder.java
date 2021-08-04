@@ -16,21 +16,28 @@
 
 package no.entur.nisaba.routes;
 
+import com.google.cloud.pubsub.v1.stub.SubscriberStub;
+import com.google.pubsub.v1.ModifyAckDeadlineRequest;
+import com.google.pubsub.v1.ProjectSubscriptionName;
 import no.entur.nisaba.Constants;
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.google.pubsub.GooglePubsubConstants;
+import org.apache.camel.component.google.pubsub.GooglePubsubEndpoint;
 import org.springframework.beans.factory.annotation.Value;
 
+import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-
 
 /**
  * Defines common route behavior.
  */
 public abstract class BaseRouteBuilder extends RouteBuilder {
+
+    private static final int ACK_DEADLINE_EXTENSION = 500;
 
     @Value("${quartz.lenient.fire.time.ms:180000}")
     private int lenientFireTimeMs;
@@ -43,7 +50,6 @@ public abstract class BaseRouteBuilder extends RouteBuilder {
 
     @Value("${nisaba.camel.redelivery.backoff.multiplier:3}")
     private int backOffMultiplier;
-
 
     @Override
     public void configure() throws Exception {
@@ -65,10 +71,13 @@ public abstract class BaseRouteBuilder extends RouteBuilder {
                     pubSubAttributes.entrySet().stream().filter(entry -> !entry.getKey().startsWith("CamelGooglePubsub")).forEach(entry -> exchange.getIn().setHeader(entry.getKey(), entry.getValue()));
                 });
 
-        // Copy only the correlationId and codespace headers from the Camel message into the PubSub message by default.
+        // Copy only the import key, correlationId and codespace headers from the Camel message into the PubSub message by default.
         interceptSendToEndpoint("google-pubsub:*").process(
                 exchange -> {
                     Map<String, String> pubSubAttributes = new HashMap<>(exchange.getIn().getHeader(GooglePubsubConstants.ATTRIBUTES, new HashMap<>(), Map.class));
+                    if (exchange.getIn().getHeader(Constants.DATASET_IMPORT_KEY) != null) {
+                        pubSubAttributes.put(Constants.DATASET_IMPORT_KEY, exchange.getIn().getHeader(Constants.DATASET_IMPORT_KEY, String.class));
+                    }
                     if (exchange.getIn().getHeader(Constants.CORRELATION_ID) != null) {
                         pubSubAttributes.put(Constants.CORRELATION_ID, exchange.getIn().getHeader(Constants.CORRELATION_ID, String.class));
                     }
@@ -104,6 +113,20 @@ public abstract class BaseRouteBuilder extends RouteBuilder {
 
     protected String correlation() {
         return "[codespace=${header." + Constants.DATASET_CODESPACE + "} correlationId=${header." + Constants.CORRELATION_ID + "}] ";
+    }
+
+    public void extendAckDeadline(Exchange exchange) throws IOException {
+        String ackId = exchange.getIn().getHeader(GooglePubsubConstants.ACK_ID, String.class);
+        GooglePubsubEndpoint fromEndpoint = (GooglePubsubEndpoint) exchange.getFromEndpoint();
+        String subscriptionName = ProjectSubscriptionName.format(fromEndpoint.getProjectId(), fromEndpoint.getDestinationName());
+        ModifyAckDeadlineRequest modifyAckDeadlineRequest = ModifyAckDeadlineRequest.newBuilder()
+                .setSubscription(subscriptionName)
+                .addAllAckIds(List.of(ackId))
+                .setAckDeadlineSeconds(ACK_DEADLINE_EXTENSION)
+                .build();
+        try (SubscriberStub subscriberStub = fromEndpoint.getComponent().getSubscriberStub()) {
+            subscriberStub.modifyAckDeadlineCallable().call(modifyAckDeadlineRequest);
+        }
     }
 
 }

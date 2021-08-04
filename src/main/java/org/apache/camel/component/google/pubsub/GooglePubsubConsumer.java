@@ -178,17 +178,27 @@ public class GooglePubsubConsumer extends DefaultConsumer {
                         }
                     }
                 } catch (IOException e) {
-                    localLog.warn("A network error occurred while pulling PubSub messages. Retrying...", e);
+                    localLog.warn("A network error occurred while pulling PubSub messages. Reconnecting...", e);
                 } catch (ApiException e) {
                     StatusCode.Code statusCode = e.getStatusCode().getCode();
-                    if (e.isRetryable()) {
-                        localLog.warn("A retryable server-side error occurred while pulling PubSub messages (status code: {}). Retrying...", statusCode, e);
+                    if (e.isRetryable() || statusCode == StatusCode.Code.DEADLINE_EXCEEDED) {
+                        localLog.warn("A retryable server-side failure occurred while pulling PubSub messages (status code: {}). Reconnecting...", statusCode, e);
+                        delay(30000);
                     } else {
-                        localLog.error("A non-retryable server-side error occurred while pulling PubSub messages (status code: {}). Consumer disconnected.", statusCode, e);
+                        localLog.error("A non-retryable server-side failure occurred while pulling PubSub messages (status code: {}). Consumer disconnected.", statusCode, e);
                         throw e;
                     }
                 }
             }
+        }
+    }
+
+    private static void delay(long delay) {
+        try {
+            Thread.sleep(delay);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException(e);
         }
     }
 }

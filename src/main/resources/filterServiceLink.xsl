@@ -10,12 +10,14 @@
     <xsl:param name="SPLIT_UPPER_BOUND"/>
 
     <!-- copy mandatory first-level elements in the PublicationDelivery -->
-    <xsl:template match="/netex:PublicationDelivery/netex:PublicationTimestamp|/netex:PublicationDelivery/netex:PublicationTimestamp//*">
+    <xsl:template
+            match="/netex:PublicationDelivery/netex:PublicationTimestamp|/netex:PublicationDelivery/netex:PublicationTimestamp//*">
         <xsl:copy>
             <xsl:apply-templates select="@*|*|text()"/>
         </xsl:copy>
     </xsl:template>
-    <xsl:template match="/netex:PublicationDelivery/netex:ParticipantRef|/netex:PublicationDelivery/netex:ParticipantRef//*">
+    <xsl:template
+            match="/netex:PublicationDelivery/netex:ParticipantRef|/netex:PublicationDelivery/netex:ParticipantRef//*">
         <xsl:copy>
             <xsl:apply-templates select="@*|*|text()"/>
         </xsl:copy>

@@ -1,12 +1,19 @@
 env: production
-replicas: 6
+replicas: 2
 
+netex:
+  publish:
+    enabled: true
 gcp:
   blobstoreProjectId: entur-ror-prod
   pubsubProjectId: entur-ror-prod
-  bucketName: marduk-production
+
+  marduk:
+    bucketName: marduk-production
+
   nisaba:
-    bucketName: nisaba-production
+    bucketName: ror-nisaba-production
+    exchangeBucketName: ror-nisaba-exchange-production
 
 monitoringEnabled: false
 
@@ -18,3 +25,6 @@ kafka:
     idempotent: rutedata-dataset-import-event-idempotent-repo-production
     common: rutedata-dataset-import-common-production
     servicejourney: rutedata-dataset-import-service-journey-production
+
+ingress:
+  loadBalancerIP: 35.205.233.237
