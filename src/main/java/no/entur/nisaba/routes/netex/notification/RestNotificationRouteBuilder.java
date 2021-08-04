@@ -121,7 +121,7 @@ public class RestNotificationRouteBuilder extends BaseRouteBuilder {
                 .to(commonApiDocEndpoint)
                 .endRest();
 
-        from("kafka:{{nisaba.kafka.topic.event}}?clientId=nisaba-event-reader&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy&valueDeserializer=io.confluent.kafka.serializers.KafkaAvroDeserializer&specificAvroReader=true&seekTo=beginning&autoOffsetReset=earliest")
+        from("kafka:{{nisaba.kafka.topic.event}}?clientId=nisaba-event-reader&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy&valueDeserializer=io.confluent.kafka.serializers.KafkaAvroDeserializer&specificAvroReader=true&seekTo=beginning&autoOffsetReset=earliest&offsetRepository=#nisabaEventReaderOffsetRepo")
                 .log(LoggingLevel.INFO, correlation() + "Received notification event from ${properties:nisaba.kafka.topic.event}")
                 .to("direct:updateImportDateMap")
                 .routeId("from-kafka-topic-event");

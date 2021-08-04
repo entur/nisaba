@@ -20,6 +20,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import no.entur.nisaba.Constants;
 import org.apache.camel.Exchange;
 import org.apache.camel.component.kafka.KafkaConfiguration;
+import org.apache.camel.impl.engine.MemoryStateRepository;
 import org.apache.camel.processor.idempotent.kafka.KafkaIdempotentRepository;
 import org.apache.camel.spi.HeaderFilterStrategy;
 import org.apache.camel.spi.IdempotentRepository;
@@ -96,6 +97,17 @@ public class CamelConfig {
             }
         };
     }
+
+    /**
+     * Store the offset repository for the import event topic.
+     * The store is not persistent, pods read the topic from the beginning at startup time.
+     * @return a memory-only store for the topic offset.
+     */
+    @Bean
+    public MemoryStateRepository nisabaEventReaderOffsetRepo() {
+        return new MemoryStateRepository();
+    }
+
 
     /**
      * Register Java Time Module for JSON serialization/deserialization of Java Time objects.
