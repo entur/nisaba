@@ -34,7 +34,7 @@ data:
     # PubSub
     nisaba.pubsub.project.id={{ .Values.gcp.pubsubProjectId }}
     spring.cloud.gcp.project-id=${nisaba.pubsub.project.id}
-    camel.component.google-pubsub.service-account-key=/etc/nisaba-service-account/credentials.json
+    camel.component.google-pubsub.service-account-key=file:/etc/nisaba-service-account/credentials.json
 
     # Blobstore
     blobstore.gcs.project.id={{ .Values.gcp.blobstoreProjectId }}
