@@ -27,6 +27,9 @@ import org.springframework.stereotype.Component;
 
 import javax.ws.rs.BadRequestException;
 import javax.ws.rs.NotFoundException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -129,7 +132,10 @@ public class RestNotificationRouteBuilder extends BaseRouteBuilder {
         from("direct:updateImportDateMap")
                 .process(exchange -> {
                             NetexImportEvent netexImportEvent = exchange.getIn().getBody(NetexImportEvent.class);
-                            importDates.put(netexImportEvent.getCodespace().toString(), netexImportEvent.getImportDateTime().toString());
+                            String importDate = netexImportEvent.getImportDateTime().toString();
+                            LocalDateTime parsedDateTime = LocalDateTime.parse(importDate);
+                            String truncatedImportDate = parsedDateTime.truncatedTo(ChronoUnit.SECONDS).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+                            importDates.put(netexImportEvent.getCodespace().toString(), truncatedImportDate);
                             log.debug("Registered import dates : {}", importDates);
                         }
                 )
