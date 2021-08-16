@@ -20,6 +20,7 @@ import no.entur.nisaba.avro.NetexImportEvent;
 import no.entur.nisaba.routes.BaseRouteBuilder;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
+import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.camel.model.rest.RestBindingMode;
 import org.apache.camel.model.rest.RestParamType;
 import org.springframework.beans.factory.annotation.Value;
@@ -41,6 +42,7 @@ public class RestNotificationRouteBuilder extends BaseRouteBuilder {
 
 
     private static final String PLAIN = "text/plain";
+    private static final String JSON = "application/json";
     private static final String SWAGGER_DATA_TYPE_STRING = "string";
     private static final String CODESPACE_PARAM = "codespace";
 
@@ -89,6 +91,18 @@ public class RestNotificationRouteBuilder extends BaseRouteBuilder {
         String commonApiDocEndpoint = "http:" + host + ":" + port + "/services/swagger.json?bridgeEndpoint=true";
 
         rest("/timetable_import_info")
+
+                .get("import_date")
+                .description("Return the date of the latest NeTEx import for all codespaces")
+                .consumes(PLAIN)
+                .produces(JSON)
+                .responseMessage().code(200).endResponseMessage()
+                .responseMessage().code(500).message("Internal error").endResponseMessage()
+                .route()
+                .setBody(e -> importDates)
+                .marshal().json(JsonLibrary.Jackson)
+                .routeId("import-all-dates")
+                .endRest()
 
                 .get("import_date/{" + CODESPACE_PARAM + '}')
                 .description("Return the date of the latest NeTEx import for a given codespace")
