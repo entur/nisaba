@@ -25,6 +25,9 @@
  *
  * This product includes software developed at
  * The Apache Software Foundation (http://www.apache.org/).
+ *
+ * Changes:
+ * - modified retry settings for SubscriberStub (see getSubscriberStub)
  */
 
 package org.apache.camel.component.google.pubsub;
@@ -33,7 +36,9 @@ import com.google.api.gax.core.CredentialsProvider;
 import com.google.api.gax.core.FixedCredentialsProvider;
 import com.google.api.gax.core.NoCredentialsProvider;
 import com.google.api.gax.grpc.GrpcTransportChannel;
+import com.google.api.gax.retrying.RetrySettings;
 import com.google.api.gax.rpc.FixedTransportChannelProvider;
+import com.google.api.gax.rpc.StatusCode;
 import com.google.api.gax.rpc.TransportChannelProvider;
 import com.google.auth.oauth2.ServiceAccountCredentials;
 import com.google.cloud.pubsub.v1.MessageReceiver;
@@ -55,10 +60,12 @@ import org.apache.camel.util.ObjectHelper;
 import org.apache.camel.util.StringHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.threeten.bp.Duration;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
@@ -68,6 +75,7 @@ import java.util.concurrent.TimeUnit;
 @Component("google-pubsub")
 public class GooglePubsubComponent extends DefaultComponent {
     private static final Logger LOG = LoggerFactory.getLogger(GooglePubsubComponent.class);
+    private static final Set<StatusCode.Code> SYNCHRONOUS_PULL_RETRYABLE_CODES = Set.of(StatusCode.Code.UNKNOWN, StatusCode.Code.ABORTED, StatusCode.Code.UNAVAILABLE, StatusCode.Code.DEADLINE_EXCEEDED);
 
     @Metadata(
             label = "common",
@@ -204,6 +212,13 @@ public class GooglePubsubComponent extends DefaultComponent {
     public SubscriberStub getSubscriberStub(String serviceAccountKey) throws IOException {
         SubscriberStubSettings.Builder builder = SubscriberStubSettings.newBuilder().setTransportChannelProvider(
                 SubscriberStubSettings.defaultGrpcTransportProviderBuilder().build());
+        RetrySettings retrySettings = builder.pullSettings().getRetrySettings().toBuilder()
+                .setTotalTimeout(Duration.ofHours(1))
+                .setRetryDelayMultiplier(2L)
+                .setInitialRetryDelay(Duration.ofSeconds(1))
+                .setMaxRetryDelay(Duration.ofMinutes(5))
+                .build();
+        builder.pullSettings().setRetrySettings(retrySettings).setRetryableCodes(SYNCHRONOUS_PULL_RETRYABLE_CODES);
 
         if (StringHelper.trimToNull(endpoint) != null) {
             ManagedChannel channel = ManagedChannelBuilder.forTarget(endpoint).usePlaintext().build();
