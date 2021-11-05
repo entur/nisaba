@@ -14,6 +14,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+/*
+ * Copied from https://github.com/apache/camel/blob/camel-3.11.3/components/camel-google/camel-google-pubsub/src/main/java/org/apache/camel/component/google/pubsub/GooglePubsubConsumer.java
+ * Original source licensed under the Apache Licence V2  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Notice:
+ * Apache Camel
+ * Copyright 2007-2021 The Apache Software Foundation
+ *
+ * This product includes software developed at
+ * The Apache Software Foundation (http://www.apache.org/).
+ *
+ * Changes:
+ * - modified retry logic for synchronous pull (see synchronousPull)
+ */
+
 package org.apache.camel.component.google.pubsub;
 
 import java.io.IOException;
