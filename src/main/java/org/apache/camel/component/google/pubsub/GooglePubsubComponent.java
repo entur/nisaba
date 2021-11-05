@@ -15,9 +15,10 @@
  * limitations under the License.
  */
 
-/**
+/*
  * Copied from https://github.com/apache/camel/blob/camel-3.11.3/components/camel-google/camel-google-pubsub/src/main/java/org/apache/camel/component/google/pubsub/GooglePubsubComponent.java
  * Original source licensed under the Apache Licence V2  http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Notice:
  * Apache Camel
  * Copyright 2007-2021 The Apache Software Foundation
@@ -27,12 +28,6 @@
  */
 
 package org.apache.camel.component.google.pubsub;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Map;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 
 import com.google.api.gax.core.CredentialsProvider;
 import com.google.api.gax.core.FixedCredentialsProvider;
@@ -60,6 +55,12 @@ import org.apache.camel.util.ObjectHelper;
 import org.apache.camel.util.StringHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Represents the component that manages {@link GooglePubsubEndpoint}.
