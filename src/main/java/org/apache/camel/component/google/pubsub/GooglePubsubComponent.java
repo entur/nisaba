@@ -27,7 +27,7 @@
  * The Apache Software Foundation (http://www.apache.org/).
  *
  * Changes:
- * - modified retry settings for SubscriberStub (see getSubscriberStub)
+ * - added an option "synchronousPullRetryableCodes" to configure retryable error codes for synchronous pull.
  */
 
 package org.apache.camel.component.google.pubsub;
@@ -36,7 +36,6 @@ import com.google.api.gax.core.CredentialsProvider;
 import com.google.api.gax.core.FixedCredentialsProvider;
 import com.google.api.gax.core.NoCredentialsProvider;
 import com.google.api.gax.grpc.GrpcTransportChannel;
-import com.google.api.gax.retrying.RetrySettings;
 import com.google.api.gax.rpc.FixedTransportChannelProvider;
 import com.google.api.gax.rpc.StatusCode;
 import com.google.api.gax.rpc.TransportChannelProvider;
@@ -60,11 +59,11 @@ import org.apache.camel.util.ObjectHelper;
 import org.apache.camel.util.StringHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.threeten.bp.Duration;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.EnumSet;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
@@ -102,6 +101,11 @@ public class GooglePubsubComponent extends DefaultComponent {
             label = "advanced",
             description = "How many milliseconds should a producer be allowed to terminate.")
     private int publisherTerminationTimeout = 60000;
+
+    @Metadata(
+            label = "consumer",
+            description = "Additional retryable error codes for synchronous pull. By default the PubSub client library retries ABORTED, UNAVAILABLE, UNKNOWN")
+    private StatusCode.Code[] synchronousPullRetryableCodes = new StatusCode.Code[0];
 
     private RemovalListener<String, Publisher> removalListener = removal -> {
         Publisher publisher = removal.getValue();
@@ -213,19 +217,12 @@ public class GooglePubsubComponent extends DefaultComponent {
         SubscriberStubSettings.Builder builder = SubscriberStubSettings.newBuilder().setTransportChannelProvider(
                 SubscriberStubSettings.defaultGrpcTransportProviderBuilder().build());
 
-        // configure custom retry settings
-        RetrySettings retrySettings = builder.pullSettings().getRetrySettings().toBuilder()
-                .setTotalTimeout(Duration.ofHours(1))
-                .setRetryDelayMultiplier(2L)
-                .setInitialRetryDelay(Duration.ofSeconds(1))
-                .setMaxRetryDelay(Duration.ofMinutes(5))
-                .build();
-        builder.pullSettings().setRetrySettings(retrySettings);
-
-        // add DEADLINE_EXCEEDED to the set of retryable errors
-        Set<StatusCode.Code> retryableCodes = EnumSet.copyOf(builder.pullSettings().getRetryableCodes());
-        retryableCodes.add(StatusCode.Code.DEADLINE_EXCEEDED);
-        builder.pullSettings().setRetryableCodes(retryableCodes);
+        if (synchronousPullRetryableCodes.length > 0) {
+            // retrieve the default retryable codes and add the ones specified as a component option
+            Set<StatusCode.Code> retryableCodes = new HashSet<>(builder.pullSettings().getRetryableCodes());
+            retryableCodes.addAll(Arrays.asList(synchronousPullRetryableCodes));
+            builder.pullSettings().setRetryableCodes(retryableCodes);
+        }
 
         if (StringHelper.trimToNull(endpoint) != null) {
             ManagedChannel channel = ManagedChannelBuilder.forTarget(endpoint).usePlaintext().build();
@@ -283,5 +280,13 @@ public class GooglePubsubComponent extends DefaultComponent {
 
     public void setServiceAccountKey(String serviceAccountKey) {
         this.serviceAccountKey = serviceAccountKey;
+    }
+
+    public StatusCode.Code[] getSynchronousPullRetryableCodes() {
+        return synchronousPullRetryableCodes;
+    }
+
+    public void setSynchronousPullRetryableCodes(StatusCode.Code[] synchronousPullRetryableCodes) {
+        this.synchronousPullRetryableCodes = synchronousPullRetryableCodes;
     }
 }
