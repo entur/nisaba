@@ -27,7 +27,7 @@
  * The Apache Software Foundation (http://www.apache.org/).
  *
  * Changes:
- * - modified retry settings for SubscriberStub (see getSubscriberStub)
+ * - added an option "synchronousPullRetryableCodes" to configure retryable error codes for synchronous pull.
  */
 
 package org.apache.camel.component.google.pubsub;
