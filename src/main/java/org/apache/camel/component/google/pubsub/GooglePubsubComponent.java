@@ -36,7 +36,6 @@ import com.google.api.gax.core.CredentialsProvider;
 import com.google.api.gax.core.FixedCredentialsProvider;
 import com.google.api.gax.core.NoCredentialsProvider;
 import com.google.api.gax.grpc.GrpcTransportChannel;
-import com.google.api.gax.retrying.RetrySettings;
 import com.google.api.gax.rpc.FixedTransportChannelProvider;
 import com.google.api.gax.rpc.StatusCode;
 import com.google.api.gax.rpc.TransportChannelProvider;
@@ -60,12 +59,10 @@ import org.apache.camel.util.ObjectHelper;
 import org.apache.camel.util.StringHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.threeten.bp.Duration;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
-import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -106,8 +103,8 @@ public class GooglePubsubComponent extends DefaultComponent {
     private int publisherTerminationTimeout = 60000;
 
     @Metadata(
-            label = "advanced",
-            description = "Additional retryable error codes for synchronous pull. By default the PubSub client library retries ABORTED, UNAVAILABLE,  UNKNOWN")
+            label = "consumer",
+            description = "Additional retryable error codes for synchronous pull. By default the PubSub client library retries ABORTED, UNAVAILABLE, UNKNOWN")
     private StatusCode.Code[] synchronousPullRetryableCodes = new StatusCode.Code[0];
 
     private RemovalListener<String, Publisher> removalListener = removal -> {
