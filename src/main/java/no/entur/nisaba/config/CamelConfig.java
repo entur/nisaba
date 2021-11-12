@@ -130,7 +130,7 @@ public class CamelConfig {
     @Bean("google-pubsub")
     public GooglePubsubComponent googlePubsubComponent() {
         GooglePubsubComponent googlePubsubComponent = new GooglePubsubComponent();
-        googlePubsubComponent.setSynchronousPullRetryableCodes("DEADLINE_EXCEEDED,RESOURCE_EXHAUSTED");
+        googlePubsubComponent.setSynchronousPullRetryableCodes("DEADLINE_EXCEEDED");
         return googlePubsubComponent;
     }
 
