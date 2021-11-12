@@ -17,7 +17,6 @@
 package no.entur.nisaba.config;
 
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.google.api.gax.rpc.StatusCode;
 import no.entur.nisaba.Constants;
 import org.apache.camel.Exchange;
 import org.apache.camel.component.google.pubsub.GooglePubsubComponent;
