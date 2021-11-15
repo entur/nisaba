@@ -31,4 +31,8 @@ public interface BlobStoreRepository {
 
     void setContainerName(String containerName);
 
+    void copyVersionedBlob(String sourceContainerName, String sourceObjectName, Long sourceVersion, String targetContainerName, String targetObjectName);
+    void copyBlob(String sourceContainerName, String sourceObjectName, String targetContainerName, String targetObjectName);
+
+
 }
