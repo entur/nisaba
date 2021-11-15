@@ -24,8 +24,6 @@ import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Repository;
 
 import java.io.InputStream;
-import java.util.Collections;
-import java.util.List;
 
 /**
  * Blob store repository targeting Google Cloud Storage.

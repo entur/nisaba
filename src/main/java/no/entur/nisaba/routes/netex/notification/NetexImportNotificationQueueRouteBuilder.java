@@ -25,7 +25,6 @@ import org.apache.camel.builder.FlexibleAggregationStrategy;
 import org.apache.camel.component.kafka.KafkaConstants;
 import org.apache.camel.dataformat.zipfile.ZipSplitter;
 import org.apache.camel.support.builder.PredicateBuilder;
-import org.apache.commons.lang3.ArrayUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -100,9 +99,9 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
         from("direct:retrieveDatasetCreationTime")
                 .log(LoggingLevel.INFO, correlation() + "Retrieving dataset creation time")
                 .split(new ZipSplitter()).aggregationStrategy(new FlexibleAggregationStrategy<LocalDateTime>()
-                .storeInBody()
-                .accumulateInCollection(TreeSet.class)
-                .pick(body()))
+                        .storeInBody()
+                        .accumulateInCollection(TreeSet.class)
+                        .pick(body()))
                 .streaming()
                 .filter(header(Exchange.FILE_NAME).not().endsWith(".xml"))
                 .log(LoggingLevel.INFO, correlation() + "Ignoring non-XML file ${header." + Exchange.FILE_NAME + "}")
@@ -146,7 +145,6 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .to("direct:findChouetteImportKey")
                 .bean("NetexImportEventFactory", "createNetexImportEvent")
                 .to("direct:copyDatasetToPrivateBucket")
-
                 .setHeader(KafkaConstants.KEY, header(DATASET_CODESPACE))
                 .to("kafka:{{nisaba.kafka.topic.event}}?clientId=nisaba-event&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy&valueSerializer=io.confluent.kafka.serializers.KafkaAvroSerializer").id("to-kafka-topic-event")
                 .removeHeader(KafkaConstants.KEY)
@@ -160,8 +158,8 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
         // only the file that corresponds to the dataset imported by chouette exists in that bucket.
         from("direct:findChouetteImportKey")
                 .split(header(DATASET_ALL_CREATION_TIMES)).aggregationStrategy(new FlexibleAggregationStrategy<String>()
-                .storeInHeader(DATASET_CHOUETTE_IMPORT_KEY)
-                .pick(header(DATASET_CHOUETTE_IMPORT_KEY)))
+                        .storeInHeader(DATASET_CHOUETTE_IMPORT_KEY)
+                        .pick(header(DATASET_CHOUETTE_IMPORT_KEY)))
                 .bean(NetexImportEventKeyFactory.class, "createNetexImportEventKey(${header." + DATASET_CODESPACE + "}, ${body})")
                 .setHeader(DATASET_CHOUETTE_IMPORT_KEY, body())
                 .setHeader(FILE_HANDLE, simple("imported/${header." + DATASET_CODESPACE + "}/${body}.zip"))
