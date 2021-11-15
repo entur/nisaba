@@ -17,7 +17,6 @@
 package no.entur.nisaba.config;
 
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.google.api.gax.rpc.StatusCode;
 import no.entur.nisaba.Constants;
 import org.apache.camel.Exchange;
 import org.apache.camel.component.google.pubsub.GooglePubsubComponent;
@@ -130,7 +129,7 @@ public class CamelConfig {
     @Bean("google-pubsub")
     public GooglePubsubComponent googlePubsubComponent() {
         GooglePubsubComponent googlePubsubComponent = new GooglePubsubComponent();
-        googlePubsubComponent.setSynchronousPullRetryableCodes(new StatusCode.Code[]{StatusCode.Code.DEADLINE_EXCEEDED});
+        googlePubsubComponent.setSynchronousPullRetryableCodes("DEADLINE_EXCEEDED");
         return googlePubsubComponent;
     }
 

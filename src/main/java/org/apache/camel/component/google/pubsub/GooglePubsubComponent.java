@@ -62,12 +62,13 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Represents the component that manages {@link GooglePubsubEndpoint}.
@@ -105,7 +106,7 @@ public class GooglePubsubComponent extends DefaultComponent {
     @Metadata(
             label = "consumer",
             description = "Additional retryable error codes for synchronous pull. By default the PubSub client library retries ABORTED, UNAVAILABLE, UNKNOWN")
-    private StatusCode.Code[] synchronousPullRetryableCodes = new StatusCode.Code[0];
+    private String synchronousPullRetryableCodes;
 
     private RemovalListener<String, Publisher> removalListener = removal -> {
         Publisher publisher = removal.getValue();
@@ -217,10 +218,14 @@ public class GooglePubsubComponent extends DefaultComponent {
         SubscriberStubSettings.Builder builder = SubscriberStubSettings.newBuilder().setTransportChannelProvider(
                 SubscriberStubSettings.defaultGrpcTransportProviderBuilder().build());
 
-        if (synchronousPullRetryableCodes.length > 0) {
+        if (synchronousPullRetryableCodes != null) {
             // retrieve the default retryable codes and add the ones specified as a component option
             Set<StatusCode.Code> retryableCodes = new HashSet<>(builder.pullSettings().getRetryableCodes());
-            retryableCodes.addAll(Arrays.asList(synchronousPullRetryableCodes));
+            Set<StatusCode.Code> customRetryableCodes = Stream.of(synchronousPullRetryableCodes.split(","))
+                    .map(String::trim)
+                    .map(StatusCode.Code::valueOf)
+                    .collect(Collectors.toSet());
+            retryableCodes.addAll(customRetryableCodes);
             builder.pullSettings().setRetryableCodes(retryableCodes);
         }
 
@@ -282,11 +287,11 @@ public class GooglePubsubComponent extends DefaultComponent {
         this.serviceAccountKey = serviceAccountKey;
     }
 
-    public StatusCode.Code[] getSynchronousPullRetryableCodes() {
+    public String getSynchronousPullRetryableCodes() {
         return synchronousPullRetryableCodes;
     }
 
-    public void setSynchronousPullRetryableCodes(StatusCode.Code[] synchronousPullRetryableCodes) {
+    public void setSynchronousPullRetryableCodes(String synchronousPullRetryableCodes) {
         this.synchronousPullRetryableCodes = synchronousPullRetryableCodes;
     }
 }
