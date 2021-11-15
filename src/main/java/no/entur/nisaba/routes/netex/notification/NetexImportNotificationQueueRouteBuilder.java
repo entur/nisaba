@@ -131,6 +131,7 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
         from("direct:notifyConsumers")
                 .log(LoggingLevel.INFO, correlation() + "Notifying Kafka topic ${properties:nisaba.kafka.topic.event}")
                 .to("direct:findChouetteImportKey")
+                .to("direct:copyToBucket")
                 .bean("NetexImportEventFactory", "createNetexImportEvent")
                 .setHeader(KafkaConstants.KEY, header(DATASET_CODESPACE))
                 .to("kafka:{{nisaba.kafka.topic.event}}?clientId=nisaba-event&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy&valueSerializer=io.confluent.kafka.serializers.KafkaAvroSerializer").id("to-kafka-topic-event")
@@ -160,6 +161,10 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .filter(header(DATASET_CHOUETTE_IMPORT_KEY).isNull())
                 .log(LoggingLevel.WARN, correlation() + "Chouette import key not found")
                 .routeId("find-chouette-import-key");
+
+        from("direct:copyToBucket")
+                .log(LoggingLevel.INFO, correlation() + "Copying file to bucket")
+                .routeId("copy-file-to-bucket");
 
     }
 

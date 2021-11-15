@@ -59,7 +59,7 @@ public class NetexImportEventFactory {
 
         String originalDatasetURI = "";
         if (chouetteImportKey != null) {
-            originalDatasetURI = "gs://" + nisabaExchangeBucketName + "/imported/" + codespace + "/" + chouetteImportKey + ".zip";
+            originalDatasetURI = "/imported/" + codespace + "/" + chouetteImportKey + ".zip";
         }
         return NetexImportEvent.newBuilder()
                 .setCodespace(codespace)
