@@ -4,6 +4,9 @@ replicas: 2
 netex:
   publish:
     enabled: true
+  publication:
+    internal:
+      bucket: ror-nisaba-exchange-varelager-test
 
 gcp:
   blobstoreProjectId: entur-ror-test

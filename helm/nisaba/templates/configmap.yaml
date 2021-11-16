@@ -4,6 +4,7 @@ data:
 
     # Nisaba
     nisaba.publish.enabled={{ .Values.netex.publish.enabled }}
+    nisaba.netex.publication.internal.bucket={{ .Values.netex.publication.internal.bucket }}
 
     # Spring
     spring.main.sources=no.entur.nisaba
