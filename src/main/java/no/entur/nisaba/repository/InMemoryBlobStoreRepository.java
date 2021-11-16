@@ -91,4 +91,16 @@ public class InMemoryBlobStoreRepository implements BlobStoreRepository {
         this.containerName = containerName;
     }
 
+
+    @Override
+    public void copyBlob(String sourceContainerName, String sourceObjectName, String targetContainerName, String targetObjectName) {
+        copyVersionedBlob(sourceContainerName, sourceObjectName, null, targetContainerName, targetObjectName);
+    }
+
+    @Override
+    public void copyVersionedBlob(String sourceContainerName, String sourceObjectName, Long sourceVersion, String targetContainerName, String targetObjectName) {
+        byte[] sourceData = getBlobsForContainer(sourceContainerName).get(sourceObjectName);
+        getBlobsForContainer(targetContainerName).put(targetObjectName, sourceData);
+    }
+
 }

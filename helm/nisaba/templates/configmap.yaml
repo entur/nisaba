@@ -4,6 +4,8 @@ data:
 
     # Nisaba
     nisaba.publish.enabled={{ .Values.netex.publish.enabled }}
+    nisaba.netex.publication.internal.bucket={{ .Values.netex.publication.internal.bucket }}
+    nisaba.netex.publication.internal.whitelist=nsb,goa,sjn,vyg
 
     # Spring
     spring.main.sources=no.entur.nisaba

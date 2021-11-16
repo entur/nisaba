@@ -16,6 +16,7 @@
 
 package no.entur.nisaba.repository;
 
+import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.Storage;
 import org.rutebanken.helper.gcp.BlobStoreHelper;
 import org.springframework.context.annotation.Profile;
@@ -42,6 +43,22 @@ public class GcsBlobStoreRepository implements BlobStoreRepository {
 
     public void setContainerName(String containerName) {
         this.containerName = containerName;
+    }
+
+    @Override
+    public void copyBlob(String sourceContainerName, String sourceObjectName, String targetContainerName, String targetObjectName) {
+        copyVersionedBlob(sourceContainerName, sourceObjectName, null, targetContainerName, targetObjectName);
+    }
+
+    @Override
+    public void copyVersionedBlob(String sourceContainerName, String sourceObjectName, Long sourceVersion, String targetContainerName, String targetObjectName) {
+
+        Storage.CopyRequest request =
+                Storage.CopyRequest.newBuilder()
+                        .setSource(BlobId.of(sourceContainerName, sourceObjectName, sourceVersion))
+                        .setTarget(BlobId.of(targetContainerName, targetObjectName))
+                        .build();
+        storage.copy(request).getResult();
     }
 
     @Override

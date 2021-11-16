@@ -26,8 +26,10 @@ import java.io.InputStream;
 public abstract class AbstractBlobStoreService {
 
     protected final BlobStoreRepository repository;
+    private final String containerName;
 
     protected AbstractBlobStoreService(String containerName, BlobStoreRepository repository) {
+        this.containerName = containerName;
         this.repository = repository;
         this.repository.setContainerName(containerName);
     }
@@ -38,6 +40,13 @@ public abstract class AbstractBlobStoreService {
 
     public void uploadBlob(@Header(value = Constants.FILE_HANDLE) String name, InputStream inputStream, Exchange exchange) {
         repository.uploadBlob(name, inputStream);
+    }
+
+    public void copyBlobToAnotherBucket(@Header(value = Constants.FILE_HANDLE) String sourceName,
+                                        @Header(value = Constants.TARGET_CONTAINER) String targetContainerName,
+                                        @Header(value = Constants.TARGET_FILE_HANDLE) String targetName,
+                                        Exchange exchange) {
+        repository.copyBlob(containerName, sourceName, targetContainerName, targetName);
     }
 
 

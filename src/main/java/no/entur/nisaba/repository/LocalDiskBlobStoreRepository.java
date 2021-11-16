@@ -30,6 +30,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 
 /**
  * Simple file-based blob store repository for testing purpose.
@@ -86,6 +87,22 @@ public class LocalDiskBlobStoreRepository implements BlobStoreRepository {
         }
     }
 
+    @Override
+    public void copyBlob(String sourceContainerName, String sourceObjectName, String targetContainerName, String targetObjectName) {
+        copyVersionedBlob(sourceContainerName, sourceObjectName, null, targetContainerName, targetObjectName);
+    }
+
+    @Override
+    public void copyVersionedBlob(String sourceContainerName, String sourceObjectName, Long sourceVersion, String targetContainerName, String targetObjectName) {
+        try {
+            Path sourcePath = Path.of(baseFolder, sourceContainerName, sourceObjectName);
+            Path targetPath = Path.of(baseFolder, targetContainerName, targetObjectName);
+            Files.createDirectories(targetPath.getParent());
+            Files.copy(sourcePath, targetPath, StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException e) {
+            throw new NisabaException(e);
+        }
+    }
 
     @Override
     public void setContainerName(String containerName) {
