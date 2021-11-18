@@ -39,6 +39,13 @@ resource "google_storage_bucket_iam_member" "storage_nisaba_exchange_bucket_iam_
   member = "serviceAccount:${google_service_account.nisaba_service_account.email}"
 }
 
+# add service account as member to nisaba exchange varelager bucket
+resource "google_storage_bucket_iam_member" "storage_nisaba_exchange_varelager_bucket_iam_member" {
+  bucket = var.bucket_nisaba_exchange_varelager_instance_name
+  role = var.service_account_bucket_role
+  member = "serviceAccount:${google_service_account.nisaba_service_account.email}"
+}
+
 # add service account as member to pubsub service in the resources project
 resource "google_project_iam_member" "pubsub_project_iam_member_subscriber" {
   project = var.gcp_pubsub_project

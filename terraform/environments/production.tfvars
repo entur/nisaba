@@ -6,5 +6,6 @@ kube_namespace = "production"
 bucket_marduk_instance_name = "marduk-production"
 bucket_nisaba_instance_name = "ror-nisaba-production"
 bucket_nisaba_exchange_instance_name = "ror-nisaba-exchange-production"
+bucket_nisaba_exchange_varelager_instance_name = "ror-nisaba-exchange-varelager-production"
 service_account_bucket_role = "roles/storage.admin"
 

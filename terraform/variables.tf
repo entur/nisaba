@@ -52,6 +52,10 @@ variable "bucket_nisaba_exchange_instance_name" {
   description = "Nisaba exchange bucket name"
 }
 
+variable "bucket_nisaba_exchange_varelager_instance_name" {
+  description = "Nisaba exchange varelager bucket name"
+}
+
 variable  ror-nisaba-kafka-username {
   description = "Nisaba kafka user name"
 }
