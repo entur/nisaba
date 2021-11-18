@@ -34,12 +34,10 @@ import static no.entur.nisaba.Constants.DATE_TIME_FORMATTER;
 public class NetexImportEventFactory {
 
     private final String mardukBucketName;
-    private final String nisabaExchangeBucketName;
 
     public NetexImportEventFactory(@Value("${blobstore.gcs.marduk.container.name}") String mardukBucketName,
                                    @Value("${blobstore.gcs.nisaba.exchange.container.name}") String nisabaExchangeBucketName) {
         this.mardukBucketName = mardukBucketName;
-        this.nisabaExchangeBucketName = nisabaExchangeBucketName;
     }
 
 
@@ -59,7 +57,7 @@ public class NetexImportEventFactory {
 
         String originalDatasetURI = "";
         if (chouetteImportKey != null) {
-            originalDatasetURI = "gs://" + nisabaExchangeBucketName + "/imported/" + codespace + "/" + chouetteImportKey + ".zip";
+            originalDatasetURI = "/imported/" + codespace + "/" + chouetteImportKey + ".zip";
         }
         return NetexImportEvent.newBuilder()
                 .setCodespace(codespace)
