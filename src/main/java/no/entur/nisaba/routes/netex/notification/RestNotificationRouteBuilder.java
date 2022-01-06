@@ -90,7 +90,7 @@ public class RestNotificationRouteBuilder extends BaseRouteBuilder {
 
         String commonApiDocEndpoint = "http:" + host + ":" + port + "/services/swagger.json?bridgeEndpoint=true";
 
-        rest("/timetable_import_info")
+        rest("/timetable-import-info")
 
                 .get("import_date")
                 .description("Return the date of the latest NeTEx import for all codespaces")
