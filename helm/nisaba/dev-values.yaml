@@ -29,6 +29,3 @@ kafka:
     idempotent: rutedata-dataset-import-event-idempotent-repo-dev
     common: rutedata-dataset-import-common-dev
     servicejourney: rutedata-dataset-import-service-journey-dev
-
-ingress:
-  loadBalancerIP: 35.205.170.68
