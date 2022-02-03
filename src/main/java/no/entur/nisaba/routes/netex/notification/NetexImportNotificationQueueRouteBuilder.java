@@ -54,7 +54,7 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
 
     private static final String EXPORT_FILE_NAME = "netex/rb_${body}-" + Constants.CURRENT_AGGREGATED_NETEX_FILENAME;
     private final String privateBucket;
-    private Set<String> whiteListedCodespaces;
+    private final Set<String> whiteListedCodespaces;
 
     public NetexImportNotificationQueueRouteBuilder(@Value("${nisaba.netex.publication.internal.whitelist:}") String[] whiteListedCodespaces,
                                                     @Value("${nisaba.netex.publication.internal.bucket:}") String privateBucket) {
