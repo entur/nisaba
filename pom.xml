@@ -29,7 +29,7 @@
         <commons-io.version>2.11.0</commons-io.version>
         <avro.version>1.11.0</avro.version>
         <confluent-kafka-client.version>6.1.1</confluent-kafka-client.version>
-        <google.cloud.bom-version>24.0.0</google.cloud.bom-version>
+        <google.cloud.bom-version>24.4.0</google.cloud.bom-version>
         <netex-parser-java.version>1.0.18</netex-parser-java.version>
         <netex-java-model.version>1.0.13</netex-java-model.version>
         <woodstox.version>6.2.8</woodstox.version>
