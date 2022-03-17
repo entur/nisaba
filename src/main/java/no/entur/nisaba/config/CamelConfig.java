@@ -19,7 +19,6 @@ package no.entur.nisaba.config;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import no.entur.nisaba.Constants;
 import org.apache.camel.Exchange;
-import org.apache.camel.component.google.pubsub.GooglePubsubComponent;
 import org.apache.camel.component.kafka.KafkaConfiguration;
 import org.apache.camel.impl.engine.MemoryStateRepository;
 import org.apache.camel.processor.idempotent.kafka.KafkaIdempotentRepository;
@@ -119,18 +118,6 @@ public class CamelConfig {
     @Bean("jacksonJavaTimeModule")
     JavaTimeModule jacksonJavaTimeModule() {
         return new JavaTimeModule();
-    }
-
-    /**
-     * Add the DEADLINE_EXCEEDED error code to the list of retryable PubSub server errors.
-     *
-     * @return a customized Google PubSub component that can retry DEADLINE_EXCEEDED errors.
-     */
-    @Bean("google-pubsub")
-    public GooglePubsubComponent googlePubsubComponent() {
-        GooglePubsubComponent googlePubsubComponent = new GooglePubsubComponent();
-        googlePubsubComponent.setSynchronousPullRetryableCodes("DEADLINE_EXCEEDED");
-        return googlePubsubComponent;
     }
 
 }
