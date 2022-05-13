@@ -42,14 +42,14 @@ public class NisabaExchangeBlobStoreRoute extends BaseRouteBuilder {
                 .to(logDebugShowAll())
                 .bean(nisabaExchangeBlobStoreService, "getBlob")
                 .to(logDebugShowAll())
-                .log(LoggingLevel.INFO, correlation() + "Returning from fetching file ${header." + FILE_HANDLE + "} from Nisaba Exchange bucket.")
+                .log(LoggingLevel.DEBUG, correlation() + "Returning from fetching file ${header." + FILE_HANDLE + "} from Nisaba Exchange bucket.")
                 .routeId("blobstore-nisaba-exchange-download");
 
         from("direct:copyBlobToAnotherBucket")
                 .to(logDebugShowAll())
                 .bean(nisabaExchangeBlobStoreService, "copyBlobToAnotherBucket")
                 .to(logDebugShowAll())
-                .log(LoggingLevel.INFO, correlation() + "Copied file ${header." + FILE_HANDLE + "} to file ${header." + TARGET_FILE_HANDLE + "} from Marduk bucket to bucket ${header." + TARGET_CONTAINER + "}.")
+                .log(LoggingLevel.DEBUG, correlation() + "Copied file ${header." + FILE_HANDLE + "} to file ${header." + TARGET_FILE_HANDLE + "} from Marduk bucket to bucket ${header." + TARGET_CONTAINER + "}.")
                 .routeId("blobstore-copy-to-another-bucket");
     }
 

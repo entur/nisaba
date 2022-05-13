@@ -40,7 +40,7 @@ public class MardukBlobStoreRoute extends BaseRouteBuilder {
                 .to(logDebugShowAll())
                 .bean(mardukBlobStoreService, "getBlob")
                 .to(logDebugShowAll())
-                .log(LoggingLevel.INFO, correlation() + "Returning from fetching file ${header." + FILE_HANDLE + "} from Marduk bucket.")
+                .log(LoggingLevel.DEBUG, correlation() + "Returning from fetching file ${header." + FILE_HANDLE + "} from Marduk bucket.")
                 .routeId("blobstore-marduk-download");
     }
 }

@@ -150,7 +150,7 @@ public class NetexServiceJourneyPublicationRouteBuilder extends BaseRouteBuilder
                 .routeId("process-line");
 
         from("direct:processRoute")
-                .log(LoggingLevel.INFO, correlation() + "Processing Route ${body.id}")
+                .log(LoggingLevel.DEBUG, correlation() + "Processing Route ${body.id}")
                 .process(exchange -> {
                     Route route = exchange.getIn().getBody(Route.class);
                     NetexEntitiesIndex netexLineEntitiesIndex = exchange.getIn().getHeader(Constants.LINE_FILE_INDEX, NetexEntitiesIndex.class);
@@ -168,7 +168,7 @@ public class NetexServiceJourneyPublicationRouteBuilder extends BaseRouteBuilder
                 .routeId("process-route");
 
         from("direct:processJourneyPattern")
-                .log(LoggingLevel.INFO, correlation() + "Processing JourneyPattern ${body.id}")
+                .log(LoggingLevel.DEBUG, correlation() + "Processing JourneyPattern ${body.id}")
                 .process(exchange -> {
                     JourneyPattern journeyPattern = exchange.getIn().getBody(JourneyPattern.class);
                     NetexEntitiesIndex netexLineEntitiesIndex = exchange.getIn().getHeader(Constants.LINE_FILE_INDEX, NetexEntitiesIndex.class);
