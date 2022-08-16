@@ -54,6 +54,7 @@ data:
     management.endpoint.health.group.readiness.include=readinessState
     management.endpoint.prometheus.enabled=true
     management.endpoints.web.exposure.include=info,health,prometheus
+    management.health.pubsub.enabled=false
 
     # Logging
     logging.level.no.entur=INFO
