@@ -77,16 +77,19 @@ public class RestNotificationRouteBuilder extends BaseRouteBuilder {
                 .bindingMode(RestBindingMode.off)
                 .endpointProperty("matchOnUriPrefix", "true")
                 .apiContextPath("/swagger.json")
-                .apiProperty("api.title", "Nisaba Timetable Import Info API").apiProperty("api.version", "1.0")
-                .apiContextRouteId("doc-api");
+                .apiProperty("api.title", "Nisaba Timetable Import Info API").apiProperty("api.version", "1.0");
 
         rest("")
                 .apiDocs(false)
                 .description("Wildcard definitions necessary to get Jetty to match authorization filters to endpoints with path params")
-                .get().route().routeId("admin-route-authorize-get").throwException(new NotFoundException()).endRest()
-                .post().route().routeId("admin-route-authorize-post").throwException(new NotFoundException()).endRest()
-                .put().route().routeId("admin-route-authorize-put").throwException(new NotFoundException()).endRest()
-                .delete().route().routeId("admin-route-authorize-delete").throwException(new NotFoundException()).endRest();
+                .get()
+                .to("direct:adminRouteAuthorizeGet")
+                .post()
+                .to("direct:adminRouteAuthorizePost")
+                .put()
+                .to("direct:adminRouteAuthorizePut")
+                .delete()
+                .to("direct:adminRouteAuthorizeDelete");
 
         String commonApiDocEndpoint = "http:" + host + ":" + port + "/services/swagger.json?bridgeEndpoint=true";
 
@@ -98,11 +101,7 @@ public class RestNotificationRouteBuilder extends BaseRouteBuilder {
                 .produces(JSON)
                 .responseMessage().code(200).endResponseMessage()
                 .responseMessage().code(500).message("Internal error").endResponseMessage()
-                .route()
-                .setBody(e -> importDates)
-                .marshal().json(JsonLibrary.Jackson)
-                .routeId("import-all-dates")
-                .endRest()
+                .to("direct:importAllDates")
 
                 .get("import_date/{" + CODESPACE_PARAM + '}')
                 .description("Return the date of the latest NeTEx import for a given codespace")
@@ -117,7 +116,36 @@ public class RestNotificationRouteBuilder extends BaseRouteBuilder {
                 .responseMessage().code(200).endResponseMessage()
                 .responseMessage().code(404).message("Unknown codespace").endResponseMessage()
                 .responseMessage().code(500).message("Internal error").endResponseMessage()
-                .route()
+                .to("direct:importDate")
+
+                .get("/swagger.json")
+                .apiDocs(false)
+                .bindingMode(RestBindingMode.off)
+                .to(commonApiDocEndpoint);
+
+
+        from("direct:adminRouteAuthorizeGet")
+                .throwException(new NotFoundException())
+                .routeId("admin-route-authorize-get");
+
+        from("direct:adminRouteAuthorizePost")
+                .throwException(new NotFoundException())
+                .routeId("admin-route-authorize-post");
+
+        from("direct:adminRouteAuthorizePut")
+                .throwException(new NotFoundException())
+                .routeId("admin-route-authorize-put");
+
+        from("direct:adminRouteAuthorizeDelete")
+                .throwException(new NotFoundException())
+                .routeId("admin-route-authorize-delete");
+
+        from("direct:importAllDates")
+                .setBody(e -> importDates)
+                .marshal().json(JsonLibrary.Jackson)
+                .routeId("import-all-dates");
+
+        from("direct:importDate")
                 .process(exchange -> {
                     String codespace = exchange.getIn().getHeader(CODESPACE_PARAM, String.class);
                     String importDate = importDates.get(codespace.toLowerCase());
@@ -127,16 +155,7 @@ public class RestNotificationRouteBuilder extends BaseRouteBuilder {
                         throw new NotFoundException("Codespace not found");
                     }
                 })
-                .routeId("import-date")
-                .endRest()
-
-
-                .get("/swagger.json")
-                .apiDocs(false)
-                .bindingMode(RestBindingMode.off)
-                .route()
-                .to(commonApiDocEndpoint)
-                .endRest();
+                .routeId("import-date");
 
         from("kafka:{{nisaba.kafka.topic.event}}?clientId=nisaba-event-reader&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy&valueDeserializer=io.confluent.kafka.serializers.KafkaAvroDeserializer&specificAvroReader=true&seekTo=beginning&autoOffsetReset=earliest&offsetRepository=#nisabaEventReaderOffsetRepo")
                 .log(LoggingLevel.INFO, correlation() + "Received notification event from ${properties:nisaba.kafka.topic.event}")
