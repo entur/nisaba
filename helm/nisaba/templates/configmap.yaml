@@ -14,7 +14,7 @@ data:
 
     # Camel
     camel.springboot.name=Nisaba
-    camel.dataformat.json-jackson.module-refs=jacksonJavaTimeModule
+    camel.dataformat.jackson.module-refs=jacksonJavaTimeModule
     camel.cluster.kubernetes.enabled=true
     camel.cluster.kubernetes.cluster-labels[app]=nisaba
     camel.cluster.kubernetes.config-map-name=nisaba-leaders
