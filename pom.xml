@@ -28,7 +28,7 @@
         <entur.helpers.version>1.83</entur.helpers.version>
         <commons-io.version>2.11.0</commons-io.version>
         <avro.version>1.11.1</avro.version>
-        <confluent-kafka-client.version>6.1.8</confluent-kafka-client.version>
+        <confluent-kafka-client.version>6.2.6</confluent-kafka-client.version>
         <netex-parser-java.version>1.0.20</netex-parser-java.version>
         <netex-java-model.version>1.0.13</netex-java-model.version>
         <woodstox.version>6.2.8</woodstox.version>
