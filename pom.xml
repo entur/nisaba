@@ -81,11 +81,6 @@
             </exclusions>
         </dependency>
         <dependency>
-            <groupId>org.entur.ror.helpers</groupId>
-            <artifactId>logging</artifactId>
-            <version>${entur.helpers.version}</version>
-        </dependency>
-        <dependency>
             <groupId>org.entur</groupId>
             <artifactId>netex-parser-java</artifactId>
             <version>${netex-parser-java.version}</version>
