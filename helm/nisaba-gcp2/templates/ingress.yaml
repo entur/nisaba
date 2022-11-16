@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  labels:
+    traffic-type: api
+    {{- include "nisaba.common.labels" . | indent 4 }}
+  annotations:
+    kubernetes.io/ingress.class: traefik
+  name: timetable-import-info-v1-timetable
+  namespace: {{ .Release.Namespace }}
+spec:
+  rules:
+    - host: timetable-import-info-v1-timetable{{ .Values.ingress.domainName }}
+      http:
+        paths:
+          - pathType: ImplementationSpecific
+            backend:
+              service:
+                name: nisaba
+                port:
+                  number: {{ .Values.common.service.externalPort }}
