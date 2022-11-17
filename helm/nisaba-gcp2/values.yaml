@@ -17,7 +17,7 @@ common:
     memoryLimit: 2000
     envFrom:
       - secretRef:
-            name: ror-nisba-secrets
+            name: ror-nisaba-secrets
     probes:
       liveness:
         path: /actuator/health/liveness
