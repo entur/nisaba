@@ -33,7 +33,7 @@ common:
     volumes:
       - configMap:
           defaultMode: 420
-          name: nisba-application
+          name: nisaba-application
         name: application-config
   postgres:
     enabled: false
