@@ -11,10 +11,10 @@ common:
     labels: { customLogRetention: enabled }
     forceReplicas: 2
     image: ${artifact.metadata.image}
-    cpu: 1
-    memory: 1800
-    cpuLimit: 1000m
-    memoryLimit: 2000
+    cpu: 2
+    memory: 2000
+    cpuLimit: 3000m
+    memoryLimit: 3000
     envFrom:
       - secretRef:
             name: ror-nisaba-secrets
@@ -39,7 +39,7 @@ common:
     enabled: false
   configmap:
     data:
-      JDK_JAVA_OPTIONS:  -server -Xmx1600m -Xss512k -XX:+UseParallelGC -XX:GCTimeRatio=4 -XX:AdaptiveSizePolicyWeight=90
+      JDK_JAVA_OPTIONS:  -server -Xmx2500m -Xss512k -XX:+UseParallelGC -XX:GCTimeRatio=4 -XX:AdaptiveSizePolicyWeight=90
         -XX:MinHeapFreeRatio=20 -XX:MaxHeapFreeRatio=40
         -Dspring.config.location=/etc/application-config/application.properties
         -Dfile.encoding=UTF-8
