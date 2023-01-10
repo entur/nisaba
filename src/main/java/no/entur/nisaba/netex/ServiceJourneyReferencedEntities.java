@@ -135,7 +135,7 @@ public class ServiceJourneyReferencedEntities {
                                     .getRef()
                                     .equals(timetabledPassingTime.getId())));
 
-            serviceJourneyReferencedEntities.noticeAssignments = Stream.concat(noticeAssignmentsOnServiceJourney, noticeAssignmentsOnPassingTimes).collect(Collectors.toList());
+            serviceJourneyReferencedEntities.noticeAssignments = Stream.concat(noticeAssignmentsOnServiceJourney, noticeAssignmentsOnPassingTimes).toList();
 
             OperatorRefStructure operatorRef = serviceJourney.getOperatorRef();
             if (operatorRef != null) {
