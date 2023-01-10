@@ -105,7 +105,7 @@ public class JourneyPatternReferencedEntities {
         }
 
         private static ScheduledStopPoint getScheduledStopPointAndUpdateVersion(NetexEntitiesIndex netexCommonEntitiesIndex, ScheduledStopPointRefStructure scheduledStopPointRef) {
-            ScheduledStopPoint scheduledStopPoint = netexCommonEntitiesIndex.getScheduledStopPointIndex().get(scheduledStopPointRef.getRef());
+            ScheduledStopPoint scheduledStopPoint = netexCommonEntitiesIndex.getScheduledStopPointIndex().getLatestVersion(scheduledStopPointRef.getRef());
             scheduledStopPointRef.setVersion(scheduledStopPoint.getVersion());
             return scheduledStopPoint;
         }
