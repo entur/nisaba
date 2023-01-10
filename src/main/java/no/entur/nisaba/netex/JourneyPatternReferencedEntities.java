@@ -99,7 +99,7 @@ public class JourneyPatternReferencedEntities {
                                     .getRef()
                                     .equals(stopPointInJourneyPattern.getId())));
 
-            journeyPatternReferencedEntities.noticeAssignments = Stream.concat(noticeAssignmentsOnJourneyPattern, noticeAssignmentsOnStopPoints).collect(Collectors.toList());
+            journeyPatternReferencedEntities.noticeAssignments = Stream.concat(noticeAssignmentsOnJourneyPattern, noticeAssignmentsOnStopPoints).toList();
 
             return journeyPatternReferencedEntities;
         }

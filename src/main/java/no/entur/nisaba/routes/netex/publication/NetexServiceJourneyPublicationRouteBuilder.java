@@ -38,7 +38,6 @@ import org.springframework.stereotype.Component;
 import javax.xml.bind.JAXBContext;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static no.entur.nisaba.Constants.COMMON_FILE_INDEX;
 import static no.entur.nisaba.Constants.DATASET_CODESPACE;
@@ -155,7 +154,7 @@ public class NetexServiceJourneyPublicationRouteBuilder extends BaseRouteBuilder
                     Route route = exchange.getIn().getBody(Route.class);
                     NetexEntitiesIndex netexLineEntitiesIndex = exchange.getIn().getHeader(Constants.LINE_FILE_INDEX, NetexEntitiesIndex.class);
                     NetexEntitiesIndex commonNetexEntitiesIndex = exchange.getIn().getHeader(Constants.COMMON_FILE_INDEX, NetexEntitiesIndex.class);
-                    List<JourneyPattern> journeyPatterns = netexLineEntitiesIndex.getJourneyPatternIndex().getAll().stream().filter(journeyPattern -> journeyPattern.getRouteRef().getRef().equals(route.getId())).collect(Collectors.toList());
+                    List<JourneyPattern> journeyPatterns = netexLineEntitiesIndex.getJourneyPatternIndex().getAll().stream().filter(journeyPattern -> journeyPattern.getRouteRef().getRef().equals(route.getId())).toList();
                     exchange.getIn().setHeader(JOURNEY_PATTERNS, journeyPatterns);
                     RouteReferencedEntities routeReferencedEntities = new RouteReferencedEntities.RouteReferencedEntitiesBuilder()
                             .withRoute(route)
@@ -173,7 +172,7 @@ public class NetexServiceJourneyPublicationRouteBuilder extends BaseRouteBuilder
                     JourneyPattern journeyPattern = exchange.getIn().getBody(JourneyPattern.class);
                     NetexEntitiesIndex netexLineEntitiesIndex = exchange.getIn().getHeader(Constants.LINE_FILE_INDEX, NetexEntitiesIndex.class);
                     NetexEntitiesIndex commonNetexEntitiesIndex = exchange.getIn().getHeader(Constants.COMMON_FILE_INDEX, NetexEntitiesIndex.class);
-                    List<ServiceJourney> serviceJourneys = netexLineEntitiesIndex.getServiceJourneyIndex().getAll().stream().filter(serviceJourney -> serviceJourney.getJourneyPatternRef().getValue().getRef().equals(journeyPattern.getId())).collect(Collectors.toList());
+                    List<ServiceJourney> serviceJourneys = netexLineEntitiesIndex.getServiceJourneyIndex().getAll().stream().filter(serviceJourney -> serviceJourney.getJourneyPatternRef().getValue().getRef().equals(journeyPattern.getId())).toList();
                     exchange.getIn().setHeader(SERVICE_JOURNEYS, serviceJourneys);
                     JourneyPatternReferencedEntities journeyPatternReferencedEntities = new JourneyPatternReferencedEntities.JourneyPatternReferencedEntitiesBuilder()
                             .withJourneyPattern(journeyPattern)

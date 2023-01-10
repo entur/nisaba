@@ -46,7 +46,6 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import static no.entur.nisaba.Constants.COMMON_FILE_INDEX;
 import static no.entur.nisaba.Constants.DATASET_CODESPACE;
@@ -107,7 +106,7 @@ public class PublicationDeliveryBuilder {
         if (serviceJourneyOperator != null) {
             operators.add(serviceJourneyOperator);
         }
-        organisationsInFrameRelStructure.getOrganisation_().addAll(operators.stream().map(this::wrapAsJAXBElement).collect(Collectors.toList()));
+        organisationsInFrameRelStructure.getOrganisation_().addAll(operators.stream().map(this::wrapAsJAXBElement).toList());
         organisationsInFrameRelStructure.getOrganisation_().add(wrapAsJAXBElement(lineReferencedEntities.getAuthority()));
         resourceFrame.setOrganisations(organisationsInFrameRelStructure);
 
@@ -130,9 +129,9 @@ public class PublicationDeliveryBuilder {
 
 
         LinesInFrame_RelStructure linesInFrameRelStructure = objectFactory.createLinesInFrame_RelStructure();
-        List<JAXBElement<Line>> lines = lineEntities.getLineIndex().getAll().stream().map(this::wrapAsJAXBElement).collect(Collectors.toList());
+        List<JAXBElement<Line>> lines = lineEntities.getLineIndex().getAll().stream().map(this::wrapAsJAXBElement).toList();
         linesInFrameRelStructure.getLine_().addAll(lines);
-        List<JAXBElement<FlexibleLine>> flexibleLines = lineEntities.getFlexibleLineIndex().getAll().stream().map(this::wrapAsJAXBElement).collect(Collectors.toList());
+        List<JAXBElement<FlexibleLine>> flexibleLines = lineEntities.getFlexibleLineIndex().getAll().stream().map(this::wrapAsJAXBElement).toList();
         linesInFrameRelStructure.getLine_().addAll(flexibleLines);
 
         serviceFrame.setLines(linesInFrameRelStructure);
@@ -154,7 +153,7 @@ public class PublicationDeliveryBuilder {
         StopAssignmentsInFrame_RelStructure stopAssignmentsInFrameRelStructure = objectFactory.createStopAssignmentsInFrame_RelStructure();
         Collection<PassengerStopAssignment> passengerStopAssignments = journeyPatternReferencedEntities.getPassengerStopAssignments();
 
-        Collection<? extends JAXBElement<? extends StopAssignment_VersionStructure>> wrappedPassengerStopAssignments = passengerStopAssignments.stream().map(this::wrapAsJAXBElement).collect(Collectors.toList());
+        Collection<? extends JAXBElement<? extends StopAssignment_VersionStructure>> wrappedPassengerStopAssignments = passengerStopAssignments.stream().map(this::wrapAsJAXBElement).toList();
         stopAssignmentsInFrameRelStructure.getStopAssignment().addAll(wrappedPassengerStopAssignments);
         serviceFrame.setStopAssignments(stopAssignmentsInFrameRelStructure);
 
@@ -184,10 +183,10 @@ public class PublicationDeliveryBuilder {
         }
 
         Collection<NoticeAssignment> noticeAssignments = Streams.concat(serviceJourneyReferencedEntities.getNoticeAssignments().stream(),
-                journeyPatternReferencedEntities.getNoticeAssignments().stream()).collect(Collectors.toList());
+                journeyPatternReferencedEntities.getNoticeAssignments().stream()).toList();
         if (!noticeAssignments.isEmpty()) {
             NoticeAssignmentsInFrame_RelStructure noticeAssignmentsInFrameRelStructure = objectFactory.createNoticeAssignmentsInFrame_RelStructure();
-            noticeAssignmentsInFrameRelStructure.getNoticeAssignment_().addAll(noticeAssignments.stream().map(this::wrapAsJAXBElement).collect(Collectors.toList()));
+            noticeAssignmentsInFrameRelStructure.getNoticeAssignment_().addAll(noticeAssignments.stream().map(this::wrapAsJAXBElement).toList());
             timetableFrame.setNoticeAssignments(noticeAssignmentsInFrameRelStructure);
         }
 
@@ -199,7 +198,7 @@ public class PublicationDeliveryBuilder {
         // if the service journey is used together with DatedServiceJourneys then no day types are defined
         if (!serviceJourneyReferencedEntities.getDayTypes().isEmpty()) {
             DayTypesInFrame_RelStructure dayTypesInFrameRelStructure = objectFactory.createDayTypesInFrame_RelStructure();
-            dayTypesInFrameRelStructure.getDayType_().addAll(serviceJourneyReferencedEntities.getDayTypes().stream().map(this::wrapAsJAXBElement).collect(Collectors.toList()));
+            dayTypesInFrameRelStructure.getDayType_().addAll(serviceJourneyReferencedEntities.getDayTypes().stream().map(this::wrapAsJAXBElement).toList());
             serviceCalendarFrame.setDayTypes(dayTypesInFrameRelStructure);
 
             DayTypeAssignmentsInFrame_RelStructure dayTypeAssignmentsInFrameRelStructure = objectFactory.createDayTypeAssignmentsInFrame_RelStructure();
