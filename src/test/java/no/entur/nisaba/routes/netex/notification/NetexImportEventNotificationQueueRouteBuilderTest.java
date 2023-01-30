@@ -52,7 +52,7 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
 
     private static final String CODESPACE_AVI = "avi";
 
-    @Produce("google-pubsub:{{nisaba.pubsub.project.id}}:NetexExportNotificationQueue")
+    @Produce("google-pubsub:{{marduk.pubsub.project.id}}:NetexExportNotificationQueue")
     protected ProducerTemplate exportNotificationQueueProducerTemplate;
 
     @Produce("direct:parseCreatedAttribute")

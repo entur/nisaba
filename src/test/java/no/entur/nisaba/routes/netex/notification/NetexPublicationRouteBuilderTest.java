@@ -54,7 +54,7 @@ class NetexPublicationRouteBuilderTest extends NisabaRouteBuilderIntegrationTest
     private static final String CODESPACE_ATB = "atb";
     private static final String CODESPACE_ATU = "atu";
 
-    @Produce("google-pubsub:{{nisaba.pubsub.project.id}}:NetexExportNotificationQueue")
+    @Produce("google-pubsub:{{marduk.pubsub.project.id}}:NetexExportNotificationQueue")
     protected ProducerTemplate exportNotificationQueueProducerTemplate;
 
     @EndpointInject("mock:retrieveDatasetCreationTime")
