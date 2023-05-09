@@ -20,8 +20,8 @@ netex:
 
 gcp:
   blobstoreProjectId: entur-ror-dev
-  nisabaPubsubProjectId: entur-ror-dev
-  mardukPubsubProjectId: entur-ror-dev
+  nisabaPubsubProjectId: ent-nisaba-dev
+  mardukPubsubProjectId: ent-marduk-dev
 
   marduk:
     bucketName: marduk-dev

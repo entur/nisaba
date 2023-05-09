@@ -1,2 +1,2 @@
-gcp_pubsub_project=ent-nisaba-prd
+gcp_pubsub_project = "ent-nisaba-prd"
 
