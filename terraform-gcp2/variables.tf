@@ -1,5 +1,9 @@
 #Enviroment variables
 
+variable "gcp_pubsub_project" {
+  description = "The GCP project hosting the PubSub resources"
+}
+
 variable "kube_namespace" {
   description = "The Kubernetes namespace"
   default = "nisaba"
