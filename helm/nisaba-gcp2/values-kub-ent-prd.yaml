@@ -13,8 +13,8 @@ netex:
       bucket: ror-nisaba-exchange-varelager-production
 gcp:
   blobstoreProjectId: entur-ror-prod
-  nisabaPubsubProjectId: entur-ror-prod
-  mardukPubsubProjectId: entur-ror-prod
+  nisabaPubsubProjectId: ent-nisaba-prd
+  mardukPubsubProjectId: ent-marduk-prd
 
   marduk:
     bucketName: marduk-production
