@@ -35,6 +35,8 @@ data:
     camel.component.kafka.sasl-jaas-config=org.apache.kafka.common.security.scram.ScramLoginModule required username="${KAFKAUSERNAME}" password="${KAFKAPASSWORD}";
 
     camel.component.kafka.schema-registry-u-r-l={{ .Values.kafka.registry }}
+    camel.component.kafka.additional-properties[basic.auth.credentials.source]=USER_INFO
+    camel.component.kafka.additional-properties[basic.auth.user.info]=${KAFKAUSERNAME}:${KAFKAPASSWORD}
 
     # PubSub
     nisaba.pubsub.project.id={{ .Values.gcp.nisabaPubsubProjectId }}

@@ -25,8 +25,8 @@ gcp:
 
 
 kafka:
-  brokers: bootstrap.prod-int.kafka.entur.io:9095
-  registry: http://schema-registry.prod-int.kafka.entur.io:8001
+  brokers: entur-kafka-prod-int-entur-prod.aivencloud.com:14019
+  registry: https://entur-kafka-prod-int-entur-prod.aivencloud.com:14009
   topic:
     event: rutedata-dataset-import-event-production
     idempotent: rutedata-dataset-import-event-idempotent-repo-production
