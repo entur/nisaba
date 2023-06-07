@@ -32,8 +32,8 @@ gcp:
 
 
 kafka:
-  brokers: bootstrap.test-int.kafka.entur.io:9095
-  registry: http://schema-registry.test-int.kafka.entur.io:8001
+  brokers: entur-kafka-test-int-entur-test.aivencloud.com:11877
+  registry: https://entur-kafka-test-int-entur-test.aivencloud.com:11867
   topic:
     event: rutedata-dataset-import-event-dev
     idempotent: rutedata-dataset-import-event-idempotent-repo-dev
