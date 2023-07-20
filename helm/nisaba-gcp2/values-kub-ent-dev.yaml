@@ -27,7 +27,7 @@ gcp:
     bucketName: marduk-dev
 
   nisaba:
-    bucketName: ror-nisaba-dev
+    bucketName: nisaba-dev
     exchangeBucketName: ror-nisaba-exchange-dev
 
 
