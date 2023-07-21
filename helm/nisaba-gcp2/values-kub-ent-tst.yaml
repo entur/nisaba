@@ -27,7 +27,7 @@ gcp:
     bucketName: marduk-test
 
   nisaba:
-    bucketName: ror-nisaba-test
+    bucketName: nisaba-test
     exchangeBucketName: ror-nisaba-exchange-test
 
 kafka:
