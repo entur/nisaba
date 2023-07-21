@@ -20,7 +20,7 @@ gcp:
     bucketName: marduk-production
 
   nisaba:
-    bucketName: ror-nisaba-production
+    bucketName: nisaba-production
     exchangeBucketName: ror-nisaba-exchange-production
 
 
