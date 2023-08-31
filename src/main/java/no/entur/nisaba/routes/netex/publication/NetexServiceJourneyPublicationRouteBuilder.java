@@ -35,7 +35,7 @@ import org.rutebanken.netex.model.Route;
 import org.rutebanken.netex.model.ServiceJourney;
 import org.springframework.stereotype.Component;
 
-import javax.xml.bind.JAXBContext;
+import jakarta.xml.bind.JAXBContext;
 import java.time.LocalDateTime;
 import java.util.List;
 
