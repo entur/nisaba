@@ -40,3 +40,4 @@ gradlew.bat
 # local log files
 .log
 /terraform/.terraform/
+/terraform-gcp2/.terraform/
