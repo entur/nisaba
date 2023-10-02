@@ -21,10 +21,13 @@ import no.entur.nisaba.event.DatasetStatHelper;
 import no.entur.nisaba.routes.BaseRouteBuilder;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.ValueBuilder;
+import org.apache.camel.component.kafka.KafkaConstants;
 import org.apache.kafka.common.errors.RecordTooLargeException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
+
+import java.util.UUID;
 
 import static no.entur.nisaba.Constants.FILE_HANDLE;
 import static no.entur.nisaba.Constants.NETEX_FILE_NAME;
@@ -111,7 +114,9 @@ public class NetexCommonFilePublicationRouteBuilder extends BaseRouteBuilder {
                 // explicitly compress the payload due to https://issues.apache.org/jira/browse/KAFKA-4169
                 .marshal().zipFile()
                 .doTry()
+                .setHeader(KafkaConstants.KEY, () -> UUID.randomUUID().toString())
                 .to("kafka:{{nisaba.kafka.topic.common}}?clientId=nisaba-common&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy&valueSerializer=org.apache.kafka.common.serialization.ByteArraySerializer").id("to-kafka-topic-common")
+                .removeHeader(KafkaConstants.KEY)
                 .bean(DatasetStatHelper.class, "addCommonFiles(1)")
                 .doCatch(RecordTooLargeException.class)
                 .log(LoggingLevel.ERROR, "Cannot serialize common file ${header." + FILE_HANDLE + "} (${header." + COMMON_FILE_PART + "}) into Kafka topic, max message size exceeded ${exception.stacktrace} ")
