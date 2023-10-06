@@ -18,7 +18,6 @@ package no.entur.nisaba.services;
 
 import no.entur.nisaba.Constants;
 import no.entur.nisaba.repository.BlobStoreRepository;
-import org.apache.camel.Exchange;
 import org.apache.camel.Header;
 
 import java.io.InputStream;
@@ -34,18 +33,17 @@ public abstract class AbstractBlobStoreService {
         this.repository.setContainerName(containerName);
     }
 
-    public InputStream getBlob(@Header(value = Constants.FILE_HANDLE) String name, Exchange exchange) {
+    public InputStream getBlob(@Header(value = Constants.FILE_HANDLE) String name) {
         return repository.getBlob(name);
     }
 
-    public void uploadBlob(@Header(value = Constants.FILE_HANDLE) String name, InputStream inputStream, Exchange exchange) {
+    public void uploadBlob(@Header(value = Constants.FILE_HANDLE) String name, InputStream inputStream) {
         repository.uploadBlob(name, inputStream);
     }
 
     public void copyBlobToAnotherBucket(@Header(value = Constants.FILE_HANDLE) String sourceName,
                                         @Header(value = Constants.TARGET_CONTAINER) String targetContainerName,
-                                        @Header(value = Constants.TARGET_FILE_HANDLE) String targetName,
-                                        Exchange exchange) {
+                                        @Header(value = Constants.TARGET_FILE_HANDLE) String targetName) {
         repository.copyBlob(containerName, sourceName, targetContainerName, targetName);
     }
 
