@@ -13,7 +13,7 @@ import org.rutebanken.netex.model.Operator;
 import org.rutebanken.netex.model.OperatorRefStructure;
 import org.rutebanken.netex.model.ServiceJourney;
 
-import jakarta.xml.bind.JAXBElement;
+import javax.xml.bind.JAXBElement;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Objects;

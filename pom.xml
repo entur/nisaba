@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.entur.ror</groupId>
         <artifactId>superpom</artifactId>
-        <version>2.3</version>
+        <version>1.64</version>
     </parent>
 
     <groupId>no.entur.nisaba</groupId>
@@ -23,14 +23,15 @@
         <developerConnection>scm:git:ssh://git@github.com:entur/nisaba.git</developerConnection>
     </scm>
     <properties>
+        <java.version>17</java.version>
         <entur.google.pubsub.emulator.download.skip>false</entur.google.pubsub.emulator.download.skip>
-        <camel.version>4.0.1</camel.version>
-        <entur.helpers.version>2.3</entur.helpers.version>
+        <camel.version>3.21.1</camel.version>
+        <entur.helpers.version>1.100</entur.helpers.version>
         <commons-io.version>2.14.0</commons-io.version>
         <avro.version>1.11.3</avro.version>
         <confluent-kafka-client.version>7.5.1</confluent-kafka-client.version>
-        <netex-parser-java.version>3.0.1</netex-parser-java.version>
-        <netex-java-model.version>2.0.14</netex-java-model.version>
+        <netex-parser-java.version>2.2.0</netex-parser-java.version>
+        <netex-java-model.version>1.0.14</netex-java-model.version>
         <woodstox.version>6.5.1</woodstox.version>
 
 

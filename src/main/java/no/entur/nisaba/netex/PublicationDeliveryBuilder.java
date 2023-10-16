@@ -39,7 +39,7 @@ import org.rutebanken.netex.model.TimetableFrame;
 import org.rutebanken.netex.model.TypesOfValueInFrame_RelStructure;
 import org.rutebanken.netex.model.VersionOfObjectRefStructure;
 
-import jakarta.xml.bind.JAXBElement;
+import javax.xml.bind.JAXBElement;
 import javax.xml.namespace.QName;
 import java.time.LocalDateTime;
 import java.util.Collection;
