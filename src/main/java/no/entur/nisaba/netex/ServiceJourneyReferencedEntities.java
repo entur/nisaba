@@ -107,7 +107,7 @@ public class ServiceJourneyReferencedEntities {
                 serviceJourneyReferencedEntities.operatingPeriods = serviceJourneyReferencedEntities.dayTypeAssignments.stream()
                         .map(DayTypeAssignment::getOperatingPeriodRef)
                         .filter(Objects::nonNull)
-                        .map(operatingPeriodRefStructure -> netexCommonEntitiesIndex.getOperatingPeriodIndex().get(operatingPeriodRefStructure.getRef()))
+                        .map(operatingPeriodRefStructure -> netexCommonEntitiesIndex.getOperatingPeriodIndex().get(operatingPeriodRefStructure.getValue().getRef()))
                         .collect(Collectors.toSet());
             }
 
