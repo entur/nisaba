@@ -26,7 +26,7 @@
         <java.version>17</java.version>
         <entur.google.pubsub.emulator.download.skip>false</entur.google.pubsub.emulator.download.skip>
         <camel.version>3.21.2</camel.version>
-        <entur.helpers.version>1.100</entur.helpers.version>
+        <entur.helpers.version>2.5</entur.helpers.version>
         <commons-io.version>2.15.0</commons-io.version>
         <avro.version>1.11.3</avro.version>
         <confluent-kafka-client.version>7.5.2</confluent-kafka-client.version>
