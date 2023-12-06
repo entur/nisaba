@@ -17,6 +17,7 @@
 package no.entur.nisaba;
 
 import com.google.cloud.spring.pubsub.core.PubSubTemplate;
+import jakarta.annotation.PostConstruct;
 import no.entur.nisaba.repository.InMemoryBlobStoreRepository;
 import org.apache.camel.EndpointInject;
 import org.apache.camel.builder.AdviceWith;
@@ -34,7 +35,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 
-import javax.annotation.PostConstruct;
 import java.io.InputStream;
 
 @CamelSpringBootTest
