@@ -14,6 +14,7 @@ common:
     cpu: 2
     memory: 2000
     memoryLimit: 3000
+    env: []
     probes:
       liveness:
         path: /actuator/health/liveness
