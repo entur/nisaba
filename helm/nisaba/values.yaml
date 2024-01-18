@@ -8,16 +8,12 @@ common:
     externalPort: 8080
     internalPort: 8080
   container:
-    labels: { customLogRetention: enabled }
+    labels: {customLogRetention: enabled}
     forceReplicas: 2
-    image: ${artifact.metadata.image}
+    image: <+artifacts.primary.image>
     cpu: 2
     memory: 2000
-    cpuLimit: 3000m
     memoryLimit: 3000
-    envFrom:
-      - secretRef:
-            name: ror-nisaba-secrets
     probes:
       liveness:
         path: /actuator/health/liveness
@@ -39,10 +35,11 @@ common:
     enabled: false
   configmap:
     data:
-      JDK_JAVA_OPTIONS:  -server -Xmx2500m -Xss512k -XX:+UseParallelGC -XX:GCTimeRatio=4 -XX:AdaptiveSizePolicyWeight=90
-        -XX:MinHeapFreeRatio=20 -XX:MaxHeapFreeRatio=40
-        -Dspring.config.location=/etc/application-config/application.properties
-        -Dfile.encoding=UTF-8
+      JDK_JAVA_OPTIONS: -server -Xmx2500m -Xss512k -XX:+UseParallelGC -XX:GCTimeRatio=4
+        -XX:AdaptiveSizePolicyWeight=90 -XX:MinHeapFreeRatio=20 -XX:MaxHeapFreeRatio=40
+        -Dspring.config.location=/etc/application-config/application.properties -Dfile.encoding=UTF-8
       TZ: Europe/Oslo
     enabled: true
     toEnv: true
+  secrets:
+    kafka: [KAFKAPASSWORD, KAFKAUSERNAME]
