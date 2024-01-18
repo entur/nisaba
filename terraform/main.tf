@@ -10,19 +10,6 @@ provider "kubernetes" {
   version = ">= 2.13.1"
 }
 
-
-resource "kubernetes_secret" "ror-nisaba-secret" {
-  metadata {
-    name      = "${var.labels.team}-${var.labels.app}-secrets"
-    namespace = var.kube_namespace
-  }
-
-  data = {
-    "KAFKAUSERNAME" = var.ror-nisaba-kafka-username
-    "KAFKAPASSWORD" = var.ror-nisaba-kafka-password
-  }
-}
-
 # Create pubsub topics and subscriptions
 resource "google_pubsub_topic" "NetexServiceJourneyPublicationDeadLetterQueue" {
   name    = "NetexServiceJourneyPublicationDeadLetterQueue"

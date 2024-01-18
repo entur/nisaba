@@ -6,31 +6,23 @@ variable "gcp_pubsub_project" {
 
 variable "kube_namespace" {
   description = "The Kubernetes namespace"
-  default = "nisaba"
+  default     = "nisaba"
 }
 
 variable "labels" {
   description = "Labels used in all resources"
-  type = map(string)
+  type        = map(string)
   default = {
     manager = "terraform"
-    team = "ror"
-    slack = "talk-ror"
-    app = "nisaba"
+    team    = "ror"
+    slack   = "talk-ror"
+    app     = "nisaba"
   }
-}
-
-variable  ror-nisaba-kafka-username {
-  description = "Nisaba kafka user name"
-}
-
-variable ror-nisaba-kafka-password {
-  description = "Nisaba kafka user password"
 }
 
 variable "bucket_instance_prefix" {
   description = "A prefix for the bucket instance, may be changed if environment is destroyed and then needed again (name collision workaround) - also bucket names must be globally unique"
-  default = "nisaba"
+  default     = "nisaba"
 }
 variable "bucket_instance_suffix" {
   description = "A suffix for the bucket instance, may be changed if environment is destroyed and then needed again (name collision workaround) - also bucket names must be globally unique"
