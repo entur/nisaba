@@ -30,7 +30,7 @@
         <commons-io.version>2.15.1</commons-io.version>
         <avro.version>1.11.3</avro.version>
         <confluent-kafka-client.version>7.6.0</confluent-kafka-client.version>
-        <netex-parser-java.version>3.1.10</netex-parser-java.version>
+        <netex-parser-java.version>3.1.11</netex-parser-java.version>
         <netex-java-model.version>2.0.15</netex-java-model.version>
         <woodstox.version>6.6.1</woodstox.version>
 
