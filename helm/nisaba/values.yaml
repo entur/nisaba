@@ -12,8 +12,8 @@ common:
     forceReplicas: 2
     image: <+artifacts.primary.image>
     cpu: 2
-    memory: 2000
-    memoryLimit: 3000
+    memory: 6000
+    memoryLimit: 7000
     env: []
     probes:
       liveness:
@@ -36,9 +36,6 @@ common:
     enabled: false
   configmap:
     data:
-      JDK_JAVA_OPTIONS: -server -Xmx2500m -Xss512k -XX:+UseParallelGC -XX:GCTimeRatio=4
-        -XX:AdaptiveSizePolicyWeight=90 -XX:MinHeapFreeRatio=20 -XX:MaxHeapFreeRatio=40
-        -Dspring.config.location=/etc/application-config/application.properties -Dfile.encoding=UTF-8
       TZ: Europe/Oslo
     enabled: true
     toEnv: true
