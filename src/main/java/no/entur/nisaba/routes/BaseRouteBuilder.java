@@ -103,10 +103,6 @@ public abstract class BaseRouteBuilder extends RouteBuilder {
         return "log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true&showCachedStreams=false";
     }
 
-    protected void setNewCorrelationId(Exchange e) {
-        e.getIn().setHeader(Constants.CORRELATION_ID, UUID.randomUUID().toString());
-    }
-
     protected void setCorrelationIdIfMissing(Exchange e) {
         e.getIn().setHeader(Constants.CORRELATION_ID, e.getIn().getHeader(Constants.CORRELATION_ID, UUID.randomUUID().toString()));
     }

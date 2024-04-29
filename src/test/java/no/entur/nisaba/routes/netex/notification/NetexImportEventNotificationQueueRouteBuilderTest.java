@@ -99,7 +99,7 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
         context.start();
         exportNotificationQueueProducerTemplate.sendBody(CODESPACE_AVI);
         mockNisabaEventTopic.assertIsSatisfied();
-        NetexImportEvent netexImportEvent = mockNisabaEventTopic.getReceivedExchanges().get(0).getIn().getBody(NetexImportEvent.class);
+        NetexImportEvent netexImportEvent = mockNisabaEventTopic.getReceivedExchanges().getFirst().getIn().getBody(NetexImportEvent.class);
         Assertions.assertEquals("avi", netexImportEvent.getCodespace().toString());
         Assertions.assertEquals(now.truncatedTo(ChronoUnit.MILLIS), LocalDateTime.parse(netexImportEvent.getImportDateTime().toString()));
     }
@@ -146,7 +146,7 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
                         DATASET_ALL_CREATION_TIMES, localDateTimes)
         );
         mockCheckFindChouetteImportKey.assertIsSatisfied();
-        String originalImportKey = mockCheckFindChouetteImportKey.getReceivedExchanges().get(0).getIn().getHeader(DATASET_CHOUETTE_IMPORT_KEY, String.class);
+        String originalImportKey = mockCheckFindChouetteImportKey.getReceivedExchanges().getFirst().getIn().getHeader(DATASET_CHOUETTE_IMPORT_KEY, String.class);
         Assertions.assertNotNull(originalImportKey);
         Assertions.assertEquals(importKey, originalImportKey);
 
