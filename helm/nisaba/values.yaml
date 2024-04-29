@@ -12,8 +12,8 @@ common:
     forceReplicas: 2
     image: <+artifacts.primary.image>
     cpu: 2
-    memory: 6000
-    memoryLimit: 7000
+    memory: 7000
+    memoryLimit: 8000
     env: []
     probes:
       liveness:
