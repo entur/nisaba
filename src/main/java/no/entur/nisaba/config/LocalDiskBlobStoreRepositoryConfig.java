@@ -16,36 +16,23 @@
 
 package no.entur.nisaba.config;
 
-import com.google.cloud.storage.Storage;
-import com.google.cloud.storage.StorageOptions;
+import org.rutebanken.helper.gcp.repository.BlobStoreRepository;
+import org.rutebanken.helper.gcp.repository.LocalDiskBlobStoreRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
+import org.springframework.context.annotation.Scope;
 
-/**
- * Stub implementation of GCS storage for testing purpose.
- */
 @Configuration
-@Profile({"in-memory-blobstore", "local-disk-blobstore"})
-public class GcsStorageStubConfig {
+@Profile("local-disk-blobstore")
+public class LocalDiskBlobStoreRepositoryConfig {
 
-    @Bean
-    public Storage storage() {
-        return getStorage();
-    }
-
-    @Bean
-    public Storage exchangeStorage() {
-        return getStorage();
-    }
-
-    @Bean
-    public Storage otpReportStorage() {
-        return getStorage();
-    }
-
-    private Storage getStorage() {
-        return StorageOptions.newBuilder().setProjectId("1234").build().getService();
-    }
-
+  @Bean
+  @Scope("prototype")
+  BlobStoreRepository blobStoreRepository(
+    @Value("${blobstore.local.folder:files/blob}") String baseFolder
+  ) {
+    return new LocalDiskBlobStoreRepository(baseFolder);
+  }
 }

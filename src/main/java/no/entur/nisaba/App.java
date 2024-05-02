@@ -16,7 +16,7 @@
 
 package no.entur.nisaba;
 
-import no.entur.nisaba.config.GcsStorageConfig;
+import no.entur.nisaba.config.GcsBlobStoreRepositoryConfig;
 import org.apache.camel.builder.RouteBuilder;
 import org.entur.pubsub.base.config.GooglePubSubConfig;
 import org.slf4j.Logger;
@@ -31,7 +31,7 @@ import org.springframework.context.annotation.Import;
  * A spring-boot application that includes a Camel route builder to setup the Camel routes
  */
 @SpringBootApplication(exclude = {UserDetailsServiceAutoConfiguration.class})
-@Import({GcsStorageConfig.class, GooglePubSubConfig.class})
+@Import({GcsBlobStoreRepositoryConfig.class, GooglePubSubConfig.class})
 public class App extends RouteBuilder {
 
     @Value("${nisaba.shutdown.timeout:300}")

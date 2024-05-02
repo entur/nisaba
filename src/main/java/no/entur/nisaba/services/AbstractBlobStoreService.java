@@ -17,8 +17,8 @@
 package no.entur.nisaba.services;
 
 import no.entur.nisaba.Constants;
-import no.entur.nisaba.repository.BlobStoreRepository;
 import org.apache.camel.Header;
+import org.rutebanken.helper.gcp.repository.BlobStoreRepository;
 
 import java.io.InputStream;
 
