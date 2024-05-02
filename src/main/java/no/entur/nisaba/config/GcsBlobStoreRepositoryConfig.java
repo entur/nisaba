@@ -16,31 +16,23 @@
 
 package no.entur.nisaba.config;
 
-import com.google.cloud.storage.Storage;
-import org.rutebanken.helper.gcp.BlobStoreHelper;
+import org.rutebanken.helper.gcp.repository.BlobStoreRepository;
+import org.rutebanken.helper.gcp.repository.GcsBlobStoreRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
+import org.springframework.context.annotation.Scope;
 
 @Configuration
 @Profile("gcs-blobstore")
-public class GcsStorageConfig {
-
-    @Value("${blobstore.gcs.credential.path:#{null}}")
-    private String credentialPath;
-
-    @Value("${blobstore.gcs.project.id}")
-    private String projectId;
+public class GcsBlobStoreRepositoryConfig {
 
     @Bean
-    public Storage storage() {
-        if (credentialPath == null || credentialPath.isEmpty()) {
-            // Use default default gcp credentials
-            return BlobStoreHelper.getStorage(projectId);
-        } else {
-            return BlobStoreHelper.getStorage(credentialPath, projectId);
-        }
+    @Scope("prototype")
+    BlobStoreRepository blobStoreRepository(
+            @Value("${blobstore.gcs.project.id}") String projectId,
+            @Value("${blobstore.gcs.credential.path:#{null}}") String credentialPath) {
+        return new GcsBlobStoreRepository(projectId, credentialPath);
     }
-
 }

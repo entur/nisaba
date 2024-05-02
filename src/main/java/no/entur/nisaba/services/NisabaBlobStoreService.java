@@ -16,7 +16,7 @@
 
 package no.entur.nisaba.services;
 
-import no.entur.nisaba.repository.BlobStoreRepository;
+import org.rutebanken.helper.gcp.repository.BlobStoreRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -27,7 +27,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class NisabaBlobStoreService extends AbstractBlobStoreService {
 
-    public NisabaBlobStoreService(@Value("${blobstore.gcs.nisaba.container.name}") String containerName, @Autowired BlobStoreRepository repository) {
+    public NisabaBlobStoreService(@Value("${blobstore.gcs.nisaba.container.name}") String containerName, BlobStoreRepository repository) {
         super(containerName, repository);
     }
 }

@@ -16,24 +16,30 @@
 
 package no.entur.nisaba.config;
 
+import org.rutebanken.helper.gcp.repository.BlobStoreRepository;
+import org.rutebanken.helper.gcp.repository.InMemoryBlobStoreRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
+import org.springframework.context.annotation.Scope;
 
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Common in-memory map of blobs that simulate different buckets in GCS.
- */
 @Configuration
 @Profile("in-memory-blobstore")
 public class InMemoryBlobStoreRepositoryConfig {
 
-    @Bean
-    public Map<String, Map<String, byte[]>> blobsInContainers() {
-        return Collections.synchronizedMap(new HashMap<>());
-    }
+  @Bean
+  public Map<String, Map<String, byte[]>> blobsInContainers() {
+    return new ConcurrentHashMap<>();
+  }
 
+  @Bean
+  @Scope("prototype")
+  BlobStoreRepository blobStoreRepository(
+    Map<String, Map<String, byte[]>> blobsInContainers
+  ) {
+    return new InMemoryBlobStoreRepository(blobsInContainers);
+  }
 }
