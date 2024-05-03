@@ -18,7 +18,6 @@ package no.entur.nisaba;
 
 import com.google.cloud.spring.pubsub.core.PubSubTemplate;
 import jakarta.annotation.PostConstruct;
-import no.entur.nisaba.repository.InMemoryBlobStoreRepository;
 import org.apache.camel.EndpointInject;
 import org.apache.camel.builder.AdviceWith;
 import org.apache.camel.component.mock.MockEndpoint;
@@ -28,6 +27,7 @@ import org.apache.camel.support.processor.idempotent.MemoryIdempotentRepository;
 import org.apache.camel.test.spring.junit5.CamelSpringBootTest;
 import org.apache.camel.test.spring.junit5.UseAdviceWith;
 import org.junit.jupiter.api.BeforeEach;
+import org.rutebanken.helper.gcp.repository.BlobStoreRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -71,13 +71,13 @@ public abstract class NisabaRouteBuilderIntegrationTestBase {
     protected PubSubTemplate pubSubTemplate;
 
     @Autowired
-    protected InMemoryBlobStoreRepository mardukInMemoryBlobStoreRepository;
+    protected BlobStoreRepository mardukInMemoryBlobStoreRepository;
 
     @Autowired
-    protected InMemoryBlobStoreRepository nisabaInMemoryBlobStoreRepository;
+    protected BlobStoreRepository nisabaInMemoryBlobStoreRepository;
 
     @Autowired
-    protected InMemoryBlobStoreRepository nisabaExchangeInMemoryBlobStoreRepository;
+    protected BlobStoreRepository nisabaExchangeInMemoryBlobStoreRepository;
 
 
     @EndpointInject("mock:sink")
