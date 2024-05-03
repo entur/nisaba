@@ -21,16 +21,8 @@ package no.entur.nisaba.exceptions;
  */
 public class NisabaException extends RuntimeException {
 
-    public NisabaException() {
-        super();
-    }
-
     public NisabaException(String message) {
         super(message);
-    }
-
-    public NisabaException(String message, Throwable throwable) {
-        super(message, throwable);
     }
 
     public NisabaException(Throwable throwable) {

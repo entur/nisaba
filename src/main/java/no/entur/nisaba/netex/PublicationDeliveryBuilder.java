@@ -260,7 +260,7 @@ public class PublicationDeliveryBuilder {
     }
 
     private CompositeFrame getCompositeFrame(PublicationDeliveryStructure publicationDeliveryStructure) {
-        Common_VersionFrameStructure commonVersionFrameStructure = publicationDeliveryStructure.getDataObjects().getCompositeFrameOrCommonFrame().get(0).getValue();
+        Common_VersionFrameStructure commonVersionFrameStructure = publicationDeliveryStructure.getDataObjects().getCompositeFrameOrCommonFrame().getFirst().getValue();
         return ((CompositeFrame) commonVersionFrameStructure);
     }
 

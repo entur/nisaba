@@ -31,8 +31,8 @@ class ListRangeSplitterTest {
     void testLessThanOneFullRange() {
         List<ListRangeSplitter.Range> split = listRangeSplitter.split(100, RANGE_SIZE);
         Assertions.assertEquals(1, split.size());
-        Assertions.assertEquals(1, split.get(0).getLowerBound());
-        Assertions.assertEquals(100, split.get(0).getUpperBound());
+        Assertions.assertEquals(1, split.getFirst().getLowerBound());
+        Assertions.assertEquals(100, split.getFirst().getUpperBound());
     }
 
     @Test
