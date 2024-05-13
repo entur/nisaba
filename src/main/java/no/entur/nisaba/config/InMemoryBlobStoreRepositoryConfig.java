@@ -16,8 +16,8 @@
 
 package no.entur.nisaba.config;
 
-import org.rutebanken.helper.gcp.repository.BlobStoreRepository;
-import org.rutebanken.helper.gcp.repository.InMemoryBlobStoreRepository;
+import org.rutebanken.helper.storage.repository.BlobStoreRepository;
+import org.rutebanken.helper.storage.repository.InMemoryBlobStoreRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
