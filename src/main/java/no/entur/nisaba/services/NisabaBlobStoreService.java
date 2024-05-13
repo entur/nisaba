@@ -16,8 +16,7 @@
 
 package no.entur.nisaba.services;
 
-import org.rutebanken.helper.gcp.repository.BlobStoreRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.rutebanken.helper.storage.repository.BlobStoreRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
