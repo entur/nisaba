@@ -52,12 +52,10 @@ public class PubSubAutoCreateEventNotifier extends EventNotifierSupport {
 
     private void createSubscriptionIfMissing(Endpoint e) {
         GooglePubsubEndpoint gep;
-        if (e instanceof GooglePubsubEndpoint googlePubsubEndpoint) {
-            gep = googlePubsubEndpoint;
-        } else if (e instanceof DefaultInterceptSendToEndpoint defaultInterceptSendToEndpoint) {
-            gep = (GooglePubsubEndpoint) defaultInterceptSendToEndpoint.getOriginalEndpoint();
-        } else {
-            throw new IllegalStateException("Incompatible endpoint: " + e);
+        switch (e) {
+            case GooglePubsubEndpoint googlePubsubEndpoint -> gep = googlePubsubEndpoint;
+            case DefaultInterceptSendToEndpoint defaultInterceptSendToEndpoint -> gep = (GooglePubsubEndpoint) defaultInterceptSendToEndpoint.getOriginalEndpoint();
+            default -> throw new IllegalStateException("Incompatible endpoint: " + e);
         }
         enturGooglePubSubAdmin.createSubscriptionIfMissing(gep.getDestinationName());
     }

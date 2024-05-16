@@ -30,7 +30,7 @@ import static no.entur.nisaba.Constants.DATE_TIME_FORMATTER;
 /**
  * Create the Avro NeTEx import event.
  */
-@Component("NetexImportEventFactory")
+@Component("netexImportEventFactory")
 public class NetexImportEventFactory {
 
     private final String mardukBucketName;

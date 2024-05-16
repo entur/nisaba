@@ -22,6 +22,9 @@ resource "google_pubsub_subscription" "NetexServiceJourneyPublicationDeadLetterQ
   topic   = google_pubsub_topic.NetexServiceJourneyPublicationDeadLetterQueue.name
   project = var.gcp_pubsub_project
   labels  = var.labels
+  expiration_policy {
+      ttl = ""
+    }
 }
 
 resource "google_pubsub_topic" "NetexServiceJourneyPublicationQueue" {
