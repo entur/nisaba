@@ -25,7 +25,4 @@ public class NisabaException extends RuntimeException {
         super(message);
     }
 
-    public NisabaException(Throwable throwable) {
-        super(throwable);
-    }
 }
