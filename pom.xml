@@ -27,7 +27,7 @@
         <entur.google.pubsub.emulator.download.skip>false</entur.google.pubsub.emulator.download.skip>
         <!-- Camel cannot be upgraded before CAMEL-20682 is fixed -->
         <camel.version>4.3.0</camel.version>
-        <entur.helpers.version>2.24</entur.helpers.version>
+        <entur.helpers.version>2.25</entur.helpers.version>
         <commons-io.version>2.16.1</commons-io.version>
         <avro.version>1.11.3</avro.version>
         <confluent-kafka-client.version>7.6.1</confluent-kafka-client.version>
