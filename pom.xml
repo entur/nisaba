@@ -33,7 +33,7 @@
         <confluent-kafka-client.version>7.6.1</confluent-kafka-client.version>
         <netex-parser-java.version>3.1.16</netex-parser-java.version>
         <netex-java-model.version>2.0.15</netex-java-model.version>
-        <woodstox.version>6.6.2</woodstox.version>
+        <woodstox.version>7.0.0</woodstox.version>
 
 
         <!-- empty argLine property, the value is set up by Jacoco during unit tests execution -->
