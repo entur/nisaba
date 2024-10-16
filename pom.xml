@@ -26,7 +26,7 @@
         <java.version>21</java.version>
         <entur.google.pubsub.emulator.download.skip>false</entur.google.pubsub.emulator.download.skip>
         <!-- Camel cannot be upgraded before CAMEL-20682 is fixed -->
-        <camel.version>4.3.0</camel.version>
+        <camel.version>4.8.0</camel.version>
         <entur.helpers.version>2.32</entur.helpers.version>
         <commons-io.version>2.17.0</commons-io.version>
         <avro.version>1.12.0</avro.version>
@@ -163,11 +163,17 @@
         </dependency>
         <dependency>
             <groupId>org.apache.camel.springboot</groupId>
-            <artifactId>camel-kubernetes-starter</artifactId>
+            <artifactId>camel-kubernetes-cluster-service-starter</artifactId>
         </dependency>
+
+
         <dependency>
             <groupId>org.apache.camel.springboot</groupId>
             <artifactId>camel-file-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.camel.springboot</groupId>
+            <artifactId>camel-file-cluster-service-starter</artifactId>
         </dependency>
         <dependency>
             <groupId>org.apache.camel.springboot</groupId>
@@ -307,5 +313,12 @@
             </plugin>
         </plugins>
     </build>
+    <repositories>
+        <repository>
+            <id>confluent</id>
+            <name>Confluent Repository</name>
+            <url>https://packages.confluent.io/maven/</url>
+        </repository>
+    </repositories>
 
 </project>

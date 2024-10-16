@@ -13,11 +13,12 @@ data:
     server.port={{ .Values.common.service.internalPort }}
 
     # Camel
-    camel.springboot.name=Nisaba
-    camel.springboot.streamCachingEnabled=false
-    camel.springboot.streamCachingSpoolEnabled=true
+    camel.main.name=Nisaba
+    camel.main.stream-caching-enabled=false
+    camel.main.stream-caching-spool-enabled=true
     camel.dataformat.jackson.module-refs=jacksonJavaTimeModule
     camel.cluster.kubernetes.enabled=true
+    camel.cluster.file.enabled=false
     camel.cluster.kubernetes.cluster-labels[app]=nisaba
     camel.cluster.kubernetes.config-map-name=nisaba-leaders
     camel.servlet.mapping.context-path=/services/*
