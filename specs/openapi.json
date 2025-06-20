@@ -1,0 +1,71 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Nisaba Timetable Import Info API",
+    "version": "1.0"
+  },
+  "servers": [
+    {
+      "url": "http://0.0.0.0/services"
+    }
+  ],
+  "tags": [
+    {
+      "name": "",
+      "description": "Wildcard definitions necessary to get Jetty to match authorization filters to endpoints with path params"
+    },
+    {
+      "name": "/timetable-import-info"
+    }
+  ],
+  "paths": {
+    "/timetable-import-info/import_date": {
+      "get": {
+        "tags": [
+          "/timetable-import-info"
+        ],
+        "summary": "Return the date of the latest NeTEx import for all codespaces",
+        "operationId": "verb1",
+        "responses": {
+          "200": {
+            "description": "success"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        }
+      }
+    },
+    "/timetable-import-info/import_date/{codespace}": {
+      "get": {
+        "tags": [
+          "/timetable-import-info"
+        ],
+        "summary": "Return the date of the latest NeTEx import for a given codespace",
+        "operationId": "verb2",
+        "parameters": [
+          {
+            "name": "codespace",
+            "in": "path",
+            "description": "Codespace of the data provider",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "success"
+          },
+          "404": {
+            "description": "Unknown codespace"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        }
+      }
+    }
+  }
+}

@@ -54,6 +54,10 @@ jobs:
                   -Dsonar.projectName=${SONAR_PROJECT_NAME} \
                   -Dsonar.host.url=https://sonarcloud.io \
                   -Dsonar.token=${SONAR_TOKEN}
+  Openapi-lint:
+    needs: [maven-verify]
+    uses: entur/gha-api/.github/workflows/lint.yml@v3
+    secrets: inherit
   docker-build:
     if: github.repository_owner == 'entur' && github.event_name == 'push' && github.ref == 'refs/heads/master'
     needs: [maven-verify]
