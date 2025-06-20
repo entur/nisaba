@@ -44,14 +44,12 @@ public class NetexImportEventFactory {
                                                    @Header(value = Constants.DATASET_LATEST_CREATION_TIME) LocalDateTime creationDate,
                                                    @Header(value = Constants.DATASET_IMPORT_KEY) String importKey,
                                                    @Header(value = Constants.DATASET_CHOUETTE_IMPORT_KEY) String chouetteImportKey,
-                                                   @Header(value = Constants.DATASET_STAT) DatasetStat datasetStat,
                                                    @Header(value = Constants.DATASET_PUBLISHED_FILE_NAME) String publishedFileName
 
     ) {
         Assert.notNull(codespace, "codespace was null");
         Assert.notNull(creationDate, "creationDate was null");
         Assert.notNull(importKey, "importKey was null");
-        Assert.notNull(datasetStat, "datasetStat was null");
         Assert.notNull(publishedFileName, "publishedFileName was null");
 
         String originalDatasetURI = "";
@@ -65,8 +63,8 @@ public class NetexImportEventFactory {
                 .setPublishedDatasetURI("gs://" + mardukBucketName + "/" + publishedFileName)
                 .setPublishedDatasetPublicLink("https://storage.googleapis.com/" + mardukBucketName + "/" + publishedFileName)
                 .setOriginalDatasetURI(originalDatasetURI)
-                .setServiceJourneys(datasetStat.getNbServiceJourneys())
-                .setCommonFiles(datasetStat.getNbCommonFiles())
+                .setServiceJourneys(0)
+                .setCommonFiles(0)
                 .build();
 
     }

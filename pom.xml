@@ -81,11 +81,6 @@
         </dependency>
         <dependency>
             <groupId>org.entur</groupId>
-            <artifactId>netex-parser-java</artifactId>
-            <version>${netex-parser-java.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.entur</groupId>
             <artifactId>netex-java-model</artifactId>
             <version>${netex-java-model.version}</version>
         </dependency>

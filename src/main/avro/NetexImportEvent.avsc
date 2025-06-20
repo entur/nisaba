@@ -42,13 +42,13 @@
          "name":"serviceJourneys",
          "type":"int",
          "default": 0,
-         "doc" : "Number of service journeys in this dataset"
+         "doc" : "Number of service journeys in this dataset. Obsolete, always equals to 0"
       },
       {
          "name":"commonFiles",
          "type":"int",
          "default": 0,
-         "doc" : "Number of common files in this dataset"
+         "doc" : "Number of common files in this dataset. Obsolete, always equals to 0"
       }
    ]
 }

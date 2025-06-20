@@ -20,7 +20,6 @@ import no.entur.nisaba.Constants;
 import no.entur.nisaba.NisabaRouteBuilderIntegrationTestBase;
 import no.entur.nisaba.TestApp;
 import no.entur.nisaba.avro.NetexImportEvent;
-import no.entur.nisaba.event.DatasetStat;
 import no.entur.nisaba.event.NetexImportEventKeyFactory;
 import org.apache.camel.EndpointInject;
 import org.apache.camel.Produce;
@@ -44,7 +43,6 @@ import static no.entur.nisaba.Constants.CURRENT_AGGREGATED_NETEX_FILENAME;
 import static no.entur.nisaba.Constants.DATASET_ALL_CREATION_TIMES;
 import static no.entur.nisaba.Constants.DATASET_CHOUETTE_IMPORT_KEY;
 import static no.entur.nisaba.Constants.DATASET_CODESPACE;
-import static no.entur.nisaba.Constants.DATASET_STAT;
 
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = TestApp.class)
@@ -81,17 +79,12 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
     void testNotification() throws Exception {
 
         AdviceWith.adviceWith(context, "netex-export-notification-queue", a -> a.weaveByToUri("direct:retrieveDatasetCreationTime").replace().to("mock:retrieveDatasetCreationTime"));
-        AdviceWith.adviceWith(context, "notify-consumers-if-new", a -> a.weaveByToUri("direct:publishDataset").replace().to("mock:publishDataset"));
         AdviceWith.adviceWith(context, "notify-consumers", a -> a.weaveById("to-kafka-topic-event").replace().to("mock:nisabaEventTopic"));
-        AdviceWith.adviceWith(context, "publish-common-file", a -> a.weaveById("to-kafka-topic-common").replace().to("mock:nisabaCommonTopic"));
-        AdviceWith.adviceWith(context, "process-service-journey", a -> a.weaveById("to-kafka-topic-servicejourney").replace().to("mock:nisabaServiceJourneyTopic"));
 
         LocalDateTime now = LocalDateTime.now();
         mockRetrieveDatasetCreationTime.whenAnyExchangeReceived(exchange -> exchange.getIn().setHeader(Constants.DATASET_LATEST_CREATION_TIME, now));
         mockNisabaEventTopic.expectedMessageCount(1);
         mockNisabaEventTopic.setResultWaitTime(30000);
-
-        mockPublishDataset.whenAnyExchangeReceived(e -> e.getIn().setHeader(DATASET_STAT, new DatasetStat()));
 
         mardukInMemoryBlobStoreRepository.uploadBlob(BLOBSTORE_PATH_OUTBOUND + "netex/rb_" + CODESPACE_AVI + "-" + CURRENT_AGGREGATED_NETEX_FILENAME,
                 getClass().getResourceAsStream("/no/entur/nisaba/netex/import/rb_avi-aggregated-netex.zip"));
@@ -108,10 +101,7 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
     void testParseCreatedAttribute() throws Exception {
 
         AdviceWith.adviceWith(context, "parse-created-attribute", a -> a.weaveAddLast().to("mock:checkCreatedAttribute"));
-        AdviceWith.adviceWith(context, "notify-consumers-if-new", a -> a.weaveByToUri("direct:publishDataset").replace().to("mock:sink"));
         AdviceWith.adviceWith(context, "notify-consumers", a -> a.weaveById("to-kafka-topic-event").replace().to("mock:nisabaEventTopic"));
-        AdviceWith.adviceWith(context, "publish-common-file", a -> a.weaveById("to-kafka-topic-common").replace().to("mock:nisabaCommonTopic"));
-        AdviceWith.adviceWith(context, "process-service-journey", a -> a.weaveById("to-kafka-topic-servicejourney").replace().to("mock:nisabaServiceJourneyTopic"));
 
         mockCheckCreatedAttribute.expectedBodiesReceived(LocalDateTime.parse("2021-04-13T09:09:45.409"));
 
@@ -124,11 +114,7 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
     void testFindChouetteImportKey() throws Exception {
 
         AdviceWith.adviceWith(context, "find-chouette-import-key", a -> a.weaveAddLast().to("mock:checkFindChouetteImportKey"));
-        AdviceWith.adviceWith(context, "notify-consumers-if-new", a -> a.weaveByToUri("direct:publishDataset").replace().to("mock:sink"));
         AdviceWith.adviceWith(context, "notify-consumers", a -> a.weaveById("to-kafka-topic-event").replace().to("mock:nisabaEventTopic"));
-        AdviceWith.adviceWith(context, "publish-common-file", a -> a.weaveById("to-kafka-topic-common").replace().to("mock:nisabaCommonTopic"));
-        AdviceWith.adviceWith(context, "process-service-journey", a -> a.weaveById("to-kafka-topic-servicejourney").replace().to("mock:nisabaServiceJourneyTopic"));
-
 
         List<LocalDateTime> localDateTimes = List.of(
                 LocalDateTime.of(2021, 6, 4, 10, 10, 0, 0),
