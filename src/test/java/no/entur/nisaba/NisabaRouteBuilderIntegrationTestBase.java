@@ -26,6 +26,10 @@ import org.apache.camel.spi.IdempotentRepository;
 import org.apache.camel.support.processor.idempotent.MemoryIdempotentRepository;
 import org.apache.camel.test.spring.junit5.CamelSpringBootTest;
 import org.apache.camel.test.spring.junit5.UseAdviceWith;
+import org.entur.pubsub.base.EnturGooglePubSubAdmin;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.rutebanken.helper.storage.repository.BlobStoreRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,14 +38,23 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.testcontainers.containers.PubSubEmulatorContainer;
+import org.testcontainers.utility.DockerImageName;
 
 import java.io.InputStream;
 
 @CamelSpringBootTest
 @UseAdviceWith
-@ActiveProfiles({"test", "default", "in-memory-blobstore", "google-pubsub-emulator", "google-pubsub-autocreate"})
+@ActiveProfiles({"test", "default", "in-memory-blobstore", "google-pubsub-autocreate"})
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 public abstract class NisabaRouteBuilderIntegrationTestBase {
+
+    private static PubSubEmulatorContainer pubsubEmulator;
+
+    @Autowired
+    private EnturGooglePubSubAdmin enturGooglePubSubAdmin;
 
     @TestConfiguration
     static class TestConfig {
@@ -90,10 +103,43 @@ public abstract class NisabaRouteBuilderIntegrationTestBase {
         nisabaExchangeInMemoryBlobStoreRepository.setContainerName(nisabaExchangeContainerName);
     }
 
+    @BeforeAll
+    public static void init() {
+        pubsubEmulator =
+                new PubSubEmulatorContainer(
+                        DockerImageName.parse(
+                                "gcr.io/google.com/cloudsdktool/cloud-sdk:emulators"
+                        )
+                );
+        pubsubEmulator.start();
+    }
+
+    @AfterAll
+    public static void tearDown() {
+        pubsubEmulator.stop();
+    }
+
     @BeforeEach
     void mockKafkaConsumers() throws Exception {
         AdviceWith.adviceWith(context, "from-kafka-topic-event", a -> a.replaceFromWith("direct:mock-from-kafka-topic-event"));
 
+    }
+
+    @AfterEach
+    public void teardown() {
+        enturGooglePubSubAdmin.deleteAllSubscriptions();
+    }
+
+    @DynamicPropertySource
+    static void emulatorProperties(DynamicPropertyRegistry registry) {
+        registry.add(
+                "spring.cloud.gcp.pubsub.emulator-host",
+                pubsubEmulator::getEmulatorEndpoint
+        );
+        registry.add(
+                "camel.component.google-pubsub.endpoint",
+                pubsubEmulator::getEmulatorEndpoint
+        );
     }
 
 
