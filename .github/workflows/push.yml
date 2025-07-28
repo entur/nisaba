@@ -56,7 +56,7 @@ jobs:
                   -Dsonar.token=${SONAR_TOKEN}
   Openapi-lint:
     needs: [maven-verify]
-    uses: entur/gha-api/.github/workflows/lint.yml@v3
+    uses: entur/gha-api/.github/workflows/lint.yml@v4
     secrets: inherit
   docker-build:
     if: github.repository_owner == 'entur' && github.event_name == 'push' && github.ref == 'refs/heads/master'
