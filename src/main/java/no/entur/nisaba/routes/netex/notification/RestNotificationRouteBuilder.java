@@ -73,23 +73,17 @@ public class RestNotificationRouteBuilder extends BaseRouteBuilder {
 
         restConfiguration()
                 .component("servlet")
-                .contextPath("/services")
+                .contextPath("")
                 .bindingMode(RestBindingMode.off)
                 .endpointProperty("matchOnUriPrefix", "true")
                 .apiContextPath("/swagger.json")
-                .apiProperty("api.title", "Nisaba Timetable Import Info API").apiProperty("api.version", "1.0");
 
-        rest("")
-                .apiDocs(false)
-                .description("Wildcard definitions necessary to get Jetty to match authorization filters to endpoints with path params")
-                .get()
-                .to("direct:adminRouteAuthorizeGet")
-                .post()
-                .to("direct:adminRouteAuthorizePost")
-                .put()
-                .to("direct:adminRouteAuthorizePut")
-                .delete()
-                .to("direct:adminRouteAuthorizeDelete");
+                .apiProperty("api.title", "Timetable Import Info API")
+                .apiProperty("api.version", "1.0")
+                .apiProperty("api.description", "Provide for each codespace the date of the latest successful NeTEx dataset import")
+
+                .apiProperty("schemes", "https")
+                .apiProperty("host", "api.entur.io/timetable-public/v1/timetable-import-info");
 
         String commonApiDocEndpoint = "http:" + host + ":" + port + "/services/swagger.json?bridgeEndpoint=true";
 
