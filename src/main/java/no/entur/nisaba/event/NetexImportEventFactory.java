@@ -66,6 +66,5 @@ public class NetexImportEventFactory {
                 .setServiceJourneys(0)
                 .setCommonFiles(0)
                 .build();
-
     }
 }
