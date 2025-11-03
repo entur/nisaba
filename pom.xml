@@ -15,7 +15,7 @@
     <version>0.0.1-SNAPSHOT</version>
 
     <name>nisaba</name>
-    <description>Backend integration</description>
+    <description>Publication of timetable import events to Kafka repository</description>
     <url>https://github.com/entur/nisaba</url>
 
     <scm>
@@ -32,7 +32,6 @@
         <netex-parser-java.version>3.1.63</netex-parser-java.version>
         <netex-java-model.version>2.0.15</netex-java-model.version>
         <woodstox.version>7.1.1</woodstox.version>
-
 
         <!-- empty argLine property, the value is set up by Jacoco during unit tests execution -->
         <argLine/>
@@ -79,11 +78,6 @@
                     <artifactId>protobuf-lite</artifactId>
                 </exclusion>
             </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>org.entur</groupId>
-            <artifactId>netex-parser-java</artifactId>
-            <version>${netex-parser-java.version}</version>
         </dependency>
         <dependency>
             <groupId>org.entur</groupId>
@@ -135,14 +129,6 @@
         <dependency>
             <groupId>org.apache.camel.springboot</groupId>
             <artifactId>camel-xpath-starter</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.camel.springboot</groupId>
-            <artifactId>camel-xslt-starter</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.camel.springboot</groupId>
-            <artifactId>camel-xslt-saxon-starter</artifactId>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.woodstox</groupId>

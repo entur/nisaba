@@ -1,5 +1,5 @@
 
-# Nisaba [![CircleCI](https://circleci.com/gh/entur/nisaba/tree/master.svg?style=svg)](https://circleci.com/gh/entur/nisaba/tree/master)
+# Nisaba
 
 Nisaba publishes events on the Kafka cluster when new timetable datasets are available.
 

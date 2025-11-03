@@ -87,7 +87,7 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .routeId("netex-export-notification-queue");
 
         from("direct:downloadNetexDataset")
-                .streamCaching()
+                .streamCache("true")
                 .log(LoggingLevel.INFO, correlation() + "Downloading NeTEx dataset")
                 .setHeader(FILE_HANDLE, header(DATASET_PUBLISHED_FILE_NAME))
                 .to("direct:getMardukBlob")
@@ -133,7 +133,6 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .stop()
                 .end()
                 .log(LoggingLevel.INFO, correlation() + "This is a new dataset. Notifying consumers")
-                .to("direct:publishDataset")
                 .to("direct:notifyConsumers")
                 .log(LoggingLevel.INFO, correlation() + "Dataset processing complete")
                 .end()

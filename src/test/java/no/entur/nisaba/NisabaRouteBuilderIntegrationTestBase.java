@@ -43,7 +43,6 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PubSubEmulatorContainer;
 import org.testcontainers.utility.DockerImageName;
 
-import java.io.InputStream;
 
 @CamelSpringBootTest
 @UseAdviceWith
@@ -65,7 +64,6 @@ public abstract class NisabaRouteBuilderIntegrationTestBase {
         }
 
     }
-
 
     @Value("${blobstore.gcs.marduk.container.name}")
     private String mardukContainerName;
@@ -143,7 +141,4 @@ public abstract class NisabaRouteBuilderIntegrationTestBase {
     }
 
 
-    protected InputStream getTestNetexArchiveAsStream() {
-        return getClass().getResourceAsStream("/no/rutebanken/nisaba/routes/file/beans/netex.zip");
-    }
 }

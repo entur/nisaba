@@ -36,5 +36,3 @@ kafka:
   topic:
     event: rutedata-dataset-import-event-staging
     idempotent: rutedata-dataset-import-event-idempotent-repo-staging
-    common: rutedata-dataset-import-common-staging
-    servicejourney: rutedata-dataset-import-service-journey-staging
