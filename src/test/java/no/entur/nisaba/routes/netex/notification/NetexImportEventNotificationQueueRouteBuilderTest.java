@@ -37,6 +37,7 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeSet;
 
 import static no.entur.nisaba.Constants.BLOBSTORE_PATH_OUTBOUND;
 import static no.entur.nisaba.Constants.CURRENT_AGGREGATED_NETEX_FILENAME;
@@ -136,6 +137,45 @@ class NetexImportEventNotificationQueueRouteBuilderTest extends NisabaRouteBuild
         Assertions.assertNotNull(originalImportKey);
         Assertions.assertEquals(importKey, originalImportKey);
 
+    }
+
+    @Test
+    void testRetrieveDatasetCreationTimeWithMissingCreatedAttribute() throws Exception {
+
+        // Mock out the Kafka endpoint to avoid broker configuration issues
+        AdviceWith.adviceWith(context, "notify-consumers", a -> a.weaveById("to-kafka-topic-event").replace().to("mock:nisabaEventTopic"));
+
+        ProducerTemplate retrieveDatasetCreationTimeTemplate = context.createProducerTemplate();
+
+        context.start();
+
+        // Load the test zip file that contains both XML files with and without the created attribute
+        byte[] zipContent = IOUtils.toByteArray(getClass().getResourceAsStream("/no/entur/nisaba/netex/import/rb_test-missing-created-aggregated-netex.zip"));
+
+        // The zip file contains:
+        // 1. _AVI_shared_data.xml - has created="2021-04-13T09:09:45.409"
+        // 2. _TEST_missing_created_attribute.xml - does NOT have the created attribute
+
+        Object result = retrieveDatasetCreationTimeTemplate.requestBody("direct:retrieveDatasetCreationTime", zipContent);
+
+        // Verify the result is a TreeSet containing both creation times
+        Assertions.assertNotNull(result, "Result should not be null");
+        Assertions.assertInstanceOf(TreeSet.class, result, "Result should be a TreeSet");
+
+        @SuppressWarnings("unchecked")
+        TreeSet<LocalDateTime> creationTimes = (TreeSet<LocalDateTime>) result;
+
+        // Should contain exactly two elements (one valid, one EPOCH)
+        Assertions.assertEquals(2, creationTimes.size(),
+            "Should contain two creation times: one valid and one EPOCH placeholder");
+
+        LocalDateTime expectedValid = LocalDateTime.parse("2021-04-13T09:09:45.409");
+
+        // TreeSet sorts in natural order, so EPOCH should be first
+        Assertions.assertEquals(NetexImportNotificationQueueRouteBuilder.EPOCH, creationTimes.first(),
+            "The first creation time should be EPOCH (1970-01-01T00:00:00)");
+        Assertions.assertEquals(expectedValid, creationTimes.last(),
+            "The last creation time should match the value from _AVI_shared_data.xml");
     }
 
 

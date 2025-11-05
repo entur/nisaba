@@ -29,6 +29,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
@@ -52,7 +53,10 @@ import static no.entur.nisaba.Constants.XML_NAMESPACE_NETEX;
 @Component
 public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
 
+    static final LocalDateTime EPOCH = LocalDateTime.ofEpochSecond(0, 0, ZoneOffset.UTC);
+
     private static final String EXPORT_FILE_NAME = "netex/rb_${body}-" + Constants.CURRENT_AGGREGATED_NETEX_FILENAME;
+
     private final String privateBucket;
     private final Set<String> whiteListedCodespaces;
 
@@ -116,12 +120,13 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
 
         from("direct:parseCreatedAttribute")
                 .setBody(xpath("/netex:PublicationDelivery/netex:dataObjects/netex:CompositeFrame/@created", String.class, XML_NAMESPACE_NETEX))
-                .filter(PredicateBuilder.or(body().isNull(), body().isEqualTo("")))
+                .choice()
+                .when(PredicateBuilder.or(body().isNull(), body().isEqualTo("")))
                 .log(LoggingLevel.WARN, correlation() + "'created' attribute not found in file ${header." + Exchange.FILE_NAME + "}")
-                .stop()
-                //end filter
-                .end()
+                .setBody(constant(EPOCH))
+                .otherwise()
                 .bean(LocalDateTime.class, "parse(${body})")
+                .end()
                 .routeId("parse-created-attribute");
 
         // Use an idempotent repository backed by a Kafka topic to identify duplicate import events.
