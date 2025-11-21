@@ -72,10 +72,9 @@ public class RestNotificationRouteBuilder extends BaseRouteBuilder {
 
 
         restConfiguration()
-                .component("servlet")
-                .contextPath("")
+                .component("platform-http")
+                .contextPath("/services")
                 .bindingMode(RestBindingMode.off)
-                .endpointProperty("matchOnUriPrefix", "true")
                 .apiContextPath("/swagger.json")
 
                 .apiProperty("api.title", "Timetable Import Info API")

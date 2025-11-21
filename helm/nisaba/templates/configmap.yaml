@@ -20,7 +20,6 @@ data:
     camel.cluster.file.enabled=false
     camel.cluster.kubernetes.cluster-labels[app]=nisaba
     camel.cluster.kubernetes.config-map-name=nisaba-leaders
-    camel.servlet.mapping.context-path=/services/*
     # the Camel shutdown timeout must be shorter than the Kubernetes terminationGracePeriod
     nisaba.shutdown.timeout=25
 
