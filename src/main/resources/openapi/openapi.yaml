@@ -1,8 +1,8 @@
 openapi: 3.0.0
 info:
-  title: Timetable Import Info API
-  description: Provide for each codespace the date of the latest successful NeTEx dataset import
-  version: "1.0"
+  title: Timetable Import Info
+  description: Provides the date of the latest successful NeTEx dataset import for each codespace. This API is used by client systems to track when timetable data was last updated and to determine if new data is available for processing.
+  version: "1.0.0"
   contact:
     name: Entur
     url: https://developer.entur.org
@@ -13,10 +13,14 @@ info:
 servers:
   - url: https://api.entur.io/timetable-public/v1
     description: Production server
+  - url: https://api.staging.entur.io/timetable-public/v1
+    description: Staging server
+  - url: https://api.dev.entur.io/timetable-public/v1
+    description: Development server
 
 tags:
-  - name: timetable-import-info
-    description: Timetable import information endpoints
+  - name: Import Status
+    description: Status of the latest import dates for timetable datasets by codespace
 
 paths:
   /timetable-import-info/import_date:

@@ -67,7 +67,7 @@ jobs:
     uses: entur/gha-api/.github/workflows/publish.yml@v4
     secrets: inherit
     with:
-      visibility: 'partner'
+      visibility: 'public'
       spec: 'src/main/resources/openapi/openapi.yaml'
   docker-build:
     if: github.repository_owner == 'entur' && github.event_name == 'push' && github.ref == 'refs/heads/master'
