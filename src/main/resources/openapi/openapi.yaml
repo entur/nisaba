@@ -1,0 +1,99 @@
+openapi: 3.0.0
+info:
+  title: Timetable Import Info
+  description: Provides the date of the latest successful NeTEx dataset import for each codespace. This API is used by client systems to track when timetable data was last updated and to determine if new data is available for processing.
+  version: "1.0.0"
+  contact:
+    name: Entur
+    url: https://developer.entur.org
+  license:
+    name: EUPL-1.2
+    url: https://joinup.ec.europa.eu/software/page/eupl
+
+servers:
+  - url: https://api.entur.io/timetable-public/v1
+    description: Production server
+  - url: https://api.staging.entur.io/timetable-public/v1
+    description: Staging server
+  - url: https://api.dev.entur.io/timetable-public/v1
+    description: Development server
+
+tags:
+  - name: Import Status
+    description: Status of the latest import dates for timetable datasets by codespace
+
+paths:
+  /timetable-import-info/import_date:
+    get:
+      tags:
+        - timetable-import-info
+      summary: Return the date of the latest NeTEx import for all codespaces
+      description: Returns a map of codespace identifiers to their latest import timestamps
+      operationId: getAllImportDates
+      responses:
+        '200':
+          description: Successfully retrieved import dates
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: string
+                  format: date-time
+              example:
+                avi: "2021-04-21T11:51:59Z"
+                rut: "2021-05-15T09:30:00Z"
+                atb: "2021-06-10T14:20:30Z"
+            text/plain:
+              schema:
+                type: object
+                additionalProperties:
+                  type: string
+                  format: date-time
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: string
+            text/plain:
+              schema:
+                type: string
+
+  /timetable-import-info/import_date/{codespace}:
+    get:
+      tags:
+        - timetable-import-info
+      summary: Return the date of the latest NeTEx import for a given codespace
+      description: Returns the import date for a specific codespace identifier
+      operationId: getImportDateByCodespace
+      parameters:
+        - name: codespace
+          in: path
+          description: Codespace of the data provider (e.g., 'avi', 'rut', 'atb')
+          required: true
+          schema:
+            type: string
+          example: avi
+      responses:
+        '200':
+          description: Successfully retrieved import date
+          content:
+            text/plain:
+              schema:
+                type: string
+                format: date-time
+              example: "2021-04-21T11:51:59"
+        '404':
+          description: Unknown codespace - no import data available
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: "Codespace not found"
+        '500':
+          description: Internal server error
+          content:
+            text/plain:
+              schema:
+                type: string

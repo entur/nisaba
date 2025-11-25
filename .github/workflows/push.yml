@@ -54,12 +54,21 @@ jobs:
                   -Dsonar.projectName=${SONAR_PROJECT_NAME} \
                   -Dsonar.host.url=https://sonarcloud.io \
                   -Dsonar.token=${SONAR_TOKEN}
-  Openapi-lint:
+  openapi-lint:
     needs: [maven-verify]
     uses: entur/gha-api/.github/workflows/lint.yml@v4
     secrets: inherit
     with:
+      spec: 'src/main/resources/openapi/openapi.yaml'
       upload_to_bucket: ${{ github.repository_owner == 'entur' && github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+  openapi-publish:
+    if: github.repository_owner == 'entur' && github.event_name == 'push' && github.ref == 'refs/heads/master'
+    needs: [ openapi-lint ]
+    uses: entur/gha-api/.github/workflows/publish.yml@v4
+    secrets: inherit
+    with:
+      visibility: 'public'
+      spec: 'src/main/resources/openapi/openapi.yaml'
   docker-build:
     if: github.repository_owner == 'entur' && github.event_name == 'push' && github.ref == 'refs/heads/master'
     needs: [maven-verify]
