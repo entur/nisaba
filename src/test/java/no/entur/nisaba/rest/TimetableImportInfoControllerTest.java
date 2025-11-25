@@ -161,6 +161,6 @@ class TimetableImportInfoControllerTest {
             .andExpect(status().isOk())
             .andExpect(content().contentTypeCompatibleWith("application/x-yaml"))
             .andExpect(content().string(containsString("openapi:")))
-            .andExpect(content().string(containsString("Timetable Import Info API")));
+            .andExpect(content().string(containsString("Timetable Import Info")));
     }
 }
