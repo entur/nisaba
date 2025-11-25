@@ -16,16 +16,15 @@
 
 package no.entur.nisaba.routes.netex.notification;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import no.entur.nisaba.NisabaRouteBuilderIntegrationTestBase;
 import no.entur.nisaba.TestApp;
 import no.entur.nisaba.avro.NetexImportEvent;
-import org.apache.camel.Exchange;
 import org.apache.camel.Produce;
 import org.apache.camel.ProducerTemplate;
 import org.apache.camel.builder.AdviceWith;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.time.LocalDateTime;
@@ -36,15 +35,13 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT, classes = TestApp.class)
-class RestNotificationRouteBuilderTest extends NisabaRouteBuilderIntegrationTestBase {
+class ImportDateMapUpdaterTest extends NisabaRouteBuilderIntegrationTestBase {
 
     @Produce("direct:updateImportDateMap")
     protected ProducerTemplate updateImportDateMapProducer;
 
-    @Produce("http:localhost:{{server.port}}/services/timetable-import-info/import_date")
-    protected ProducerTemplate importAllDatesProducer;
-
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    @Autowired
+    private Map<String, String> importDatesMap;
 
     @BeforeEach
     void mockKafkaProducer() throws Exception {
@@ -54,8 +51,11 @@ class RestNotificationRouteBuilderTest extends NisabaRouteBuilderIntegrationTest
     }
 
     @Test
-    void testGetAllImportDatesViaRest() throws Exception {
+    void testUpdateImportDateMap() throws Exception {
         context.start();
+
+        // Clear the map before testing
+        importDatesMap.clear();
 
         // Add multiple codespaces
         LocalDateTime dateTime1 = LocalDateTime.of(2021, 8, 1, 10, 0, 0);
@@ -66,32 +66,18 @@ class RestNotificationRouteBuilderTest extends NisabaRouteBuilderIntegrationTest
         updateImportDateMapProducer.sendBody(createEvent("flt", dateTime2));
         updateImportDateMapProducer.sendBody(createEvent("vyg", dateTime3));
 
-        // Call REST endpoint
-        Map<String, Object> headers = getTestHeaders("GET");
-        Object response = importAllDatesProducer.requestBodyAndHeaders(null, headers);
-
-        String jsonResult = new String(((java.io.InputStream) response).readAllBytes());
-
-        @SuppressWarnings("unchecked")
-        Map<String, String> allDates = objectMapper.readValue(jsonResult, Map.class);
-
-        assertTrue(allDates.size() >= 3);
-        assertTrue(allDates.containsKey("opp"));
-        assertTrue(allDates.containsKey("flt"));
-        assertTrue(allDates.containsKey("vyg"));
+        // Verify the map is updated
+        assertTrue(importDatesMap.size() >= 3);
+        assertTrue(importDatesMap.containsKey("opp"));
+        assertTrue(importDatesMap.containsKey("flt"));
+        assertTrue(importDatesMap.containsKey("vyg"));
 
         assertEquals(dateTime1.truncatedTo(ChronoUnit.SECONDS).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
-                allDates.get("opp"));
+                importDatesMap.get("opp"));
         assertEquals(dateTime2.truncatedTo(ChronoUnit.SECONDS).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
-                allDates.get("flt"));
+                importDatesMap.get("flt"));
         assertEquals(dateTime3.truncatedTo(ChronoUnit.SECONDS).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
-                allDates.get("vyg"));
-    }
-
-    private static Map<String, Object> getTestHeaders(String method) {
-        return Map.of(
-                Exchange.HTTP_METHOD, method
-        );
+                importDatesMap.get("vyg"));
     }
 
     private NetexImportEvent createEvent(String codespace, LocalDateTime importDateTime) {

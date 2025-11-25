@@ -36,13 +36,22 @@ paths:
                 additionalProperties:
                   type: string
                   format: date-time
-                example:
-                  avi: "2021-04-21T11:51:59"
-                  rut: "2021-05-15T09:30:00"
-                  atb: "2021-06-10T14:20:30"
+              example:
+                avi: "2021-04-21T11:51:59Z"
+                rut: "2021-05-15T09:30:00Z"
+                atb: "2021-06-10T14:20:30Z"
+            text/plain:
+              schema:
+                type: object
+                additionalProperties:
+                  type: string
+                  format: date-time
         '500':
           description: Internal server error
           content:
+            application/json:
+              schema:
+                type: string
             text/plain:
               schema:
                 type: string
