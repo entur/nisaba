@@ -32,6 +32,9 @@
         <netex-parser-java.version>3.1.63</netex-parser-java.version>
         <netex-java-model.version>2.0.15</netex-java-model.version>
         <woodstox.version>7.1.1</woodstox.version>
+        <openapi-generator.version>7.10.0</openapi-generator.version>
+        <swagger-annotations.version>2.2.27</swagger-annotations.version>
+        <jackson-databind-nullable.version>0.2.6</jackson-databind-nullable.version>
 
         <!-- empty argLine property, the value is set up by Jacoco during unit tests execution -->
         <argLine/>
@@ -176,6 +179,23 @@
             <artifactId>camel-openapi-java-starter</artifactId>
         </dependency>
 
+        <!-- OpenAPI Generator dependencies -->
+        <dependency>
+            <groupId>io.swagger.core.v3</groupId>
+            <artifactId>swagger-annotations-jakarta</artifactId>
+            <version>${swagger-annotations.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.swagger.core.v3</groupId>
+            <artifactId>swagger-models-jakarta</artifactId>
+            <version>${swagger-annotations.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.openapitools</groupId>
+            <artifactId>jackson-databind-nullable</artifactId>
+            <version>${jackson-databind-nullable.version}</version>
+        </dependency>
+
         <!-- Other -->
 
         <dependency>
@@ -282,6 +302,35 @@
                 </executions>
             </plugin>
 
+            <!-- OpenAPI Generator Plugin -->
+            <plugin>
+                <groupId>org.openapitools</groupId>
+                <artifactId>openapi-generator-maven-plugin</artifactId>
+                <version>${openapi-generator.version}</version>
+                <executions>
+                    <execution>
+                        <id>generate-api-interfaces</id>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                        <configuration>
+                            <inputSpec>${project.basedir}/src/main/resources/openapi/openapi.yaml</inputSpec>
+                            <generatorName>spring</generatorName>
+                            <apiPackage>no.entur.nisaba.rest.api</apiPackage>
+                            <modelPackage>no.entur.nisaba.rest.model</modelPackage>
+                            <configOptions>
+                                <useSpringBoot3>true</useSpringBoot3>
+                                <interfaceOnly>true</interfaceOnly>
+                                <skipDefaultInterface>true</skipDefaultInterface>
+                                <useTags>true</useTags>
+                                <useJakartaEe>true</useJakartaEe>
+                                <serializableModel>true</serializableModel>
+                                <openApiNullable>false</openApiNullable>
+                            </configOptions>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

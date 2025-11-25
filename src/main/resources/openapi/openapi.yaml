@@ -1,0 +1,86 @@
+openapi: 3.0.0
+info:
+  title: Timetable Import Info API
+  description: Provide for each codespace the date of the latest successful NeTEx dataset import
+  version: "1.0"
+  contact:
+    name: Entur
+    url: https://developer.entur.org
+  license:
+    name: EUPL-1.2
+    url: https://joinup.ec.europa.eu/software/page/eupl
+
+servers:
+  - url: https://api.entur.io/timetable-public/v1
+    description: Production server
+
+tags:
+  - name: timetable-import-info
+    description: Timetable import information endpoints
+
+paths:
+  /timetable-import-info/import_date:
+    get:
+      tags:
+        - timetable-import-info
+      summary: Return the date of the latest NeTEx import for all codespaces
+      description: Returns a map of codespace identifiers to their latest import timestamps
+      operationId: getAllImportDates
+      responses:
+        '200':
+          description: Successfully retrieved import dates
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: string
+                  format: date-time
+                example:
+                  avi: "2021-04-21T11:51:59"
+                  rut: "2021-05-15T09:30:00"
+                  atb: "2021-06-10T14:20:30"
+        '500':
+          description: Internal server error
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /timetable-import-info/import_date/{codespace}:
+    get:
+      tags:
+        - timetable-import-info
+      summary: Return the date of the latest NeTEx import for a given codespace
+      description: Returns the import date for a specific codespace identifier
+      operationId: getImportDateByCodespace
+      parameters:
+        - name: codespace
+          in: path
+          description: Codespace of the data provider (e.g., 'avi', 'rut', 'atb')
+          required: true
+          schema:
+            type: string
+          example: avi
+      responses:
+        '200':
+          description: Successfully retrieved import date
+          content:
+            text/plain:
+              schema:
+                type: string
+                format: date-time
+              example: "2021-04-21T11:51:59"
+        '404':
+          description: Unknown codespace - no import data available
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: "Codespace not found"
+        '500':
+          description: Internal server error
+          content:
+            text/plain:
+              schema:
+                type: string
