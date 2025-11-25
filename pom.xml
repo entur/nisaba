@@ -32,7 +32,7 @@
         <netex-parser-java.version>3.1.63</netex-parser-java.version>
         <netex-java-model.version>2.0.15</netex-java-model.version>
         <woodstox.version>7.1.1</woodstox.version>
-        <openapi-generator.version>7.10.0</openapi-generator.version>
+        <openapi-generator.version>7.17.0</openapi-generator.version>
         <swagger-annotations.version>2.2.41</swagger-annotations.version>
         <jackson-databind-nullable.version>0.2.8</jackson-databind-nullable.version>
 
