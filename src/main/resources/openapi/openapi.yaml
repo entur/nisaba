@@ -1,7 +1,26 @@
 openapi: 3.0.0
 info:
   title: Timetable Import Info
-  description: Provides the date of the latest successful NeTEx dataset import for each codespace. This API is used by client systems to track when timetable data was last updated and to determine if new data is available for processing.
+  description: |
+    API for checking the status of timetable data imports.
+    The endpoint returns the date of the latest successful import of timetable data into Entur's systems for each data provider.
+    Data providers are identified by their [codespaces](https://enturas.atlassian.net/wiki/spaces/PUBLIC/pages/637370434/List+of+current+Codespaces)
+  
+    This import date is also displayed in the list of NeTEx files available on Entur Open Data Portal.
+    Additionally, the import date is stored in each NeTEx archive available on this page, in the "created" timestamp of the CompositeFrame. For example: created="2019-05-29T12:59:32.202"
+  
+    The date returned by this service is the original import date, i.e. the date Entur received the source dataset from the data provider.
+    It may be different from the creation date of the archives listed on open data page, since these archives are regenerated every day through a filtering process that removes obsolete data.
+    
+    ## Authentication
+
+    This API is open under NLOD licence, however, it is required that all consumers identify themselves by using the header ET-Client-Name. Entur will deploy strict rate-limiting policies on API-consumers who do not identify with a header and reserves the right to block unidentified consumers. The structure of ET-Client-Name should be: "company-application"
+
+     *Header examples:*
+    - "brakar-journeyplanner"
+    - "fosen_utvikling-departureboard"
+    - "nor_way_bussekspress-nwy-app"
+
   version: "1.0.0"
   contact:
     name: Entur
