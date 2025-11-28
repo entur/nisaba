@@ -71,7 +71,7 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
         super.configure();
 
 
-        from("master:lockOnNetexExportNotificationQueueRoute:google-pubsub:{{marduk.pubsub.project.id}}:NetexExportNotificationQueue")
+        from("master:lock-on-netex-export-notification-queue-route:google-pubsub:{{marduk.pubsub.project.id}}:NetexExportNotificationQueue")
 
                 .process(this::setCorrelationIdIfMissing)
                 .setHeader(DATASET_CODESPACE, bodyAs(String.class))
