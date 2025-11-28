@@ -27,5 +27,5 @@ rules:
     verbs: ["get", "watch", "list"]
   - apiGroups: ["coordination.k8s.io"]
     resources: ["leases"]
-    resourceNames: ["lock-on-netex-export-notification-queue-route"]
+    resourceNames: ["nisaba-leaders-lock-on-netex-export-notification-queue-route"]
     verbs: ["create", "get", "patch", "update", "list"]
