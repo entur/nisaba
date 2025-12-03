@@ -25,12 +25,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.OffsetDateTime;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * REST controller for timetable import information.
@@ -52,7 +47,7 @@ public class TimetableImportInfoController implements TimetableImportInfoApi {
     }
 
     @Override
-    public ResponseEntity<Map<String, OffsetDateTime>> getAllImportDates() {
+    public ResponseEntity<Map<String, String>> getAllImportDates() {
         LOGGER.info("Received request to get all import dates");
 
         if (importDates.isEmpty()) {
@@ -60,34 +55,23 @@ public class TimetableImportInfoController implements TimetableImportInfoApi {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
         }
 
-        // Convert String dates to OffsetDateTime with proper serialization format
-        Map<String, OffsetDateTime> convertedDates = importDates.entrySet().stream()
-            .collect(Collectors.toMap(
-                Map.Entry::getKey,
-                entry -> LocalDateTime.parse(entry.getValue(), DateTimeFormatter.ISO_LOCAL_DATE_TIME)
-                    .atOffset(ZoneOffset.UTC)
-            ));
-
-        LOGGER.info("Returning {} import dates", convertedDates.size());
+        LOGGER.info("Returning {} import dates", importDates.size());
         return ResponseEntity.ok()
             .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
-            .body(convertedDates);
+            .body(importDates);
     }
 
     @Override
-    public ResponseEntity<OffsetDateTime> getImportDateByCodespace(String codespace) {
+    public ResponseEntity<String> getImportDateByCodespace(String codespace) {
         LOGGER.info("Received request to get import date for codespace '{}'", codespace);
 
         String importDate = importDates.get(codespace.toLowerCase());
 
         if (importDate != null) {
-            OffsetDateTime dateTime = LocalDateTime.parse(importDate, DateTimeFormatter.ISO_LOCAL_DATE_TIME)
-                .atOffset(ZoneOffset.UTC);
             LOGGER.info("Found import date for codespace '{}': {}", codespace, importDate);
-            // Return as text/plain with formatted string
             return ResponseEntity.ok()
                 .contentType(org.springframework.http.MediaType.TEXT_PLAIN)
-                .body(dateTime);
+                .body(importDate);
         } else {
             LOGGER.warn("Codespace '{}' not found", codespace);
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
