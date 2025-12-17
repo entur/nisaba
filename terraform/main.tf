@@ -28,27 +28,6 @@ resource "google_pubsub_subscription" "NetexServiceJourneyPublicationDeadLetterQ
     }
 }
 
-resource "google_pubsub_topic" "NetexServiceJourneyPublicationQueue" {
-  name    = "NetexServiceJourneyPublicationQueue"
-  project = var.gcp_pubsub_project
-  labels  = var.labels
-}
-
-resource "google_pubsub_subscription" "NetexServiceJourneyPublicationQueue" {
-  name                 = "NetexServiceJourneyPublicationQueue"
-  topic                = google_pubsub_topic.NetexServiceJourneyPublicationQueue.name
-  project              = var.gcp_pubsub_project
-  labels               = var.labels
-  ack_deadline_seconds = 600
-  dead_letter_policy {
-    max_delivery_attempts = 5
-    dead_letter_topic     = google_pubsub_topic.NetexServiceJourneyPublicationDeadLetterQueue.id
-  }
-  retry_policy {
-    minimum_backoff = "10s"
-  }
-}
-
 # Create bucket
 resource "google_storage_bucket" "storage_bucket" {
   name                        = "${var.bucket_instance_prefix}-${var.bucket_instance_suffix}"
