@@ -30,7 +30,7 @@
         <avro.version>1.12.1</avro.version>
         <confluent-kafka-client.version>7.9.5</confluent-kafka-client.version>
         <netex-parser-java.version>3.1.63</netex-parser-java.version>
-        <netex-java-model.version>2.0.15.1</netex-java-model.version>
+        <netex-java-model.version>2.0.15.2</netex-java-model.version>
         <woodstox.version>7.1.1</woodstox.version>
         <openapi-generator.version>7.19.0</openapi-generator.version>
         <swagger-annotations.version>2.2.42</swagger-annotations.version>
