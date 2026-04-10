@@ -53,7 +53,7 @@ jobs:
     uses: entur/gha-api/.github/workflows/lint.yml@v6
     secrets: inherit
     with:
-      spec: 'src/main/resources/openapi/openapi.yaml'
+      path: 'src/main/resources/openapi/openapi.yaml'
       upload_to_bucket: ${{ github.repository_owner == 'entur' && github.event_name == 'push' && github.ref == 'refs/heads/master' }}
   openapi-publish:
     if: github.repository_owner == 'entur' && github.event_name == 'push' && github.ref == 'refs/heads/master'
@@ -61,8 +61,7 @@ jobs:
     uses: entur/gha-api/.github/workflows/publish.yml@v6
     secrets: inherit
     with:
-      visibility: 'public'
-      spec: 'src/main/resources/openapi/openapi.yaml'
+      path: 'src/main/resources/openapi/openapi.yaml'
   docker-build:
     if: github.repository_owner == 'entur' && github.event_name == 'push' && github.ref == 'refs/heads/master'
     needs: [maven-verify]
