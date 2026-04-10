@@ -28,6 +28,10 @@ info:
   license:
     name: EUPL-1.2
     url: https://joinup.ec.europa.eu/software/page/eupl
+  x-entur-metadata:
+    id: timetable-import-info
+    audience: open
+    owner: team-ror
 
 servers:
   - url: https://api.entur.io/timetable-public/v1
@@ -38,7 +42,7 @@ servers:
     description: Development server
 
 tags:
-  - name: Import Status
+  - name: timetable-import-info
     description: Status of the latest import dates for timetable datasets by codespace
 
 paths:
