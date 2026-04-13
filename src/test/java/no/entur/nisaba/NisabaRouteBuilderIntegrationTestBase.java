@@ -18,9 +18,7 @@ package no.entur.nisaba;
 
 import com.google.cloud.spring.pubsub.core.PubSubTemplate;
 import jakarta.annotation.PostConstruct;
-import org.apache.camel.EndpointInject;
 import org.apache.camel.builder.AdviceWith;
-import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.model.ModelCamelContext;
 import org.apache.camel.spi.IdempotentRepository;
 import org.apache.camel.support.processor.idempotent.MemoryIdempotentRepository;
@@ -68,9 +66,6 @@ public abstract class NisabaRouteBuilderIntegrationTestBase {
     @Value("${blobstore.gcs.marduk.container.name}")
     private String mardukContainerName;
 
-    @Value("${blobstore.gcs.nisaba.container.name}")
-    private String nisabaContainerName;
-
     @Value("${blobstore.gcs.nisaba.exchange.container.name}")
     private String nisabaExchangeContainerName;
 
@@ -85,19 +80,11 @@ public abstract class NisabaRouteBuilderIntegrationTestBase {
     protected BlobStoreRepository mardukInMemoryBlobStoreRepository;
 
     @Autowired
-    protected BlobStoreRepository nisabaInMemoryBlobStoreRepository;
-
-    @Autowired
     protected BlobStoreRepository nisabaExchangeInMemoryBlobStoreRepository;
-
-
-    @EndpointInject("mock:sink")
-    protected MockEndpoint sink;
 
     @PostConstruct
     void initInMemoryBlobStoreRepositories() {
         mardukInMemoryBlobStoreRepository.setContainerName(mardukContainerName);
-        nisabaInMemoryBlobStoreRepository.setContainerName(nisabaContainerName);
         nisabaExchangeInMemoryBlobStoreRepository.setContainerName(nisabaExchangeContainerName);
     }
 

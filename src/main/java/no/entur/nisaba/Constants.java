@@ -35,7 +35,6 @@ public final class Constants {
 
     public static final String DATASET_IMPORT_KEY = "EnturDatasetImportKey";
 
-    public static final String DATASET_CONTENT = "EnturDatasetContent";
     public static final String DATASET_CHOUETTE_IMPORT_KEY = "EnturDatasetChouetteImportKey";
     public static final String DATASET_ALL_CREATION_TIMES = "EnturDatasetAllCreationTimes";
     public static final String DATASET_LATEST_CREATION_TIME = "EnturDatasetLatestCreationTime";

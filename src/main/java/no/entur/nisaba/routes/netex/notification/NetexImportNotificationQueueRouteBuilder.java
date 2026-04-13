@@ -39,7 +39,6 @@ import static no.entur.nisaba.Constants.BLOBSTORE_PATH_OUTBOUND;
 import static no.entur.nisaba.Constants.DATASET_ALL_CREATION_TIMES;
 import static no.entur.nisaba.Constants.DATASET_CHOUETTE_IMPORT_KEY;
 import static no.entur.nisaba.Constants.DATASET_CODESPACE;
-import static no.entur.nisaba.Constants.DATASET_CONTENT;
 import static no.entur.nisaba.Constants.DATASET_IMPORT_KEY;
 import static no.entur.nisaba.Constants.DATASET_LATEST_CREATION_TIME;
 import static no.entur.nisaba.Constants.DATASET_PUBLISHED_FILE_NAME;
@@ -83,7 +82,6 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .stop()
                 //end filter
                 .end()
-                .setHeader(DATASET_CONTENT, body())
                 .log(LoggingLevel.INFO, correlation() + "NeTEx export file downloaded")
                 .to("direct:retrieveDatasetCreationTime")
                 .setHeader(DATASET_IMPORT_KEY, method(NetexImportEventKeyFactory.class, "createNetexImportEventKey(${header." + DATASET_CODESPACE + "}, ${header." + DATASET_LATEST_CREATION_TIME + "})"))
