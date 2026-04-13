@@ -37,10 +37,6 @@ public abstract class AbstractBlobStoreService {
         return repository.getBlob(name);
     }
 
-    public void uploadBlob(@Header(value = Constants.FILE_HANDLE) String name, InputStream inputStream) {
-        repository.uploadBlob(name, inputStream);
-    }
-
     public void copyBlobToAnotherBucket(@Header(value = Constants.FILE_HANDLE) String sourceName,
                                         @Header(value = Constants.TARGET_CONTAINER) String targetContainerName,
                                         @Header(value = Constants.TARGET_FILE_HANDLE) String targetName) {
