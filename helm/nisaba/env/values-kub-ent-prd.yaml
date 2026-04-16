@@ -12,8 +12,6 @@ ingress:
   domainName: -gcp2.entur.io
 
 netex:
-  publish:
-    enabled: false
   publication:
     internal:
       bucket: ror-nisaba-exchange-varelager-production
@@ -26,7 +24,6 @@ gcp:
     bucketName: marduk-production
 
   nisaba:
-    bucketName: nisaba-production
     exchangeBucketName: ror-nisaba-exchange-production
 
 

@@ -32,8 +32,6 @@ common:
           defaultMode: 420
           name: nisaba-application
         name: application-config
-  postgres:
-    enabled: false
   configmap:
     data:
       TZ: Europe/Oslo

@@ -12,8 +12,6 @@ ingress:
   domainName: -gcp2.staging.entur.io
 
 netex:
-  publish:
-    enabled: false
   publication:
     internal:
       bucket: ror-nisaba-exchange-varelager-test
@@ -27,7 +25,6 @@ gcp:
     bucketName: marduk-test
 
   nisaba:
-    bucketName: nisaba-test
     exchangeBucketName: ror-nisaba-exchange-test
 
 kafka:
