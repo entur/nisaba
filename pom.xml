@@ -31,7 +31,7 @@
         <confluent-kafka-client.version>7.9.5</confluent-kafka-client.version>
         <woodstox.version>7.1.1</woodstox.version>
         <openapi-generator.version>7.20.0</openapi-generator.version>
-        <swagger-annotations.version>2.2.47</swagger-annotations.version>
+        <swagger-annotations.version>2.2.48</swagger-annotations.version>
 
         <!-- empty argLine property, the value is set up by Jacoco during unit tests execution -->
         <argLine/>
