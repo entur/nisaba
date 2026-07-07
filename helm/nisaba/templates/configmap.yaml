@@ -67,3 +67,5 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
   {{- include "nisaba.common.labels" . | indent 4 }}
+  annotations:
+  {{- include "nisaba.common.annotations" . | indent 4 }}

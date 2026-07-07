@@ -4,6 +4,7 @@ metadata:
   labels:
     traffic-type: api
     {{- include "nisaba.common.labels" . | indent 4 }}
+    {{- include "nisaba.common.annotations" . | indent 4 }}
   annotations:
     kubernetes.io/ingress.class: traefik
   name: timetable-import-info-v1-timetable
