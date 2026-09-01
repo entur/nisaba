@@ -25,14 +25,10 @@ import org.apache.camel.builder.FlexibleAggregationStrategy;
 import org.apache.camel.component.kafka.KafkaConstants;
 import org.apache.camel.dataformat.zipfile.ZipSplitter;
 import org.apache.camel.support.builder.PredicateBuilder;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.TreeSet;
 
 import static no.entur.nisaba.Constants.BLOBSTORE_PATH_OUTBOUND;
@@ -55,15 +51,6 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
     static final LocalDateTime EPOCH = LocalDateTime.ofEpochSecond(0, 0, ZoneOffset.UTC);
 
     private static final String EXPORT_FILE_NAME = "netex/rb_${body}-" + Constants.CURRENT_AGGREGATED_NETEX_FILENAME;
-
-    private final String privateBucket;
-    private final Set<String> whiteListedCodespaces;
-
-    public NetexImportNotificationQueueRouteBuilder(@Value("${nisaba.netex.publication.internal.whitelist:}") String[] whiteListedCodespaces,
-                                                    @Value("${nisaba.netex.publication.internal.bucket:}") String privateBucket) {
-        this.whiteListedCodespaces = new HashSet<>(Arrays.asList(whiteListedCodespaces));
-        this.privateBucket = privateBucket;
-    }
 
     @Override
     public void configure() throws Exception {
@@ -146,7 +133,6 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .log(LoggingLevel.INFO, correlation() + "Notifying Kafka topic ${properties:nisaba.kafka.topic.event}")
                 .to("direct:findChouetteImportKey")
                 .bean("netexImportEventFactory", "createNetexImportEvent")
-                .to("direct:copyDatasetToPrivateBucket")
                 .setHeader(KafkaConstants.KEY, header(DATASET_CODESPACE))
                 .to("kafka:{{nisaba.kafka.topic.event}}?clientId=nisaba-event&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy&valueSerializer=io.confluent.kafka.serializers.KafkaAvroSerializer").id("to-kafka-topic-event")
                 .removeHeader(KafkaConstants.KEY)
@@ -176,20 +162,6 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .log(LoggingLevel.WARN, correlation() + "Chouette import key not found")
                 .routeId("find-chouette-import-key");
 
-        from("direct:copyDatasetToPrivateBucket")
-                .log(LoggingLevel.INFO, correlation() + "Checking codespace against whitelist")
-                .filter(exchange -> isWhiteListedCodespace(exchange.getIn().getHeader(DATASET_CODESPACE, String.class)))
-                .log(LoggingLevel.INFO, correlation() + "Copying dataset to private bucket")
-                .setHeader(Constants.TARGET_CONTAINER, constant(privateBucket))
-                .setHeader(FILE_HANDLE, simple("${body.originalDatasetURI}"))
-                .setHeader(Constants.TARGET_FILE_HANDLE, header(FILE_HANDLE))
-                .to("direct:copyBlobToAnotherBucket")
-                .routeId("copy-dataset-to-private-bucket");
-
-    }
-
-    private boolean isWhiteListedCodespace(String codespace) {
-        return whiteListedCodespaces.contains(codespace);
     }
 
 }
