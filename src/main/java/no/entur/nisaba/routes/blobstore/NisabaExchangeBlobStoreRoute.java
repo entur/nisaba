@@ -22,8 +22,6 @@ import org.apache.camel.LoggingLevel;
 import org.springframework.stereotype.Component;
 
 import static no.entur.nisaba.Constants.FILE_HANDLE;
-import static no.entur.nisaba.Constants.TARGET_CONTAINER;
-import static no.entur.nisaba.Constants.TARGET_FILE_HANDLE;
 
 
 @Component
@@ -44,13 +42,6 @@ public class NisabaExchangeBlobStoreRoute extends BaseRouteBuilder {
                 .to(logDebugShowAll())
                 .log(LoggingLevel.DEBUG, correlation() + "Returning from fetching file ${header." + FILE_HANDLE + "} from Nisaba Exchange bucket.")
                 .routeId("blobstore-nisaba-exchange-download");
-
-        from("direct:copyBlobToAnotherBucket")
-                .to(logDebugShowAll())
-                .bean(nisabaExchangeBlobStoreService, "copyBlobToAnotherBucket")
-                .to(logDebugShowAll())
-                .log(LoggingLevel.DEBUG, correlation() + "Copied file ${header." + FILE_HANDLE + "} to file ${header." + TARGET_FILE_HANDLE + "} from Marduk bucket to bucket ${header." + TARGET_CONTAINER + "}.")
-                .routeId("blobstore-copy-to-another-bucket");
     }
 
 
