@@ -26,9 +26,6 @@ public final class Constants {
     public static final String FILE_HANDLE = "RutebankenFileHandle";
     public static final String CORRELATION_ID = "RutebankenCorrelationId";
 
-    public static final String TARGET_FILE_HANDLE = "RutebankenTargetFileHandle";
-    public static final String TARGET_CONTAINER = "RutebankenTargetContainer";
-
     public static final String CURRENT_AGGREGATED_NETEX_FILENAME = "aggregated-netex.zip";
 
     public static final String BLOBSTORE_PATH_OUTBOUND = "outbound/";

@@ -11,10 +11,6 @@ common:
 ingress:
   domainName: -gcp2.entur.io
 
-netex:
-  publication:
-    internal:
-      bucket: ror-nisaba-exchange-varelager-production
 gcp:
   blobstoreProjectId: entur-ror-prod
   nisabaPubsubProjectId: ent-nisaba-prd
