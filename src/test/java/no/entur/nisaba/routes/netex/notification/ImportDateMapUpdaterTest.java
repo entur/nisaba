@@ -19,6 +19,8 @@ package no.entur.nisaba.routes.netex.notification;
 import no.entur.nisaba.NisabaRouteBuilderIntegrationTestBase;
 import no.entur.nisaba.TestApp;
 import no.entur.nisaba.avro.NetexImportEvent;
+import org.apache.avro.specific.SpecificData;
+import org.apache.avro.util.ClassSecurityValidator;
 import org.apache.camel.Produce;
 import org.apache.camel.ProducerTemplate;
 import org.apache.camel.builder.AdviceWith;
@@ -78,6 +80,24 @@ class ImportDateMapUpdaterTest extends NisabaRouteBuilderIntegrationTestBase {
                 importDatesMap.get("flt"));
         assertEquals(dateTime3.truncatedTo(ChronoUnit.SECONDS).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
                 importDatesMap.get("vyg"));
+    }
+
+    /**
+     * The Avro class security validator must be installed by the application context itself
+     * (AvroClassSecurityConfig), without this test installing anything. Without it the Kafka
+     * consumer cannot deserialize any event and the import date map stays empty.
+     */
+    @Test
+    void testAvroClassSecurityValidatorIsInstalledAtStartup() {
+        // DEFAULT is the initial value of the Avro global validator, so a different instance
+        // means the application context ran the registration
+        assertNotSame(ClassSecurityValidator.DEFAULT, ClassSecurityValidator.getGlobal());
+
+        // a fresh SpecificData bypasses the process wide class cache of SpecificData.get()
+        assertEquals(
+                NetexImportEvent.class,
+                new SpecificData().getClass(NetexImportEvent.getClassSchema())
+        );
     }
 
     private NetexImportEvent createEvent(String codespace, LocalDateTime importDateTime) {
