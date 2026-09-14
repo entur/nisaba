@@ -11,11 +11,6 @@ common:
 ingress:
   domainName: -gcp2.staging.entur.io
 
-netex:
-  publication:
-    internal:
-      bucket: ror-nisaba-exchange-varelager-test
-
 gcp:
   blobstoreProjectId: entur-ror-test
   nisabaPubsubProjectId: ent-nisaba-tst
