@@ -47,12 +47,10 @@ nisaba/
 │   │   │   └── RestNotificationRouteBuilder.java
 │   │   └── blobstore/
 │   │       ├── MardukBlobStoreRoute.java
-│   │       ├── NisabaBlobStoreRoute.java
 │   │       └── NisabaExchangeBlobStoreRoute.java
 │   ├── services/                         # Blob store service implementations
 │   │   ├── AbstractBlobStoreService.java
 │   │   ├── MardukBlobStoreService.java
-│   │   ├── NisabaBlobStoreService.java
 │   │   └── NisabaExchangeBlobStoreService.java
 │   ├── event/                            # Event handling
 │   │   ├── NetexImportEventFactory.java
@@ -83,14 +81,12 @@ The core workflow is implemented in `NetexImportNotificationQueueRouteBuilder` w
 - **notify-consumers-if-new**: Checks idempotency and triggers notification
 - **notify-consumers**: Publishes to Kafka topic
 - **find-chouette-import-key**: Identifies the original Chouette dataset for mixed sources
-- **copy-dataset-to-private-bucket**: Copies whitelisted datasets to a private bucket
 
 #### Blob Store Services
 
-Three service implementations handle access to different GCS buckets:
+Two service implementations handle access to different GCS buckets:
 - **MardukBlobStoreService**: Accesses Marduk's export bucket (`marduk-{env}`)
-- **NisabaBlobStoreService**: Manages Nisaba's own storage
-- **NisabaExchangeBlobStoreService**: Handles exchange bucket for imported datasets
+- **NisabaExchangeBlobStoreService**: Reads the exchange bucket to look up the original Chouette import
 
 #### Event Model
 
@@ -136,9 +132,6 @@ The Avro schema (`NetexImportEvent.avsc`) defines the Kafka event structure:
    - Kafka key: dataset codespace
    - Topic naming: `rutedata-dataset-import-event-{env}`
 
-6. **Optional Private Copy**
-   - For whitelisted codespaces, copies dataset to private bucket
-
 ### NeTEx Dataset Structure
 
 - **File naming convention**: `rb_<codespace>-aggregated-netex.zip`
@@ -159,8 +152,6 @@ The application supports multiple environments (dev, test, production) with corr
 
 - `marduk.pubsub.project.id`: GCP project for PubSub
 - `nisaba.kafka.topic.event`: Kafka topic for publishing events
-- `nisaba.netex.publication.internal.bucket`: Private bucket for whitelisted datasets
-- `nisaba.netex.publication.internal.whitelist`: Codespaces eligible for private copy
 - `nisaba.shutdown.timeout`: Graceful shutdown timeout (default: 300s)
 
 ## Deployment
