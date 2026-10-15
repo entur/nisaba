@@ -47,12 +47,10 @@ nisaba/
 │   │   │   └── RestNotificationRouteBuilder.java
 │   │   └── blobstore/
 │   │       ├── MardukBlobStoreRoute.java
-│   │       ├── NisabaBlobStoreRoute.java
 │   │       └── NisabaExchangeBlobStoreRoute.java
 │   ├── services/                         # Blob store service implementations
 │   │   ├── AbstractBlobStoreService.java
 │   │   ├── MardukBlobStoreService.java
-│   │   ├── NisabaBlobStoreService.java
 │   │   └── NisabaExchangeBlobStoreService.java
 │   ├── event/                            # Event handling
 │   │   ├── NetexImportEventFactory.java
@@ -86,10 +84,9 @@ The core workflow is implemented in `NetexImportNotificationQueueRouteBuilder` w
 
 #### Blob Store Services
 
-Three service implementations handle access to different GCS buckets:
+Two service implementations handle access to different GCS buckets:
 - **MardukBlobStoreService**: Accesses Marduk's export bucket (`marduk-{env}`)
-- **NisabaBlobStoreService**: Manages Nisaba's own storage
-- **NisabaExchangeBlobStoreService**: Handles exchange bucket for imported datasets
+- **NisabaExchangeBlobStoreService**: Reads the exchange bucket to look up the original Chouette import
 
 #### Event Model
 

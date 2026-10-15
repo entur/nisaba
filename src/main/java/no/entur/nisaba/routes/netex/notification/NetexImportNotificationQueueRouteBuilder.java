@@ -136,7 +136,7 @@ public class NetexImportNotificationQueueRouteBuilder extends BaseRouteBuilder {
                 .setHeader(KafkaConstants.KEY, header(DATASET_CODESPACE))
                 .to("kafka:{{nisaba.kafka.topic.event}}?clientId=nisaba-event&headerFilterStrategy=#nisabaKafkaHeaderFilterStrategy&valueSerializer=io.confluent.kafka.serializers.KafkaAvroSerializer").id("to-kafka-topic-event")
                 .removeHeader(KafkaConstants.KEY)
-                .log(LoggingLevel.INFO, correlation() + "Notified export of ${body.serviceJourneys} service journeys and ${body.commonFiles} common files")
+                .log(LoggingLevel.INFO, correlation() + "Notified Kafka topic ${properties:nisaba.kafka.topic.event} of new dataset ${body.importKey}")
                 .routeId("notify-consumers");
 
         // A published dataset that contains flexible lines is made of two source datasets,
