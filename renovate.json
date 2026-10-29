@@ -2,5 +2,13 @@
   "extends": [
     "github>entur/ror-renovate-config"
   ],
-  "separateMinorPatch": true
+  "separateMinorPatch": true,
+  "packageRules": [
+    {
+      "description": "Keep Camel minor releases out of the grouped non-major PR (not SemVer compliant: breaking changes may occur)",
+      "matchPackageNames": ["/^org\\.apache\\.camel/"],
+      "matchUpdateTypes": ["minor"],
+      "groupName": "Apache Camel"
+    }
+  ]
 }
