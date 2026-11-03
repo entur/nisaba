@@ -30,11 +30,13 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 /**
  * The consumer's own contract: identity in the MDC before the pipeline runs, the failure metric once per
@@ -87,7 +89,23 @@ class NetexExportNotificationConsumerTest {
     }
 
     @Test
-    void blankBodyIsRejectedBeforeAnythingRuns() {
-        assertThrows(IllegalArgumentException.class, () -> consumer.onMessage(" ".getBytes(StandardCharsets.UTF_8), Map.of()));
+    void blankBodyIsCountedAndAckedWithoutRunningAnything() {
+        consumer.onMessage(" ".getBytes(StandardCharsets.UTF_8), Map.of());
+
+        verifyNoInteractions(pipeline);
+        assertEquals(1.0, registry.get(NetexImportMetrics.NOTIFICATIONS).tag("outcome", "invalid").counter().count());
+        assertEquals(0, inFlightMessages.inFlightCount());
+    }
+
+    @Test
+    void errorIsCountedAndRethrownAsAnExceptionTheBaseClassNacks() {
+        doThrow(new StackOverflowError()).when(pipeline).process(any());
+
+        IllegalStateException e = assertThrows(IllegalStateException.class,
+                () -> consumer.onMessage("avi".getBytes(StandardCharsets.UTF_8), Map.of()));
+
+        assertInstanceOf(StackOverflowError.class, e.getCause());
+        assertEquals(1.0, registry.get(NetexImportMetrics.NOTIFICATIONS).tag("outcome", "failed").counter().count());
+        assertEquals(0, inFlightMessages.inFlightCount());
     }
 }

@@ -109,7 +109,12 @@ them:
   out to have won, it is released, so that the key does not stay dead.
 
 - **The producer gave up on the add** (it is bounded by `delivery.timeout.ms` = the send timeout). The
-  claim fails at once, nothing is left in the registry, and the next attempt claims fresh.
+  caller fails at once, but the record may have landed with its acknowledgement lost (a request in flight
+  when the timeout expires can still be appended by the broker), so the claim is kept, abandoned, and keeps
+  listening for its record. If it is read back and won, a retry on the same pod re-owns it, or it is released
+  as above. Once the poller has read everything the topic held a send timeout after the failure (a barrier
+  of the poller, `caughtUp()`), a record not seen is one that was never written: the claim is forgotten and
+  the next attempt claims fresh.
 - **Two callers for one key on one pod** (not possible with one callback thread per pod, but the class does
   not rely on that): the key is held by one caller at a time; the second waits for the first to confirm
   (then it is a duplicate) or release (then it claims fresh).
@@ -119,8 +124,13 @@ for a key is only ever written after the previous claim's `remove` has been ackn
 within one pod a retried `remove` can never land on top of a newer `add`; across pods a `remove` written by
 this version only removes the claim it releases (the Camel version's removes, which carry no claim id, are
 applied unconditionally), so a `remove` whose acknowledgement was lost and that was sent again cannot delete
-another pod's newer claim. On shutdown, every release still being retried is sent once more before the
-producer closes.
+another pod's newer claim. A release that fails is retried until it lands or the pod stops, backing off
+from the poll timeout to 30 s; nothing is given up on, because a cause the client calls non-retriable (an
+authorization failure, say) can still clear and a dead claim is a lost dataset. On shutdown, every release
+still being retried is sent once more before the producer closes; a claim still held by a notification the
+drain gave up on is waited for briefly (the event producer closes at the same phase and fails its publish),
+then released, so that the redelivery can publish the event (or, if that publish did succeed, publish it a
+second time: the lesser harm); a release arriving while the repository stops is sent on the caller's thread.
 
 What the protocol does not cover is in *Known open*.
 
@@ -147,8 +157,9 @@ Everything below is a deliberate difference from the Camel implementation.
    context starts closing. The consumer base class sleeps `entur.pubsub.consumer.retry.delay` after a nack;
    it is set to 1 s instead of the library's 15 s, because PubSub's own backoff (10 s to 600 s) governs
    redelivery anyway and the sleep runs inside the shutdown budget.
-6. **The PubSub body is trimmed; a blank body is rejected** (nacked) instead of looking up
-   `rb_-aggregated-netex.zip`.
+6. **The PubSub body is trimmed; a blank body is discarded** (ERROR line, `outcome=invalid`, acked) instead
+   of looking up `rb_-aggregated-netex.zip`. A nack would redeliver it forever: the subscription has no
+   dead-letter topic.
 7. **The correlation id attribute is honoured when present.** Camel's `interceptFrom("google-pubsub:*")`
    never matched the `master:`-prefixed route, so it never was; and Marduk's `netex-notify-export` route
    calls `removeHeaders("*")` before publishing, so there is none on the wire today. A no-op kept for its
@@ -171,6 +182,10 @@ Everything below is a deliberate difference from the Camel implementation.
     timeout) are forced, whatever `spring.kafka.producer.*` says; an override is logged and ignored. Camel let
     the producer run for `delivery.timeout.ms` = 120 s while the route waited; now a publish that throws has
     not written the event, so the retry cannot write a second one.
+13. **An `Error` thrown while processing a message is nacked.** The consumer base class catches only
+    `Exception` (Camel's receiver did the same), so a `StackOverflowError` from a pathological archive would
+    leave the message neither acked nor nacked, leased for up to the ack extension, with this pod's one
+    callback slot blocked meanwhile. It is counted as `failed` and rethrown wrapped in a `RuntimeException`.
 
 ## Shutdown
 
@@ -203,7 +218,7 @@ it; if that ever changed, the drain would silently cap at 5 s.
 | `nisaba.kafka.topic.event` / `.idempotent` | | The two topics |
 | `nisaba.kafka.claim-timeout` / `send-timeout` | 30s / 30s | A claim is `claim-timeout` after its `send-timeout` at worst |
 | `nisaba.kafka.replay-timeout` | 2m | Start-up replay of each topic; two replays run one after the other and must fit the 300 s startup probe |
-| `nisaba.kafka.poll-timeout` | 1s | Consumer poll, and the interval of a failed release's retries |
+| `nisaba.kafka.poll-timeout` | 1s | Consumer poll, and the first interval of a failed release's retries (doubling up to 30 s) |
 | `spring.kafka.*` | | Brokers, `security.protocol`, `properties.sasl.*`, `properties.schema.registry.url`, `properties.basic.auth.*`; shared by the three clients |
 
 Kafka clients and their ids, as the broker sees them: `nisaba-idempotent-repo` (producer and consumer of
@@ -214,8 +229,9 @@ runtime are not seen until a restart (unchanged).
 
 Health: `/actuator/health` has a `kafkaPoller` contributor that reports DOWN when a poller thread has died
 (a claim then fails at once instead of timing out). It is deliberately not in the liveness group in this
-release; see *Known open*. Metrics: `nisaba_notifications_total{outcome=published|duplicate|dataset_missing|failed}`;
-`failed` is counted once per message, when the local retries are exhausted and the message is nacked.
+release; see *Known open*. Metrics: `nisaba_notifications_total{outcome=published|duplicate|dataset_missing|invalid|failed}`;
+`failed` is counted once per message, when the local retries are exhausted and the message is nacked;
+`invalid` is a message without a codespace, acked.
 
 Running locally: the `in-memory-blobstore` and `local-disk-blobstore` profiles need `commons-io`, which the
 pom scopes to tests on purpose (the GCS repository does not use it), so a local run of the packaged jar
@@ -287,7 +303,10 @@ emulator:
   history including `clear` and a bogus value; two pods racing for one key; release then claim; `clear`;
   three partitions and a fresh replay; an abandoned claim released; a retry re-attaching to a claim in
   flight; a release that fails and is retried while the next attempt waits; an add the producer gives up
-  on; two callers for one key on one pod; stop joining the poller and leaving no client MBeans. Every
+  on, forgotten once the poller has read past it, with a retry waiting for that; an add that landed with its
+  acknowledgement lost, released, or re-owned by a retry; a claim still held at stop, released; a release
+  arriving during stop; two callers for one key on one pod; stop joining the poller and leaving no client
+  MBeans. Every
   scenario ends with an empty registry and no pending future, asserted after each test. Replay of 20 000 records over three partitions: 125 ms. Claim latency over 200
   claims on the embedded broker: p50 4 ms, p99 6 ms. The four Kafka test classes were run twenty times in a
   row on a copy of the tree: 20 of 20 green.
@@ -324,16 +343,11 @@ Ranked by consequence, none blocking:
    exceptions from `poll()` are logged and the loop goes on, as Camel's did) makes every claim fail at once
    and every notification nack forever; a restart is the fix, but a false DOWN would restart both pods, so
    it is observed first.
-5. **An `Error` thrown while processing a message is neither acked nor nacked** by the consumer base class
-   (it catches `Exception`), so the message stays leased for up to the ack extension (an hour) and that pod,
-   with flow control 1, processes nothing meanwhile; the other pod carries on. Camel behaved the same (its
-   receiver also caught `Exception`), but with two consumers the consequence is now half the capacity
-   rather than none.
-6. **No alert on `num_undelivered_messages` / `oldest_unacked_message_age`** for the subscription: the
+5. **No alert on `num_undelivered_messages` / `oldest_unacked_message_age`** for the subscription: the
    October outage went unnoticed for ten hours and nothing in this change watches for the next one.
-7. **The Apigee proxy** (`api/timetable-import-info`) targets `/services/timetable-import-info`, the old Camel
+6. **The Apigee proxy** (`api/timetable-import-info`) targets `/services/timetable-import-info`, the old Camel
    REST path, while the Spring controller serves `/timetable-import-info/...` without a context path. Unrelated
    to this change, noticed while reading.
-8. **No `@Scheduled` task exists.** If one is added, note that spring-cloud-gcp registers its own
+7. **No `@Scheduled` task exists.** If one is added, note that spring-cloud-gcp registers its own
    `ThreadPoolTaskScheduler` beans, so Boot's `TaskSchedulingAutoConfiguration` backs off and
    `spring.task.scheduling.*` means nothing without a `taskScheduler` bean (antu's lesson).

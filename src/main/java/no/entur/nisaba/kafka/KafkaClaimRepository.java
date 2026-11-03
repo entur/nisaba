@@ -39,6 +39,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
@@ -66,12 +67,19 @@ import static no.entur.nisaba.kafka.IdempotentTopicContract.CLIENT_ID_REPOSITORY
  * release did not land, instead of producing a second claim and then skipping its own key; a claim whose
  * outcome arrived after the caller gave up is released, so a redelivery can publish the event; and a key is
  * held by one caller at a time, so two notifications for one key on one pod cannot both publish.
+ * <p>
+ * A producer that gives up on an add has not necessarily failed to write it: the record may have landed and
+ * only its acknowledgement been lost. Such a claim stays registered, abandoned, until the poller has read past
+ * the point where the record could have landed; if it shows up meanwhile, a retry re-owns it or it is released.
  */
 public class KafkaClaimRepository implements ImportEventClaimRepository, SmartLifecycle {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(KafkaClaimRepository.class);
     private static final Duration CLOSE_TIMEOUT = Duration.ofSeconds(5);
     private static final Duration MAX_BLOCK = Duration.ofSeconds(10);
+    /** A failed release is retried with an exponential back-off from the poll timeout up to this delay. */
+    private static final Duration MAX_RELEASE_RETRY_DELAY = Duration.ofSeconds(30);
+    private static final Duration HELD_CLAIM_POLL = Duration.ofMillis(50);
 
     public record Timeouts(Duration sendTimeout, Duration claimTimeout, Duration replayTimeout, Duration pollTimeout) {
     }
@@ -97,8 +105,12 @@ public class KafkaClaimRepository implements ImportEventClaimRepository, SmartLi
     private final class LocalClaim {
         private final String key;
         private final String claimId;
+        /** The topic's answer: completed by the poller when the add is read back, or failed when it never will be. */
         private final CompletableFuture<Boolean> outcome;
+        /** Completed when the producer gave up on the add; the record may have landed nonetheless. */
+        private final CompletableFuture<ClaimException> addFailed = new CompletableFuture<>();
         private final CompletableFuture<Void> removeAcked = new CompletableFuture<>();
+        private int removeAttempts;
         private LocalState localState = LocalState.PENDING;
         /** True while a caller may still act on the claim; one caller at a time. */
         private boolean held = true;
@@ -141,6 +153,8 @@ public class KafkaClaimRepository implements ImportEventClaimRepository, SmartLi
     private final Map<String, LocalClaim> registry = new HashMap<>();
 
     private volatile boolean running;
+    /** False once {@link #stop()} is about to close the producer; releases are sent while it is true. */
+    private volatile boolean producerOpen;
     private Producer<String, String> producer;
     private AssignedTopicPoller<String, String> poller;
     private ScheduledExecutorService releaseExecutor;
@@ -181,11 +195,13 @@ public class KafkaClaimRepository implements ImportEventClaimRepository, SmartLi
                 () -> new KafkaConsumer<>(consumerProperties(consumerConfig)),
                 this::applyRecord, timeouts.pollTimeout(), timeouts.replayTimeout());
         running = true;
+        producerOpen = true;
         LOGGER.info("Syncing idempotent repository from topic {} starting", topic);
         try {
             poller.start();
         } catch (RuntimeException e) {
             running = false;
+            producerOpen = false;
             releaseExecutor.shutdownNow();
             producer.close(CLOSE_TIMEOUT);
             throw e;
@@ -201,7 +217,10 @@ public class KafkaClaimRepository implements ImportEventClaimRepository, SmartLi
         }
         running = false;
         releaseExecutor.shutdownNow();
+        awaitHeldClaims(CLOSE_TIMEOUT);
+        releaseUnconfirmedClaims();
         flushPendingReleases();
+        producerOpen = false;
         poller.stop(CLOSE_TIMEOUT);
         producer.close(CLOSE_TIMEOUT);
         topicState.failPending(new ClaimException("Idempotent repository stopped"));
@@ -210,6 +229,49 @@ public class KafkaClaimRepository implements ImportEventClaimRepository, SmartLi
             registry.clear();
         }
         LOGGER.info("Stopped idempotent repository on topic {}", topic);
+    }
+
+    /**
+     * A caller still holding a claim when the repository stops is a notification the shutdown drain gave up on.
+     * Its confirm or release is usually moments away (the event producer is closed at the same phase and fails
+     * the publish in flight), so wait a little for it; a release sent meanwhile goes straight to the producer.
+     */
+    private void awaitHeldClaims(Duration timeout) {
+        long deadline = System.nanoTime() + timeout.toNanos();
+        while (System.nanoTime() - deadline < 0) {
+            synchronized (lock) {
+                if (registry.values().stream().noneMatch(c -> c.held && c.localState == LocalState.OWNED)) {
+                    return;
+                }
+            }
+            try {
+                Thread.sleep(HELD_CLAIM_POLL.toMillis());
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
+            }
+        }
+    }
+
+    /**
+     * A claim still held after the wait has an event in flight whose fate this pod will not learn. Release
+     * it: if the publish fails, the redelivery can publish the event; if it succeeds, the event may be published
+     * twice, which is the lesser harm.
+     */
+    private void releaseUnconfirmedClaims() {
+        List<LocalClaim> unconfirmed = new ArrayList<>();
+        synchronized (lock) {
+            for (LocalClaim local : registry.values()) {
+                if (local.held && local.localState == LocalState.OWNED) {
+                    unconfirmed.add(local);
+                }
+            }
+            for (LocalClaim local : unconfirmed) {
+                LOGGER.warn("Releasing key {} (claim {}) whose publish is still in flight at shutdown; "
+                        + "the event may be published twice if that publish succeeds", local.key, local.claimId);
+                transitionToReleasing(local);
+            }
+        }
     }
 
     /**
@@ -321,10 +383,10 @@ public class KafkaClaimRepository implements ImportEventClaimRepository, SmartLi
             switch (step) {
                 case PRODUCE -> {
                     produceAdd(local);
-                    return await(local);
+                    return await(local, true);
                 }
                 case AWAIT -> {
-                    return await(local);
+                    return await(local, false);
                 }
                 case AWAIT_REMOVE -> {
                     awaitRemove(local);
@@ -437,8 +499,9 @@ public class KafkaClaimRepository implements ImportEventClaimRepository, SmartLi
     }
 
     /**
-     * Hands the add to the producer. The outcome is decided by the poller when the record is read back, or
-     * failed by the producer when it gives up on the record (bounded by {@code delivery.timeout.ms}).
+     * Hands the add to the producer. The outcome is decided by the poller when the record is read back. A
+     * {@code send} that throws has not enqueued the record, so the claim is simply dropped; a failure reported
+     * through the callback (bounded by {@code delivery.timeout.ms}) is handled by {@link #onAddFailed}.
      */
     private void produceAdd(LocalClaim local) {
         try {
@@ -451,29 +514,75 @@ public class KafkaClaimRepository implements ImportEventClaimRepository, SmartLi
                 }
             });
         } catch (RuntimeException e) {
-            onAddFailed(local, e);
+            if (!(e instanceof RetriableException)) {
+                LOGGER.error("The producer of the idempotent topic {} failed: {}", topic, e.toString());
+            }
+            synchronized (lock) {
+                evict(local);
+            }
             throw new ClaimException("Could not write the claim for key " + local.key + " to topic " + topic, e);
         }
     }
 
+    /**
+     * The producer gave up on the add. The record may have landed with its acknowledgement lost (a request in
+     * flight when the delivery timeout expires can still be appended by the broker), so the claim is not
+     * dropped: the waiting caller is failed, the claim stays registered as abandoned and keeps listening for
+     * its record, and once the poller has read past where the record could have landed it is forgotten.
+     * Meanwhile a retry on this pod re-attaches to it, and a record that does show up and won is either
+     * re-owned by that retry or released.
+     */
     private void onAddFailed(LocalClaim local, Exception exception) {
         if (!(exception instanceof RetriableException)) {
             LOGGER.error("The producer of the idempotent topic {} failed: {}", topic, exception.toString());
         }
         synchronized (lock) {
-            if (local.localState == LocalState.PENDING || local.localState == LocalState.ABANDONED) {
-                evict(local);
+            if (local.outcome.isDone()) {
+                return;
             }
+            LOGGER.warn("The producer gave up on claim {} for key {}: {}. Whether the record landed is unknown until the "
+                    + "poller has read past it; the claim is kept meanwhile", local.claimId, local.key, exception.toString());
         }
-        local.outcome.completeExceptionally(new ClaimException("Could not write the claim for key " + local.key
-                + " to topic " + topic, exception));
+        local.addFailed.complete(new ClaimException("Could not write the claim for key " + local.key + " to topic "
+                + topic, exception));
+        Duration grace = timeouts.sendTimeout();
+        try {
+            releaseExecutor.schedule(() -> poller.caughtUp().whenComplete((v, ex) -> forgetIfNeverRead(local, ex)),
+                    grace.toMillis(), TimeUnit.MILLISECONDS);
+        } catch (RejectedExecutionException e) {
+            // stopping: stop() fails the pending claims and clears the registry
+        }
     }
 
-    private Optional<Claim> await(LocalClaim local) {
+    /**
+     * Runs once the poller has read everything the topic held a send timeout after the producer gave up on
+     * the add: a record not seen by then was never written, and the claim is failed, which evicts it.
+     */
+    private void forgetIfNeverRead(LocalClaim local, Throwable pollerFailure) {
+        synchronized (lock) {
+            if (local.outcome.isDone()) {
+                return;
+            }
+            if (pollerFailure == null) {
+                LOGGER.info("Claim {} for key {} was never written; forgetting it", local.claimId, local.key);
+            }
+            local.outcome.completeExceptionally(pollerFailure != null
+                    ? new ClaimException("Claim " + local.claimId + " for key " + local.key + " cannot be decided", pollerFailure)
+                    : new ClaimException("Claim " + local.claimId + " for key " + local.key + " was never written"));
+        }
+    }
+
+    /**
+     * Waits for the outcome. The first caller is also woken when the producer gives up on the add; a caller
+     * re-attaching to an abandoned claim waits for the outcome alone, which is failed when the add turns out
+     * never to have been written.
+     */
+    private Optional<Claim> await(LocalClaim local, boolean firstAttempt) {
         Boolean won;
         Duration wait = timeouts.sendTimeout().plus(timeouts.claimTimeout());
+        CompletableFuture<?> wakeUp = firstAttempt ? CompletableFuture.anyOf(local.outcome, local.addFailed) : local.outcome;
         try {
-            won = local.outcome.get(wait.toMillis(), TimeUnit.MILLISECONDS);
+            wakeUp.get(wait.toMillis(), TimeUnit.MILLISECONDS);
         } catch (TimeoutException e) {
             synchronized (lock) {
                 if (!local.outcome.isDone()) {
@@ -483,15 +592,9 @@ public class KafkaClaimRepository implements ImportEventClaimRepository, SmartLi
                             + " is not visible after " + wait);
                 }
             }
-            return await(local);
+            return await(local, firstAttempt);
         } catch (ExecutionException e) {
-            synchronized (lock) {
-                evict(local);
-            }
-            if (e.getCause() instanceof ClaimException claimException) {
-                throw claimException;
-            }
-            throw new ClaimException("Claim " + local.claimId + " for key " + local.key + " failed", e.getCause());
+            // the outcome failed; handled below
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             synchronized (lock) {
@@ -499,6 +602,25 @@ public class KafkaClaimRepository implements ImportEventClaimRepository, SmartLi
                 local.settle();
             }
             throw new ClaimException("Interrupted while waiting for claim " + local.claimId + " for key " + local.key, e);
+        }
+        synchronized (lock) {
+            if (!local.outcome.isDone()) {
+                // the producer gave up on the add: see onAddFailed
+                local.localState = LocalState.ABANDONED;
+                local.settle();
+                throw local.addFailed.join();
+            }
+        }
+        try {
+            won = local.outcome.join();
+        } catch (CompletionException e) {
+            synchronized (lock) {
+                evict(local);
+            }
+            if (e.getCause() instanceof ClaimException claimException) {
+                throw claimException;
+            }
+            throw new ClaimException("Claim " + local.claimId + " for key " + local.key + " failed", e.getCause());
         }
         synchronized (lock) {
             if (Boolean.TRUE.equals(won)) {
@@ -542,16 +664,26 @@ public class KafkaClaimRepository implements ImportEventClaimRepository, SmartLi
         }
     }
 
+    /**
+     * Sends the remove on the release thread. While the repository is stopping the executor is gone but the
+     * producer may still be open: a first attempt is then sent on the calling thread, so that a release
+     * arriving during the shutdown still lands; a retry is left to {@link #flushPendingReleases()}.
+     */
     private void scheduleRemove(LocalClaim local, Duration delay) {
         try {
             releaseExecutor.schedule(() -> sendRemove(local), delay.toMillis(), TimeUnit.MILLISECONDS);
         } catch (RejectedExecutionException e) {
-            LOGGER.warn("Not scheduling the release of key {} (claim {}): the repository is stopping", local.key, local.claimId);
+            if (delay.isZero()) {
+                sendRemove(local);
+            } else {
+                LOGGER.warn("Not retrying the release of key {} (claim {}): the repository is stopping", local.key, local.claimId);
+            }
         }
     }
 
     private void sendRemove(LocalClaim local) {
-        if (!running) {
+        if (!producerOpen) {
+            LOGGER.warn("Not sending the release of key {} (claim {}): the producer is closed", local.key, local.claimId);
             return;
         }
         try {
@@ -568,16 +700,35 @@ public class KafkaClaimRepository implements ImportEventClaimRepository, SmartLi
         }
     }
 
+    /**
+     * A failed remove is retried until it lands or the pod stops, with an exponential back-off from the poll
+     * timeout to {@link #MAX_RELEASE_RETRY_DELAY}. Nothing is given up on: a cause the client calls
+     * non-retriable (an authorization failure, say) can still clear, and a dead claim is a lost dataset.
+     */
     private void retryRemove(LocalClaim local, Throwable cause) {
-        if (!running) {
+        if (!producerOpen) {
             return;
         }
         if (!(cause instanceof RetriableException)) {
             LOGGER.error("The producer of the idempotent topic {} failed: {}", topic, cause.toString());
         }
-        LOGGER.warn("Release of key {} (claim {}) failed: {}. Retrying in {}", local.key, local.claimId,
-                cause.toString(), timeouts.pollTimeout());
-        scheduleRemove(local, timeouts.pollTimeout());
+        int attempt;
+        Duration delay;
+        synchronized (lock) {
+            attempt = ++local.removeAttempts;
+            delay = releaseRetryDelay(attempt);
+        }
+        LOGGER.warn("Release of key {} (claim {}) failed, attempt {}: {}. Retrying in {}", local.key, local.claimId,
+                attempt, cause.toString(), delay);
+        scheduleRemove(local, delay);
+    }
+
+    private Duration releaseRetryDelay(int failedAttempts) {
+        Duration delay = timeouts.pollTimeout();
+        for (int i = 1; i < failedAttempts && delay.compareTo(MAX_RELEASE_RETRY_DELAY) < 0; i++) {
+            delay = delay.multipliedBy(2);
+        }
+        return delay.compareTo(MAX_RELEASE_RETRY_DELAY) < 0 ? delay : MAX_RELEASE_RETRY_DELAY;
     }
 
     private ProducerRecord<String, String> record(String key, String action, String claimId) {

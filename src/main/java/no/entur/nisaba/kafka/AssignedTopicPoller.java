@@ -27,6 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -62,7 +63,17 @@ public final class AssignedTopicPoller<K, V> {
     private final Duration pollTimeout;
     private final Duration replayTimeout;
 
+    /**
+     * A request to be told once the poller has handled everything the topic held when the request was made.
+     * The end offsets are snapshotted on the poller thread, the first time it sees the request.
+     */
+    private static final class Barrier {
+        private final CompletableFuture<Void> done = new CompletableFuture<>();
+        private Map<TopicPartition, Long> endOffsets;
+    }
+
     private final CompletableFuture<Void> replayed = new CompletableFuture<>();
+    private final List<Barrier> barriers = new ArrayList<>();
     private final Object pauseLock = new Object();
     private boolean paused;
     private boolean parked;
@@ -139,6 +150,23 @@ public final class AssignedTopicPoller<K, V> {
     }
 
     /**
+     * @return a future completed once every record the topic held at the time of this call has been handled,
+     * so that a caller can conclude that a record it has not seen by then was never written; failed when the
+     * poller stops first. Checked once per poll, so it completes at the earliest one poll timeout later.
+     */
+    public CompletableFuture<Void> caughtUp() {
+        Barrier barrier = new Barrier();
+        synchronized (barriers) {
+            if (!running) {
+                barrier.done.completeExceptionally(new IllegalStateException(name + " is not running"));
+            } else {
+                barriers.add(barrier);
+            }
+        }
+        return barrier.done;
+    }
+
+    /**
      * Test hook: stop calling poll() until {@link #resume()}. Returns once the poller thread is parked, so a
      * record produced after this call is not applied before {@link #resume()}.
      */
@@ -186,6 +214,7 @@ public final class AssignedTopicPoller<K, V> {
                 }
                 try {
                     pollOnce(c);
+                    settleBarriers(c);
                 } catch (WakeupException e) {
                     throw e;
                 } catch (RuntimeException e) {
@@ -204,6 +233,7 @@ public final class AssignedTopicPoller<K, V> {
             if (!replayed.isDone()) {
                 replayed.completeExceptionally(new IllegalStateException(name + ": the poller of topic " + topic + " stopped before the replay completed"));
             }
+            failBarriers();
             try {
                 c.close(CLOSE_TIMEOUT);
             } catch (RuntimeException e) {
@@ -230,6 +260,43 @@ public final class AssignedTopicPoller<K, V> {
             records += pollOnce(c);
         }
         LOGGER.info("{}: replayed {} records of topic {}", name, records, topic);
+    }
+
+    /**
+     * Snapshots the end offsets of a new barrier and completes every barrier whose end offsets are reached.
+     * Runs on the poller thread, between polls, so a barrier is settled only after the records before its
+     * end offsets have been handled.
+     */
+    private void settleBarriers(Consumer<K, V> c) {
+        List<Barrier> pending;
+        synchronized (barriers) {
+            if (barriers.isEmpty()) {
+                return;
+            }
+            pending = new ArrayList<>(barriers);
+        }
+        for (Barrier barrier : pending) {
+            if (barrier.endOffsets == null) {
+                barrier.endOffsets = c.endOffsets(c.assignment());
+            }
+            if (reached(c, barrier.endOffsets)) {
+                synchronized (barriers) {
+                    barriers.remove(barrier);
+                }
+                barrier.done.complete(null);
+            }
+        }
+    }
+
+    private void failBarriers() {
+        List<Barrier> pending;
+        synchronized (barriers) {
+            pending = new ArrayList<>(barriers);
+            barriers.clear();
+        }
+        for (Barrier barrier : pending) {
+            barrier.done.completeExceptionally(new IllegalStateException(name + ": the poller of topic " + topic + " stopped"));
+        }
     }
 
     private static <K, V> boolean reached(Consumer<K, V> c, Map<TopicPartition, Long> endOffsets) {

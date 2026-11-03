@@ -21,6 +21,8 @@ import no.entur.nisaba.pipeline.ImportMdc;
 import no.entur.nisaba.pipeline.NetexImportMetrics;
 import no.entur.nisaba.pipeline.NetexImportPipeline;
 import org.entur.pubsub.base.AbstractEnturGooglePubSubConsumer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.event.ContextClosedEvent;
@@ -39,6 +41,8 @@ import java.util.Map;
 @Component
 @ConditionalOnProperty(value = "nisaba.pubsub.consumer.enabled", matchIfMissing = true)
 public class NetexExportNotificationConsumer extends AbstractEnturGooglePubSubConsumer {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(NetexExportNotificationConsumer.class);
 
     private final NetexImportPipeline pipeline;
     private final InFlightMessages inFlightMessages;
@@ -61,19 +65,34 @@ public class NetexExportNotificationConsumer extends AbstractEnturGooglePubSubCo
         return ProjectSubscriptionName.format(mardukProjectId, NisabaQueues.NETEX_EXPORT_NOTIFICATION_QUEUE);
     }
 
+    /**
+     * A notification that carries no codespace is logged, counted and acked: a redelivery cannot make it
+     * usable, and the subscription has no dead-letter topic. Any other failure, an {@code Error} included, is
+     * counted and rethrown as a {@code RuntimeException}: the base class catches only {@code Exception}, and a
+     * message it neither acks nor nacks stays leased until the ack deadline lapses, blocking this pod's one
+     * callback slot meanwhile.
+     */
     @Override
     public void onMessage(byte[] content, Map<String, String> attributes) {
         ImportMdc.clear();
-        NetexExportNotification notification = NetexExportNotification.from(content, attributes);
+        NetexExportNotification notification;
+        try {
+            notification = NetexExportNotification.from(content, attributes);
+        } catch (IllegalArgumentException e) {
+            LOGGER.error("Discarding a NeTEx export notification that cannot be processed: {} (attributes {})",
+                    e.getMessage(), attributes);
+            metrics.count(NetexImportMetrics.Outcome.INVALID);
+            return;
+        }
         ImportMdc.put(notification.codespace(), notification.correlationId());
         inFlightMessages.track(() -> {
             try {
                 redelivery.run(() -> pipeline.process(notification));
-            } catch (Exception e) {
+            } catch (RuntimeException e) {
                 metrics.count(NetexImportMetrics.Outcome.FAILED);
-                if (e instanceof RuntimeException runtimeException) {
-                    throw runtimeException;
-                }
+                throw e;
+            } catch (Exception | Error e) {
+                metrics.count(NetexImportMetrics.Outcome.FAILED);
                 throw new IllegalStateException(e);
             }
         });

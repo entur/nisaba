@@ -29,15 +29,25 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * Wraps a real producer so that a test can make every send fail, as during a broker outage.
+ * Wraps a real producer so that a test can make every send fail, as during a broker outage, or make every
+ * send land while its acknowledgement is reported lost, as when the producer gives up on a request in flight.
  */
 final class FailableProducer {
 
     private final AtomicBoolean failing = new AtomicBoolean();
+    private final AtomicBoolean losingAcknowledgements = new AtomicBoolean();
     private final java.util.concurrent.atomic.AtomicInteger failedSends = new java.util.concurrent.atomic.AtomicInteger();
 
     void failSends(boolean fail) {
         failing.set(fail);
+    }
+
+    /**
+     * The record is written, but the callback reports a timeout, as the producer does when it gives up on a
+     * request the broker then completes.
+     */
+    void loseAcknowledgements(boolean lose) {
+        losingAcknowledgements.set(lose);
     }
 
     int failedSends() {
@@ -57,6 +67,17 @@ final class FailableProducer {
                         }
                         Future<RecordMetadata> future = CompletableFuture.failedFuture(failure);
                         return future;
+                    }
+                    if (method.getName().equals("send") && losingAcknowledgements.get()
+                            && args.length == 2 && args[1] instanceof Callback callback) {
+                        failedSends.incrementAndGet();
+                        Callback lost = (metadata, exception) -> callback.onCompletion(null,
+                                exception != null ? exception : new TimeoutException("simulated lost acknowledgement"));
+                        try {
+                            return method.invoke(delegate, args[0], lost);
+                        } catch (InvocationTargetException e) {
+                            throw e.getCause();
+                        }
                     }
                     try {
                         return method.invoke(delegate, args);

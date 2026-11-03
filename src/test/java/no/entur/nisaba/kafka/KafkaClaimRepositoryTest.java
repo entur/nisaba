@@ -66,6 +66,9 @@ class KafkaClaimRepositoryTest {
             new KafkaClaimRepository.Timeouts(Duration.ofSeconds(10), Duration.ofSeconds(10), Duration.ofSeconds(30), Duration.ofMillis(100));
     private static final KafkaClaimRepository.Timeouts SHORT_CLAIM =
             new KafkaClaimRepository.Timeouts(Duration.ofSeconds(10), SHORT, Duration.ofSeconds(30), Duration.ofMillis(100));
+    /** A short send timeout: the grace before an add the producer gave up on is forgotten is the send timeout. */
+    private static final KafkaClaimRepository.Timeouts SHORT_SEND =
+            new KafkaClaimRepository.Timeouts(Duration.ofSeconds(2), Duration.ofSeconds(10), Duration.ofSeconds(30), Duration.ofMillis(100));
 
     private final List<KafkaClaimRepository> started = new ArrayList<>();
     private String topic;
@@ -352,21 +355,134 @@ class KafkaClaimRepositoryTest {
         assertTrue(a.contains("k"));
     }
 
-    // A send that the producer gives up on fails the claim at once; nothing is left behind and the next claim is fresh.
+    // A send that the producer gives up on fails the claim at once. The claim is kept until the poller has read
+    // past where the add could have landed, then forgotten; the next claim is fresh.
     @Test
-    void failedAddFailsTheClaimAndLeavesNothingBehind(TestInfo info) {
+    void failedAddFailsTheClaimAndIsForgottenOnceThePollerHasReadPastIt(TestInfo info) {
         topic(info);
         FailableProducer failable = new FailableProducer();
-        KafkaClaimRepository a = repository("a", TIMEOUTS, config -> failable.wrap(config, TIMEOUTS));
+        KafkaClaimRepository a = repository("a", SHORT_SEND, config -> failable.wrap(config, SHORT_SEND));
         failable.failSends(true);
         assertThrows(ClaimException.class, () -> a.claim("k"));
-        assertEquals(0, a.registrySize());
-        assertEquals(0, a.pendingFutures());
+        assertEquals(1, a.registrySize(), "the claim is kept while the add may still show up");
+        assertEquals(1, a.pendingFutures());
         assertEquals(List.of(), values());
+        await().atMost(10, TimeUnit.SECONDS).until(() -> a.registrySize() == 0 && a.pendingFutures() == 0);
 
         failable.failSends(false);
         a.confirm(a.claim("k").orElseThrow());
         assertEquals(List.of("add"), values());
+    }
+
+    // A retry on the same pod during that window re-attaches to the claim and fails once it is known never to
+    // have been written; the retry after that claims fresh.
+    @Test
+    void retryAfterAFailedAddWaitsUntilTheAddIsKnownNeverWritten(TestInfo info) throws Exception {
+        topic(info);
+        FailableProducer failable = new FailableProducer();
+        KafkaClaimRepository a = repository("a", SHORT_SEND, config -> failable.wrap(config, SHORT_SEND));
+        failable.failSends(true);
+        assertThrows(ClaimException.class, () -> a.claim("k"));
+        failable.failSends(false);
+
+        CompletableFuture<Optional<Claim>> retry = CompletableFuture.supplyAsync(() -> a.claim("k"));
+        assertFalse(retry.isDone());
+        ClaimException e = assertThrows(ClaimException.class, () -> {
+            try {
+                retry.get(10, TimeUnit.SECONDS);
+            } catch (java.util.concurrent.ExecutionException ex) {
+                throw ex.getCause();
+            }
+        });
+        assertTrue(e.getMessage().contains("never written"), e.getMessage());
+        assertEquals(List.of(), values(), "the retry wrote no second add while the first was undecided");
+
+        a.confirm(a.claim("k").orElseThrow());
+        assertEquals(List.of("add"), values());
+    }
+
+    // The producer gave up on an add that did land (acknowledgement lost): the claim won after its caller
+    // gave up, so it is released, and the key does not stay owned by a claim nobody will ever release.
+    @Test
+    void addWhoseAcknowledgementWasLostIsReleased(TestInfo info) {
+        topic(info);
+        FailableProducer failable = new FailableProducer();
+        KafkaClaimRepository a = repository("a", SHORT_SEND, config -> failable.wrap(config, SHORT_SEND));
+        failable.loseAcknowledgements(true);
+        assertThrows(ClaimException.class, () -> a.claim("k"));
+        failable.loseAcknowledgements(false);
+        await().atMost(10, TimeUnit.SECONDS).until(() -> values().equals(List.of("add", "remove")));
+        await().atMost(10, TimeUnit.SECONDS).until(() -> !a.contains("k") && a.registrySize() == 0);
+
+        KafkaClaimRepository b = repository("b", TIMEOUTS);
+        b.confirm(b.claim("k").orElseThrow());
+    }
+
+    // Same, but a retry on the same pod re-attaches before the add is read back: it re-owns the claim and
+    // publishes, with no second add and no remove.
+    @Test
+    void retryReownsTheAddWhoseAcknowledgementWasLost(TestInfo info) throws Exception {
+        topic(info);
+        FailableProducer failable = new FailableProducer();
+        KafkaClaimRepository a = repository("a", SHORT_SEND, config -> failable.wrap(config, SHORT_SEND));
+        a.poller().pause();
+        failable.loseAcknowledgements(true);
+        assertThrows(ClaimException.class, () -> a.claim("k"));
+        failable.loseAcknowledgements(false);
+
+        CompletableFuture<Optional<Claim>> retry = new CompletableFuture<>();
+        Thread retrying = new Thread(() -> retry.complete(a.claim("k")));
+        retrying.start();
+        await().atMost(10, TimeUnit.SECONDS).until(() -> retrying.getState() == Thread.State.TIMED_WAITING);
+        a.poller().resume();
+
+        Claim claim = retry.get(10, TimeUnit.SECONDS).orElseThrow();
+        assertEquals(Optional.of(claim.claimId()), a.owner("k"));
+        a.confirm(claim);
+        assertEquals(List.of("add"), values(), "one add, no remove");
+        assertEquals(0, a.registrySize());
+    }
+
+    // A claim still held when the repository stops (the drain gave up on its notification) is released, so
+    // that the redelivery can publish the event.
+    @Test
+    void unconfirmedClaimIsReleasedAtStop(TestInfo info) {
+        topic(info);
+        KafkaClaimRepository a = repository("a", TIMEOUTS);
+        Claim held = a.claim("k").orElseThrow();
+        a.stop();
+        assertEquals(List.of("add", "remove"), values());
+
+        KafkaClaimRepository b = repository("b", TIMEOUTS);
+        assertFalse(b.contains("k"));
+        Claim fresh = b.claim("k").orElseThrow();
+        assertNotEquals(held.claimId(), fresh.claimId());
+        b.confirm(fresh);
+    }
+
+    // A release that arrives while the repository is stopping is sent through the producer before it closes.
+    @Test
+    void releaseDuringStopIsSent(TestInfo info) throws Exception {
+        topic(info);
+        KafkaClaimRepository a = repository("a", TIMEOUTS);
+        Claim held = a.claim("k").orElseThrow();
+        Thread releasing = new Thread(() -> {
+            try {
+                Thread.sleep(300);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            a.release(held);
+        });
+        releasing.start();
+        a.stop();
+        releasing.join(5000);
+        List<String> written = values();
+        assertEquals("add", written.getFirst());
+        assertTrue(written.size() >= 2 && written.subList(1, written.size()).stream().allMatch("remove"::equals), written.toString());
+
+        KafkaClaimRepository b = repository("b", TIMEOUTS);
+        assertFalse(b.contains("k"));
     }
 
     // One holder per key on one pod: a second caller waits for the first to confirm or release.

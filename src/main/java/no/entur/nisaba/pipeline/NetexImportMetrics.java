@@ -32,6 +32,8 @@ public class NetexImportMetrics {
         PUBLISHED,
         DUPLICATE,
         DATASET_MISSING,
+        /** The notification could not be used (no codespace in the body) and was acked. */
+        INVALID,
         FAILED
     }
 

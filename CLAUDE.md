@@ -152,7 +152,7 @@ Tests: plain unit tests, embedded-Kafka (KRaft) tests for the Kafka classes, Spr
 ## Monitoring and Observability
 
 - **Actuator endpoints**: health (liveness/readiness), info, Prometheus metrics
-- **Metrics**: `nisaba_notifications_total{outcome=published|duplicate|dataset_missing|failed}`; health contributor `kafkaPoller`
+- **Metrics**: `nisaba_notifications_total{outcome=published|duplicate|dataset_missing|invalid|failed}`; health contributor `kafkaPoller`
 - **Structured logging**: Logstash JSON with `breadcrumb` (= correlation id) and `codespace` fields from the MDC
 
 ## Important Notes
