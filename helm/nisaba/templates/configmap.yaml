@@ -7,7 +7,9 @@ data:
     spring.profiles.active=gcs-blobstore
     server.port={{ .Values.common.service.internalPort }}
 
-    # Camel
+    # Camel-era keys: unused by this version, KEPT for rollback and for old pods that restart mid-rollout
+    # (an old jar booting without camel.cluster.kubernetes.enabled fails with "No cluster service found").
+    # Remove in the follow-up PR once the Camel-free version has been running in production.
     camel.main.name=Nisaba
     camel.main.stream-caching-enabled=false
     camel.main.stream-caching-spool-enabled=true
@@ -19,9 +21,10 @@ data:
     # the Camel shutdown timeout must be shorter than the Kubernetes terminationGracePeriod
     nisaba.shutdown.timeout=25
 
-    # Kafka
+    # Kafka topics
     nisaba.kafka.topic.event={{ .Values.kafka.topic.event }}
     nisaba.kafka.topic.idempotent={{ .Values.kafka.topic.idempotent }}
+    # Camel-era Kafka client keys, kept for rollback (see above)
     camel.component.kafka.brokers={{ .Values.kafka.brokers }}
     camel.component.kafka.sasl-mechanism=SCRAM-SHA-512
     camel.component.kafka.security-protocol=SASL_SSL
@@ -36,6 +39,38 @@ data:
     marduk.pubsub.project.id={{ .Values.gcp.mardukPubsubProjectId }}
     spring.cloud.gcp.project-id=${nisaba.pubsub.project.id}
     camel.component.google-pubsub.synchronous-pull-retryable-codes=DEADLINE_EXCEEDED
+
+    # PubSub consumer (replaces the Camel master:/google-pubsub route)
+    # The subscription lives in the Marduk project; the consumer subscribes with the fully-qualified name.
+    # Topics and subscriptions are terraformed in marduk: never let the consumer create them.
+    entur.pubsub.subscriber.autocreate=false
+    # After a nack the consumer base class sleeps this long inside the callback; PubSub's own backoff
+    # (10 s to 600 s) governs redelivery, so keep it short for the shutdown budget.
+    entur.pubsub.consumer.retry.delay=1000
+    # One notification at a time per pod (Camel's single gax subscriber ran up to 5 callbacks on the leader).
+    spring.cloud.gcp.pubsub.subscriber.executor-threads=1
+    spring.cloud.gcp.pubsub.subscriber.flow-control.max-outstanding-element-count=1
+    # spring-cloud-gcp defaults this to 0, which DISABLES ack-deadline extension; Camel used 3600.
+    spring.cloud.gcp.pubsub.subscriber.max-ack-extension-period=3600
+    # Local redelivery, same schedule as the Camel error handler: 5 s, 15 s, 45 s, then nack.
+    nisaba.redelivery.max=3
+    nisaba.redelivery.delay.millis=5000
+    nisaba.redelivery.backoff.multiplier=3
+    # Drain: 10 s subscriber close + this + 4 x 5 s Kafka closes must fit terminationGracePeriodSeconds (90).
+    nisaba.shutdown.drain.timeout.seconds=45
+    spring.lifecycle.timeout-per-shutdown-phase=5s
+    # Each Kafka replay must finish well inside the 300 s startup probe.
+    nisaba.kafka.replay-timeout=2m
+
+    # Kafka (spring-kafka properties); SASL and schema registry configured once for all clients
+    spring.kafka.bootstrap-servers={{ .Values.kafka.brokers }}
+    spring.kafka.security.protocol=SASL_SSL
+    spring.kafka.properties.sasl.mechanism=SCRAM-SHA-512
+    spring.kafka.properties.sasl.jaas.config=org.apache.kafka.common.security.scram.ScramLoginModule required username="${KAFKAUSERNAME}" password="${KAFKAPASSWORD}";
+    spring.kafka.properties.schema.registry.url={{ .Values.kafka.registry }}
+    spring.kafka.properties.basic.auth.credentials.source=USER_INFO
+    spring.kafka.properties.basic.auth.user.info=${KAFKAUSERNAME}:${KAFKAPASSWORD}
+    spring.kafka.admin.auto-create=false
 
     # Blobstore
     blobstore.gcs.project.id={{ .Values.gcp.blobstoreProjectId }}
