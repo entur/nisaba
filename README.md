@@ -26,9 +26,9 @@ When the dataset contains NeTEx data exported from both Chouette and Uttu, the d
 
 # Identifying previously imported datasets
 Marduk publishes a NeTEx export event each time a dataset is exported or re-exported, while Nisaba publishes an event only when the dataset is exported for the first time.  
-Nisaba relies on a Camel IdempotentRepository to identify datasets that have been already exported.  
-The idempotent repository is backed by a Kafka topic that stores the history of previous imports identified by a unique key.  
-The history is kept for 365 days.
+Nisaba keeps the history of previous imports, identified by their unique key, in a Kafka topic (`rutedata-dataset-import-event-idempotent-repo-<env>`).  
+Each pod replays the topic at start-up and follows it. Claiming a key writes it to the topic and reads it back: Kafka orders the records of a key, so the first claim wins on every pod and no leader election is needed.  
+The history is kept for as long as the topic retains it. See [docs/camel-removal.md](docs/camel-removal.md) for the design.
 
 # Dataset import unique key
 A dataset import is uniquely identified by a key built as follows:
