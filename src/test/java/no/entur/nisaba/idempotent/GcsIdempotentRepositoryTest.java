@@ -21,6 +21,9 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -112,12 +115,37 @@ class GcsIdempotentRepositoryTest {
         }
     }
 
-    private final InMemoryMarkerStore store = new InMemoryMarkerStore();
+    /** The clock of the store and of the pods; advancing it ages every claim. */
+    private static final class TestClock extends Clock {
+        private volatile Instant now = Instant.parse("2026-11-11T02:00:00Z");
+
+        void advance(Duration by) {
+            now = now.plus(by);
+        }
+
+        @Override
+        public Instant instant() {
+            return now;
+        }
+
+        @Override
+        public ZoneId getZone() {
+            return ZoneOffset.UTC;
+        }
+
+        @Override
+        public Clock withZone(ZoneId zone) {
+            return this;
+        }
+    }
+
+    private final TestClock clock = new TestClock();
+    private final InMemoryMarkerStore store = new InMemoryMarkerStore(clock);
     private final GcsIdempotentRepository a = repository("a", store);
     private final GcsIdempotentRepository b = repository("b", store);
 
-    private static GcsIdempotentRepository repository(String instanceId, MarkerStore store) {
-        return new GcsIdempotentRepository(store, instanceId, STALE_AFTER, Clock.systemUTC(), Duration.ofMillis(1));
+    private GcsIdempotentRepository repository(String instanceId, MarkerStore store) {
+        return new GcsIdempotentRepository(store, instanceId, STALE_AFTER, clock, Duration.ofMillis(1));
     }
 
     @Test
@@ -135,16 +163,15 @@ class GcsIdempotentRepositoryTest {
     void confirmedKeyIsADuplicateForEverybodyForEver() {
         a.confirm(a.claim(KEY).orElseThrow());
         assertTrue(store.read(KEY).orElseThrow().confirmed());
-        store.backdate(KEY, STALE_AFTER.multipliedBy(1000));
+        clock.advance(STALE_AFTER.multipliedBy(1000));
         assertTrue(a.claim(KEY).isEmpty());
         assertTrue(b.claim(KEY).isEmpty());
-        assertEquals(1, store.size());
     }
 
     @Test
     void keyBeingPublishedByAnotherPodIsNeitherClaimedNorADuplicate() {
         Claim first = a.claim(KEY).orElseThrow();
-        store.backdate(KEY, STALE_AFTER.minusSeconds(30));
+        clock.advance(STALE_AFTER.minusSeconds(30));
         assertThrows(ClaimInProgressException.class, () -> b.claim(KEY));
         assertEquals(first.generation(), store.read(KEY).orElseThrow().generation());
 
@@ -157,7 +184,7 @@ class GcsIdempotentRepositoryTest {
     void redeliveryOfAKeyWhoseClaimerDiedIsPublishedOnceTheClaimIsStale() {
         a.claim(KEY).orElseThrow();
         assertThrows(ClaimInProgressException.class, () -> b.claim(KEY));
-        store.backdate(KEY, STALE_AFTER.plusSeconds(1));
+        clock.advance(STALE_AFTER.plusSeconds(1));
         assertTrue(b.claim(KEY).orElseThrow().claimId().startsWith("b:"));
     }
 
@@ -165,7 +192,7 @@ class GcsIdempotentRepositoryTest {
     void releasedKeyCanBeClaimedAgain() {
         Claim first = a.claim(KEY).orElseThrow();
         a.release(first);
-        assertFalse(store.contains(KEY));
+        assertFalse(store.read(KEY).isPresent());
         Claim second = b.claim(KEY).orElseThrow();
         assertTrue(second.claimId().startsWith("b:"));
     }
@@ -173,7 +200,7 @@ class GcsIdempotentRepositoryTest {
     @Test
     void unconfirmedClaimIsTakenOverOnceStale() {
         Claim dead = a.claim(KEY).orElseThrow();
-        store.backdate(KEY, STALE_AFTER.plusSeconds(1));
+        clock.advance(STALE_AFTER.plusSeconds(1));
         Claim taken = b.claim(KEY).orElseThrow();
         assertTrue(taken.claimId().startsWith("b:"));
         assertEquals(taken.claimId(), store.read(KEY).orElseThrow().claimId());
@@ -191,7 +218,7 @@ class GcsIdempotentRepositoryTest {
     @Test
     void onlyOneOfManyPodsTakesAStaleClaimOver() throws Exception {
         a.claim(KEY).orElseThrow();
-        store.backdate(KEY, STALE_AFTER.plusSeconds(1));
+        clock.advance(STALE_AFTER.plusSeconds(1));
         int pods = 16;
         ExecutorService executor = Executors.newFixedThreadPool(pods);
         try {
@@ -245,7 +272,7 @@ class GcsIdempotentRepositoryTest {
         Claim claim = pod.claim(KEY).orElseThrow();
         faulty.failDelete = true;
         pod.release(claim);
-        assertTrue(store.contains(KEY), "the release failed without throwing");
+        assertTrue(store.read(KEY).isPresent(), "the release failed without throwing");
 
         // the retry owns the claim again, and a second failed release is remembered as well
         assertEquals(claim, pod.claim(KEY).orElseThrow());
@@ -268,7 +295,7 @@ class GcsIdempotentRepositoryTest {
         faulty.failDelete = false;
 
         assertThrows(ClaimInProgressException.class, () -> b.claim(KEY), "not stale yet: the message is retried");
-        store.backdate(KEY, STALE_AFTER.plusSeconds(1));
+        clock.advance(STALE_AFTER.plusSeconds(1));
         Claim taken = b.claim(KEY).orElseThrow();
 
         // the first pod no longer owns the key: its remembered claim is of an older generation
@@ -348,12 +375,12 @@ class GcsIdempotentRepositoryTest {
         // every takeover is beaten by a new stale claim of somebody else
         FaultyStore faulty = new FaultyStore(store);
         faulty.beforeDelete = () -> {
-            store.clear();
+            store.read(KEY).ifPresent(marker -> store.deleteIfGeneration(KEY, marker.generation()));
             store.createIfAbsent(KEY, "other:claim", false);
-            store.backdate(KEY, STALE_AFTER.plusSeconds(1));
+            clock.advance(STALE_AFTER.plusSeconds(1));
         };
         store.createIfAbsent(KEY, "other:claim", false);
-        store.backdate(KEY, STALE_AFTER.plusSeconds(1));
+        clock.advance(STALE_AFTER.plusSeconds(1));
         assertThrows(IdempotentRepositoryException.class, () -> repository("a", faulty).claim(KEY));
     }
 }

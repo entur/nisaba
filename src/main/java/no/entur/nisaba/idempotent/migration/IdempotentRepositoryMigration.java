@@ -18,8 +18,7 @@ package no.entur.nisaba.idempotent.migration;
 
 import no.entur.nisaba.idempotent.MarkerStore;
 import no.entur.nisaba.kafka.AssignedTopicPoller;
-import no.entur.nisaba.kafka.IdempotentTopicContract;
-import no.entur.nisaba.kafka.IdempotentTopicState;
+import no.entur.nisaba.kafka.NisabaKafkaProperties;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.slf4j.Logger;
@@ -48,7 +47,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public final class IdempotentRepositoryMigration {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(IdempotentRepositoryMigration.class);
-    private static final Duration CLOSE_TIMEOUT = Duration.ofSeconds(5);
+    static final String CLIENT_ID = "nisaba-idempotent-repo-migration";
 
     /** Prefix of the claim id of a migrated marker, followed by the claim id found on the topic. */
     public static final String MIGRATED_PREFIX = "migrated:";
@@ -153,12 +152,12 @@ public final class IdempotentRepositoryMigration {
                 pollTimeout, replayTimeout);
         // returns once everything the topic held at the start has been applied
         poller.start();
-        poller.stop(CLOSE_TIMEOUT);
+        poller.stop(NisabaKafkaProperties.CLOSE_TIMEOUT);
         return state.snapshot();
     }
 
     static Map<String, Object> consumerProperties(Map<String, Object> config) {
-        return AssignedTopicPoller.consumerProperties(config, IdempotentTopicContract.CLIENT_ID_REPOSITORY + "-migration",
+        return AssignedTopicPoller.consumerProperties(config, CLIENT_ID,
                 StringDeserializer.class, StringDeserializer.class);
     }
 }

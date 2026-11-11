@@ -57,6 +57,8 @@ class NetexImportPipelineSpringTest {
     @Autowired
     private Map<String, Map<String, byte[]>> blobsInContainers;
 
+    private static final String IMPORT_KEY = "avi_2021-04-13T09_09_45.409";
+
     @Autowired
     private InMemoryMarkerStore claims;
 
@@ -66,7 +68,7 @@ class NetexImportPipelineSpringTest {
     @BeforeEach
     void publishedDataset() throws IOException {
         blobsInContainers.clear();
-        claims.clear();
+        claims.read(IMPORT_KEY).ifPresent(marker -> claims.deleteIfGeneration(IMPORT_KEY, marker.generation()));
         publisher.clear();
         byte[] zip = getClass().getResourceAsStream("/no/entur/nisaba/netex/import/rb_avi-aggregated-netex.zip").readAllBytes();
         blobsInContainers.computeIfAbsent("marduk", k -> new java.util.concurrent.ConcurrentHashMap<>())
@@ -95,14 +97,14 @@ class NetexImportPipelineSpringTest {
         assertEquals("gs://marduk/outbound/netex/rb_avi-aggregated-netex.zip", event.getPublishedDatasetURI().toString());
         assertEquals("imported/avi/avi_2021-04-05T09_09_45.409.zip", event.getOriginalDatasetURI().toString());
         assertEquals("corr-1", publisher.published().getFirst().mdc().get("correlationId"));
-        assertTrue(claims.contains("avi_2021-04-13T09_09_45.409"));
+        assertTrue(claims.read(IMPORT_KEY).isPresent());
     }
 
     @Test
     void publishFailureReleasesTheClaimSoTheRetryPublishes() {
         publisher.failWith(new IllegalStateException("kafka down"));
         assertThrows(IllegalStateException.class, () -> pipeline.process(new NetexExportNotification("avi", "corr-1")));
-        assertFalse(claims.contains("avi_2021-04-13T09_09_45.409"));
+        assertFalse(claims.read(IMPORT_KEY).isPresent());
 
         publisher.clear();
         pipeline.process(new NetexExportNotification("avi", "corr-1"));
@@ -114,7 +116,7 @@ class NetexImportPipelineSpringTest {
         blobsInContainers.get("marduk").clear();
         pipeline.process(new NetexExportNotification("avi", "corr-1"));
         assertTrue(publisher.events().isEmpty());
-        assertFalse(claims.contains("avi_2021-04-13T09_09_45.409"));
+        assertFalse(claims.read(IMPORT_KEY).isPresent());
     }
 
     /**

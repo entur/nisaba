@@ -14,7 +14,7 @@
  *
  */
 
-package no.entur.nisaba.kafka;
+package no.entur.nisaba.idempotent.migration;
 
 import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.Headers;
@@ -22,28 +22,21 @@ import org.apache.kafka.common.header.Headers;
 import java.nio.charset.StandardCharsets;
 
 /**
- * The record format of the idempotent topic and the Kafka client ids.
- * <p>
- * The idempotent topic was written by Camel's {@code KafkaIdempotentRepository} until the Camel removal and
- * is still read by that version during a rolling update or a rollback: {@code key = <import key>},
- * {@code value = "add" | "remove" | "clear"}, String serializers. The only addition is the
- * {@link #CLAIM_ID_HEADER} record header, which Camel ignores. A record with a null value must never be
- * written: Camel's reader NPEs on it during its startup replay.
+ * The record format of the Kafka idempotent topic of the previous versions, which this version only reads,
+ * once, to migrate it: {@code key = <import key>}, {@code value = "add" | "remove" | "clear"}, String
+ * serializers. Camel's {@code KafkaIdempotentRepository} wrote it without headers; the Kafka claim repository
+ * that followed added the {@link #CLAIM_ID_HEADER} record header.
  */
-public final class IdempotentTopicContract {
+final class IdempotentTopicContract {
 
-    public static final String ACTION_ADD = "add";
-    public static final String ACTION_REMOVE = "remove";
-    public static final String ACTION_CLEAR = "clear";
+    static final String ACTION_ADD = "add";
+    static final String ACTION_REMOVE = "remove";
+    static final String ACTION_CLEAR = "clear";
 
     /**
      * Record header carrying the id of the claim that produced the record.
      */
-    public static final String CLAIM_ID_HEADER = "nisaba-claim-id";
-
-    public static final String CLIENT_ID_REPOSITORY = "nisaba-idempotent-repo";
-    public static final String CLIENT_ID_EVENT_PRODUCER = "nisaba-event";
-    public static final String CLIENT_ID_EVENT_READER = "nisaba-event-reader";
+    static final String CLAIM_ID_HEADER = "nisaba-claim-id";
 
     private IdempotentTopicContract() {
     }
@@ -52,7 +45,7 @@ public final class IdempotentTopicContract {
      * @return the claim id carried by the record headers, or null for a record written without one
      * (by the Camel version).
      */
-    public static String claimId(Headers headers) {
+    static String claimId(Headers headers) {
         Header header = headers.lastHeader(CLAIM_ID_HEADER);
         if (header == null || header.value() == null) {
             return null;

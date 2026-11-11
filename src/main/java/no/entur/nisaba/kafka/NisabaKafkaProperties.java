@@ -40,6 +40,12 @@ public record NisabaKafkaProperties(
         @DefaultValue("2m") Duration replayTimeout,
         @DefaultValue("1s") Duration pollTimeout) {
 
+    /**
+     * How long closing one Kafka client may take. The shutdown budget in the helm values counts one close of
+     * the producer and one of the reader.
+     */
+    public static final Duration CLOSE_TIMEOUT = Duration.ofSeconds(5);
+
     public record Topic(String event, String idempotent) {
     }
 }

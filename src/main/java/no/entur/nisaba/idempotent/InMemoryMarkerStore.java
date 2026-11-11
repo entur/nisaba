@@ -17,7 +17,6 @@
 package no.entur.nisaba.idempotent;
 
 import java.time.Clock;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.OptionalLong;
@@ -27,7 +26,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * The marker store of a single JVM, for the local profiles and the tests: the same semantics as
- * {@link GcsMarkerStore}, backed by a map.
+ * {@link GcsMarkerStore}, backed by a map. The age of a claim follows the clock given.
  */
 public final class InMemoryMarkerStore implements MarkerStore {
 
@@ -95,27 +94,5 @@ public final class InMemoryMarkerStore implements MarkerStore {
     @Override
     public String location(String name) {
         return "memory:" + name;
-    }
-
-    // --- test hooks ---
-
-    public boolean contains(String name) {
-        return objects.containsKey(name);
-    }
-
-    public int size() {
-        return objects.size();
-    }
-
-    public void clear() {
-        objects.clear();
-    }
-
-    /**
-     * Make the claim for the key look older, as if it had been created {@code by} earlier.
-     */
-    public void backdate(String name, Duration by) {
-        objects.computeIfPresent(name, (k, entry) ->
-                new Entry(entry.generation, entry.claimId, entry.confirmed, entry.createdAt.minus(by)));
     }
 }

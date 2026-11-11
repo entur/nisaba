@@ -41,7 +41,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
-import static no.entur.nisaba.kafka.IdempotentTopicContract.CLIENT_ID_EVENT_PRODUCER;
+import static no.entur.nisaba.kafka.NisabaKafkaProperties.CLOSE_TIMEOUT;
 
 /**
  * The Kafka producer of NeTEx import events, with the wire format of the Camel route:
@@ -57,7 +57,7 @@ import static no.entur.nisaba.kafka.IdempotentTopicContract.CLIENT_ID_EVENT_PROD
 public class KafkaNetexImportEventPublisher implements NetexImportEventPublisher, SmartLifecycle {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(KafkaNetexImportEventPublisher.class);
-    private static final Duration CLOSE_TIMEOUT = Duration.ofSeconds(5);
+    static final String CLIENT_ID = "nisaba-event";
 
     private final String topic;
     private final Supplier<Producer<String, NetexImportEvent>> producerFactory;
@@ -132,7 +132,7 @@ public class KafkaNetexImportEventPublisher implements NetexImportEventPublisher
      */
     static Map<String, Object> producerProperties(Map<String, Object> config, Duration sendTimeout) {
         Map<String, Object> props = new HashMap<>(config);
-        props.put(ProducerConfig.CLIENT_ID_CONFIG, CLIENT_ID_EVENT_PRODUCER);
+        props.put(ProducerConfig.CLIENT_ID_CONFIG, CLIENT_ID);
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
         props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaAvroSerializer.class.getName());
         forceDurable(props);

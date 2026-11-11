@@ -14,18 +14,17 @@
  *
  */
 
-package no.entur.nisaba.kafka;
+package no.entur.nisaba.idempotent.migration;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static no.entur.nisaba.kafka.IdempotentTopicContract.ACTION_ADD;
-import static no.entur.nisaba.kafka.IdempotentTopicContract.ACTION_CLEAR;
-import static no.entur.nisaba.kafka.IdempotentTopicContract.ACTION_REMOVE;
+import static no.entur.nisaba.idempotent.migration.IdempotentTopicContract.ACTION_ADD;
+import static no.entur.nisaba.idempotent.migration.IdempotentTopicContract.ACTION_CLEAR;
+import static no.entur.nisaba.idempotent.migration.IdempotentTopicContract.ACTION_REMOVE;
 
 /**
  * The replayed view of the Kafka idempotent topic of the previous versions: which import keys are present
@@ -35,21 +34,21 @@ import static no.entur.nisaba.kafka.IdempotentTopicContract.ACTION_REMOVE;
  * makes the key present. Records written by the Camel version carry no claim id; records written by the
  * Kafka claim repository carry one in the {@value IdempotentTopicContract#CLAIM_ID_HEADER} header.
  */
-public final class IdempotentTopicState {
+final class IdempotentTopicState {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(IdempotentTopicState.class);
 
     /**
      * Owner of a record written by the Camel version, which carries no claim id.
      */
-    public static final String UNKNOWN_OWNER = "";
+    static final String UNKNOWN_OWNER = "";
 
     private final ConcurrentHashMap<String, String> owners = new ConcurrentHashMap<>();
 
     /**
      * Apply one record of the topic. Never throws on bad input: an unknown or null value is logged and skipped.
      */
-    public void apply(String key, String value, String claimId, String topic, int partition, long offset) {
+    void apply(String key, String value, String claimId, String topic, int partition, long offset) {
         if (value == null) {
             unexpected(key, null, topic, partition, offset);
             return;
@@ -78,23 +77,11 @@ public final class IdempotentTopicState {
                 value, key, topic, partition, offset);
     }
 
-    public boolean contains(String key) {
-        return owners.containsKey(key);
-    }
-
-    public Optional<String> owner(String key) {
-        return Optional.ofNullable(owners.get(key));
-    }
-
-    public int size() {
-        return owners.size();
-    }
-
     /**
      * @return a copy of the keys present, each with the claim id that owns it ({@link #UNKNOWN_OWNER} for a
      * record written by the Camel version).
      */
-    public Map<String, String> snapshot() {
+    Map<String, String> snapshot() {
         return Map.copyOf(owners);
     }
 }

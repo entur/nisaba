@@ -33,7 +33,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
 
-import static no.entur.nisaba.kafka.IdempotentTopicContract.CLIENT_ID_EVENT_READER;
+import static no.entur.nisaba.kafka.NisabaKafkaProperties.CLOSE_TIMEOUT;
 
 /**
  * Keeps the import-date map behind the public REST API up to date from the event topic.
@@ -47,7 +47,7 @@ import static no.entur.nisaba.kafka.IdempotentTopicContract.CLIENT_ID_EVENT_READ
 public class ImportDateMapReader implements SmartLifecycle {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ImportDateMapReader.class);
-    private static final Duration CLOSE_TIMEOUT = Duration.ofSeconds(5);
+    static final String CLIENT_ID = "nisaba-event-reader";
 
     private final String topic;
     private final Map<String, Object> consumerConfig;
@@ -81,7 +81,7 @@ public class ImportDateMapReader implements SmartLifecycle {
     }
 
     static Map<String, Object> consumerProperties(Map<String, Object> config) {
-        Map<String, Object> props = AssignedTopicPoller.consumerProperties(config, CLIENT_ID_EVENT_READER,
+        Map<String, Object> props = AssignedTopicPoller.consumerProperties(config, CLIENT_ID,
                 StringDeserializer.class, KafkaAvroDeserializer.class);
         props.put(KafkaAvroDeserializerConfig.SPECIFIC_AVRO_READER_CONFIG, "true");
         return props;

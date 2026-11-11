@@ -95,15 +95,14 @@ class IdempotentRepositoryMigrationTest {
 
         assertEquals(new Result(3, 3, 0, 0), result);
         assertTrue(result.successful());
-        assertEquals(3, store.size());
         assertEquals("migrated:camel", store.read("camel1").orElseThrow().claimId());
         assertEquals("migrated:pod-a:1", store.read("kafka1").orElseThrow().claimId());
         assertEquals("migrated:pod-b:5", store.read("kafka3").orElseThrow().claimId());
         assertTrue(store.read("camel1").orElseThrow().confirmed());
         assertTrue(store.read("kafka1").orElseThrow().confirmed());
         assertTrue(store.read("kafka3").orElseThrow().confirmed());
-        assertFalse(store.contains("camel2"));
-        assertFalse(store.contains("kafka2"));
+        assertFalse(store.read("camel2").isPresent());
+        assertFalse(store.read("kafka2").isPresent());
     }
 
     @Test
@@ -123,7 +122,7 @@ class IdempotentRepositoryMigrationTest {
             send(producer, topic, "late", "add", "pod-a:6");
         }
         assertEquals(new Result(4, 1, 3, 0), migration(topic, store, false).run());
-        assertTrue(store.contains("late"));
+        assertTrue(store.read("late").isPresent());
     }
 
     @Test
@@ -133,7 +132,8 @@ class IdempotentRepositoryMigrationTest {
         store.createIfAbsent("camel1", "migrated:camel", true);
 
         assertEquals(new Result(3, 2, 1, 0), migration(topic, store, true).run());
-        assertEquals(1, store.size());
+        assertTrue(store.read("kafka1").isEmpty());
+        assertTrue(store.read("kafka3").isEmpty());
     }
 
     @Test

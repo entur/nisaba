@@ -52,10 +52,10 @@ nisaba/
 │   ├── idempotent/                       # Idempotent repository on GCS
 │   │   ├── IdempotentRepository.java / GcsIdempotentRepository.java
 │   │   ├── MarkerStore.java / GcsMarkerStore.java / InMemoryMarkerStore.java
-│   │   └── migration/                    # One-shot copy of the former Kafka idempotent topic into the bucket
-│   ├── kafka/                            # Event publisher, import-date reader, replay of the former idempotent topic
-│   │   ├── AssignedTopicPoller.java / IdempotentTopicState.java
-│   │   ├── KafkaNetexImportEventPublisher.java
+│   │   └── migration/                    # One-shot copy of the former Kafka idempotent topic into the bucket (IdempotentTopicState, IdempotentTopicContract)
+│   ├── kafka/                            # Event publisher, import-date reader, topic poller
+│   │   ├── AssignedTopicPoller.java
+│   │   ├── KafkaNetexImportEventPublisher.java / PublishedImportKeys.java
 │   │   ├── ImportDateMapReader.java
 │   │   └── NisabaKafkaConfig.java / NisabaKafkaProperties.java
 │   ├── services/                         # Blob store service implementations

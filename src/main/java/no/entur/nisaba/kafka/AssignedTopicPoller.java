@@ -30,6 +30,8 @@ import org.apache.kafka.common.serialization.Deserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static no.entur.nisaba.kafka.NisabaKafkaProperties.CLOSE_TIMEOUT;
+
 import java.io.IOException;
 import java.time.Duration;
 import java.util.HashMap;
@@ -60,7 +62,6 @@ import java.util.function.Supplier;
 public final class AssignedTopicPoller<K, V> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AssignedTopicPoller.class);
-    private static final Duration CLOSE_TIMEOUT = Duration.ofSeconds(5);
 
     public interface RecordHandler<K, V> {
         void handle(ConsumerRecord<K, V> record);

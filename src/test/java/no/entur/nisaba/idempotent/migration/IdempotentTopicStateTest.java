@@ -14,7 +14,7 @@
  *
  */
 
-package no.entur.nisaba.kafka;
+package no.entur.nisaba.idempotent.migration;
 
 import org.junit.jupiter.api.Test;
 
@@ -39,35 +39,35 @@ class IdempotentTopicStateTest {
     void firstAddAfterLastRemoveWins() {
         apply("k", "add", "A");
         apply("k", "add", "B");
-        assertEquals(Optional.of("A"), state.owner("k"));
+        assertEquals(Optional.of("A"), Optional.ofNullable(state.snapshot().get("k")));
 
         apply("k", "remove", "A");
-        assertFalse(state.contains("k"));
+        assertFalse(state.snapshot().containsKey("k"));
 
         apply("k", "add", "B2");
-        assertEquals(Optional.of("B2"), state.owner("k"));
+        assertEquals(Optional.of("B2"), Optional.ofNullable(state.snapshot().get("k")));
     }
 
     @Test
     void camelRecordsWithoutClaimIdAreOwnedByNobody() {
         apply("k", "add", null);
-        assertEquals(Optional.of(IdempotentTopicState.UNKNOWN_OWNER), state.owner("k"));
+        assertEquals(Optional.of(IdempotentTopicState.UNKNOWN_OWNER), Optional.ofNullable(state.snapshot().get("k")));
         apply("k", "add", "A");
-        assertEquals(Optional.of(IdempotentTopicState.UNKNOWN_OWNER), state.owner("k"));
+        assertEquals(Optional.of(IdempotentTopicState.UNKNOWN_OWNER), Optional.ofNullable(state.snapshot().get("k")));
         apply("k", "remove", null);
-        assertFalse(state.contains("k"));
+        assertFalse(state.snapshot().containsKey("k"));
     }
 
     @Test
     void removeWithAClaimIdOnlyRemovesThatClaim() {
         apply("k", "add", "A");
         apply("k", "remove", "B");
-        assertEquals(Optional.of("A"), state.owner("k"), "a late remove of another claim is ignored");
+        assertEquals(Optional.of("A"), Optional.ofNullable(state.snapshot().get("k")), "a late remove of another claim is ignored");
         apply("k", "remove", "A");
-        assertFalse(state.contains("k"));
+        assertFalse(state.snapshot().containsKey("k"));
         apply("k", "add", "C");
         apply("k", "remove", null);
-        assertFalse(state.contains("k"), "a Camel-written remove is unconditional");
+        assertFalse(state.snapshot().containsKey("k"), "a Camel-written remove is unconditional");
     }
 
     @Test
@@ -75,17 +75,17 @@ class IdempotentTopicStateTest {
         apply("k1", "add", null);
         apply("k2", "add", "A");
         apply(null, "clear", null);
-        assertEquals(0, state.size());
+        assertEquals(0, state.snapshot().size());
     }
 
     @Test
     void unknownAndNullValuesAreIgnored() {
         apply("k", "bogus", null);
         apply("k", null, null);
-        assertFalse(state.contains("k"));
+        assertFalse(state.snapshot().containsKey("k"));
         apply("k", "add", null);
         apply("k", "confirm", null);
-        assertTrue(state.contains("k"));
+        assertTrue(state.snapshot().containsKey("k"));
     }
 
     @Test
