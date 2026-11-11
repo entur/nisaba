@@ -16,6 +16,7 @@
 
 package no.entur.nisaba.kafka;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.kafka.KafkaProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -52,7 +53,8 @@ public class NisabaKafkaConfig {
     @Bean
     @Profile("!test")
     ImportDateMapReader importDateMapReader(KafkaProperties kafkaProperties, NisabaKafkaProperties nisabaKafkaProperties,
-                                            Map<String, String> importDatesMap, PublishedImportKeys publishedImportKeys) {
+                                            @Qualifier("importDatesMap") Map<String, String> importDatesMap,
+                                            PublishedImportKeys publishedImportKeys) {
         return new ImportDateMapReader(nisabaKafkaProperties.topic().event(), kafkaProperties.buildConsumerProperties(),
                 importDatesMap, publishedImportKeys, nisabaKafkaProperties.pollTimeout(), nisabaKafkaProperties.replayTimeout());
     }
