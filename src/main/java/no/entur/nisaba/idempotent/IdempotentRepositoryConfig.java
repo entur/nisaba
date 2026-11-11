@@ -45,7 +45,7 @@ public class IdempotentRepositoryConfig {
     }
 
     /**
-     * Fails the start-up when the bucket is missing or not accessible.
+     * Fails the start-up when the bucket is missing or not writable: the check writes and deletes a probe object.
      */
     @Bean
     @Profile("gcs-blobstore")

@@ -31,6 +31,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
+import java.util.UUID;
 
 /**
  * Markers as objects of a GCS bucket. The object name is the import key, the content and the
@@ -53,6 +54,10 @@ public final class GcsMarkerStore implements MarkerStore {
     private static final String CONTENT_TYPE = "text/plain";
     private static final int PRECONDITION_FAILED = 412;
     private static final int NOT_FOUND = 404;
+
+    /** Where the start-up access check writes its probe objects; an import key starts with a codespace. */
+    static final String ACCESS_CHECK_PREFIX = ".access-check/";
+    private static final String ACCESS_CHECK_CLAIM_ID = "access-check";
 
     private final Storage storage;
     private final String bucket;
@@ -138,13 +143,38 @@ public final class GcsMarkerStore implements MarkerStore {
         }
     }
 
+    /**
+     * Creates, confirms and deletes a probe object: the three writes of a claim. Listing the bucket is not
+     * enough, a read-only role can list. The probe has a unique name under {@value #ACCESS_CHECK_PREFIX}, which
+     * no import key starts with, so the pods do not disturb each other; one left behind by a pod killed
+     * half-way is removed by the lifecycle rule of the bucket.
+     */
     @Override
     public void checkAccess() {
+        String probe = ACCESS_CHECK_PREFIX + UUID.randomUUID();
         try {
-            // objects.list is granted with objects.create and objects.delete by roles/storage.objectUser
-            storage.list(bucket, Storage.BlobListOption.pageSize(1));
-        } catch (StorageException e) {
-            throw new IdempotentRepositoryException("The bucket of the idempotent repository gs://" + bucket + " is not accessible: " + e.getMessage(), e);
+            long generation = createIfAbsent(probe, ACCESS_CHECK_CLAIM_ID, false)
+                    .orElseThrow(() -> new IdempotentRepositoryException(location(probe) + " already exists"));
+            try {
+                if (!confirm(probe, generation)) {
+                    throw new IdempotentRepositoryException(location(probe) + " disappeared during the access check");
+                }
+            } catch (IdempotentRepositoryException e) {
+                deleteProbeQuietly(probe, generation);
+                throw e;
+            }
+            deleteIfGeneration(probe, generation);
+        } catch (IdempotentRepositoryException e) {
+            throw new IdempotentRepositoryException("The bucket of the idempotent repository gs://" + bucket
+                    + " is not writable: " + e.getMessage() + (e.getCause() == null ? "" : ": " + e.getCause().getMessage()), e);
+        }
+    }
+
+    private void deleteProbeQuietly(String probe, long generation) {
+        try {
+            deleteIfGeneration(probe, generation);
+        } catch (IdempotentRepositoryException e) {
+            LOGGER.warn("Could not delete {} after a failed access check: {}", location(probe), e.toString());
         }
     }
 

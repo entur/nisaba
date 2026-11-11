@@ -176,8 +176,9 @@ class GcsMarkerStoreTest {
     }
 
     @Test
-    void accessCheckFailsOnAMissingBucket() {
+    void accessCheckLeavesNothingBehindAndFailsOnAMissingBucket() {
         store.checkAccess();
+        assertFalse(storage.list(BUCKET, Storage.BlobListOption.prefix(GcsMarkerStore.ACCESS_CHECK_PREFIX)).iterateAll().iterator().hasNext());
         GcsMarkerStore missing = new GcsMarkerStore(storage, "no-such-bucket");
         assertThrows(IdempotentRepositoryException.class, missing::checkAccess);
         assertThrows(IllegalArgumentException.class, () -> new GcsMarkerStore(storage, " "));

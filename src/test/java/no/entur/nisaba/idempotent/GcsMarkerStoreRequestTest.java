@@ -30,6 +30,7 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Predicate;
 import java.util.zip.GZIPInputStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -54,12 +55,16 @@ class GcsMarkerStoreRequestTest {
     private final List<String> requests = new CopyOnWriteArrayList<>();
     private final List<String> bodies = new CopyOnWriteArrayList<>();
     private volatile int status = 200;
+    /** The requests, as "METHOD uri", that the stub refuses with a 403 whatever the status. */
+    private volatile Predicate<String> forbidden = request -> false;
 
     @BeforeEach
     void startStub() throws IOException {
         server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
         server.createContext("/", exchange -> {
-            requests.add(exchange.getRequestMethod() + " " + exchange.getRequestURI());
+            String request = exchange.getRequestMethod() + " " + exchange.getRequestURI();
+            requests.add(request);
+            int status = forbidden.test(request) ? 403 : this.status;
             boolean gzip = "gzip".equals(exchange.getRequestHeaders().getFirst("Content-Encoding"));
             try (InputStream in = gzip ? new GZIPInputStream(exchange.getRequestBody()) : exchange.getRequestBody()) {
                 bodies.add(new String(in.readAllBytes(), StandardCharsets.UTF_8));
@@ -154,6 +159,41 @@ class GcsMarkerStoreRequestTest {
         assertThrows(IdempotentRepositoryException.class, () -> store.confirm("key", 42));
         assertThrows(IdempotentRepositoryException.class, () -> store.deleteIfGeneration("key", 42));
         assertThrows(IdempotentRepositoryException.class, store::checkAccess);
+    }
+
+    @Test
+    void accessCheckCreatesConfirmsAndDeletesAProbe() {
+        store.checkAccess();
+        assertEquals(3, requests.size(), requests.toString());
+        assertTrue(requests.get(0).startsWith("POST /upload/storage/v1/b/bucket/o?"), requests.get(0));
+        assertTrue(requests.get(0).contains("ifGenerationMatch=0"), requests.get(0));
+        assertTrue(bodies.get(0).contains("\"name\":\"" + GcsMarkerStore.ACCESS_CHECK_PREFIX), bodies.get(0));
+        assertTrue(bodies.get(1).contains("\"confirmed\":\"true\""), bodies.get(1));
+        assertTrue(requests.get(2).startsWith("DELETE /storage/v1/b/bucket/o/"), requests.get(2));
+        assertTrue(requests.get(2).contains("ifGenerationMatch=42"), requests.get(2));
+    }
+
+    @Test
+    void accessCheckFailsWhenTheBucketCannotBeWritten() {
+        // a read-only role: every write is refused, the first one is enough
+        forbidden = request -> !request.startsWith("GET ");
+        assertThrows(IdempotentRepositoryException.class, store::checkAccess);
+        assertEquals(1, requests.size(), requests.toString());
+    }
+
+    @Test
+    void accessCheckFailsWhenAMarkerCannotBeConfirmedAndRemovesItsProbe() {
+        forbidden = request -> !request.startsWith("POST /upload/") && !request.startsWith("DELETE ");
+        assertThrows(IdempotentRepositoryException.class, store::checkAccess);
+        assertEquals(3, requests.size(), requests.toString());
+        assertTrue(requests.get(2).startsWith("DELETE "), requests.get(2));
+    }
+
+    @Test
+    void accessCheckFailsWhenAMarkerCannotBeDeleted() {
+        forbidden = request -> request.startsWith("DELETE ");
+        assertThrows(IdempotentRepositoryException.class, store::checkAccess);
+        assertEquals(3, requests.size(), requests.toString());
     }
 
     @Test

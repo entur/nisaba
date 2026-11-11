@@ -84,8 +84,10 @@ exists, the claim would simply try the conditional create again.
    concerns notifications).
 4. **A duplicate costs two GCS requests** (a refused create and a metadata read) instead of a map lookup;
    a new dataset costs two (create, confirm). At a few dozen notifications a night this is noise.
-5. **Start-up fails when the bucket is missing or not accessible** (`gcs-blobstore` profile), so a
-   provisioning mistake stops the rollout instead of failing the first nightly export.
+5. **Start-up fails when the bucket is missing or not writable** (`gcs-blobstore` profile), so a
+   provisioning mistake stops the rollout instead of failing the first nightly export. The check creates,
+   confirms and deletes a probe object named `.access-check/<uuid>`: a read-only role, which can list the
+   bucket, is caught too. The migration tool runs the same check, in a dry run as well.
 6. **The dedup horizon is the bucket's lifecycle rule**, not the topic's retention. See *Provisioning*.
 
 A publish that times out after the broker wrote the event is no longer released blindly: the publisher first
@@ -119,7 +121,8 @@ One bucket per environment, named in `helm/nisaba/env/values-kub-ent-*.yaml`:
   when its marker expires. Without a rule the history is kept for ever; the objects are a few dozen bytes.
 - Soft delete can be left at the bucket default; a soft-deleted object does not exist for the precondition.
 
-The bucket must exist before the deployment: the pods do not start without it.
+The bucket must exist and be writable before the deployment: the pods do not start otherwise. A pod killed
+during its start-up check can leave a `.access-check/<uuid>` object behind; the lifecycle rule removes it.
 
 ## Migrating the history from the Kafka topic
 
