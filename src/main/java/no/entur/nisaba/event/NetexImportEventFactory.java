@@ -16,9 +16,8 @@
 
 package no.entur.nisaba.event;
 
-import no.entur.nisaba.Constants;
 import no.entur.nisaba.avro.NetexImportEvent;
-import org.apache.camel.Header;
+import no.entur.nisaba.pipeline.ChouetteImportKeyResolver;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
@@ -30,7 +29,7 @@ import static no.entur.nisaba.Constants.DATE_TIME_FORMATTER;
 /**
  * Create the Avro NeTEx import event.
  */
-@Component("netexImportEventFactory")
+@Component
 public class NetexImportEventFactory {
 
     private final String mardukBucketName;
@@ -40,13 +39,14 @@ public class NetexImportEventFactory {
     }
 
 
-    public NetexImportEvent createNetexImportEvent(@Header(value = Constants.DATASET_CODESPACE) String codespace,
-                                                   @Header(value = Constants.DATASET_LATEST_CREATION_TIME) LocalDateTime creationDate,
-                                                   @Header(value = Constants.DATASET_IMPORT_KEY) String importKey,
-                                                   @Header(value = Constants.DATASET_CHOUETTE_IMPORT_KEY) String chouetteImportKey,
-                                                   @Header(value = Constants.DATASET_PUBLISHED_FILE_NAME) String publishedFileName
-
-    ) {
+    /**
+     * @param chouetteImportKey the import key of the dataset Chouette imported, or null when none was found.
+     */
+    public NetexImportEvent createNetexImportEvent(String codespace,
+                                                   LocalDateTime creationDate,
+                                                   String importKey,
+                                                   String chouetteImportKey,
+                                                   String publishedFileName) {
         Assert.notNull(codespace, "codespace was null");
         Assert.notNull(creationDate, "creationDate was null");
         Assert.notNull(importKey, "importKey was null");
@@ -54,7 +54,7 @@ public class NetexImportEventFactory {
 
         String originalDatasetURI = "";
         if (chouetteImportKey != null) {
-            originalDatasetURI = "imported/" + codespace + "/" + chouetteImportKey + ".zip";
+            originalDatasetURI = ChouetteImportKeyResolver.importedFileName(codespace, chouetteImportKey);
         }
         return NetexImportEvent.newBuilder()
                 .setCodespace(codespace)

@@ -28,7 +28,7 @@ import org.springframework.context.annotation.Configuration;
  * <p>
  * Since Avro 1.12.2, {@link ClassSecurityValidator} guards every class that Avro resolves by name
  * and trusts only a handful of JDK types by default. The Kafka consumer route is configured with
- * {@code specificAvroReader=true}, so the Confluent {@code KafkaAvroDeserializer} resolves the
+ * {@code specific.avro.reader=true}, so the Confluent {@code KafkaAvroDeserializer} resolves the
  * reader class from the writer schema name. Without this configuration every poll fails with
  * {@code SecurityException: Forbidden no.entur.nisaba.avro.NetexImportEvent!}, the import date map
  * is never populated and the timetable-import-info API returns 404.
@@ -56,12 +56,12 @@ public class AvroClassSecurityConfig {
 
     /**
      * Installs the Avro class security validator on the startup thread.
-     * Camel is started as a {@code SmartLifecycle} once the application context refresh is
-     * complete, that is after every singleton has been initialized, so this runs before the Kafka
-     * consumer route starts and therefore before the first record is deserialized.
+     * The Kafka clients are started as {@code SmartLifecycle} beans once the application context refresh
+     * is complete, that is after every singleton has been initialized, so this runs before the event
+     * reader starts and therefore before the first record is serialized or deserialized.
      */
     @PostConstruct
-    void trustNisabaAvroClasses() {
+    public void trustNisabaAvroClasses() {
         ClassSecurityValidator.setGlobal(
                 ClassSecurityValidator.composite(ClassSecurityValidator.DEFAULT, NISABA_AVRO_CLASSES)
         );
