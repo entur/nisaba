@@ -64,6 +64,7 @@ nisaba/
 ├── src/main/resources/
 │   └── logback.xml                       # Logging configuration
 ├── helm/nisaba/                          # Kubernetes deployment charts
+├── terraform/                           # GCS bucket of the idempotent repository and its IAM binding
 ├── Dockerfile                            # Container image definition
 └── pom.xml                               # Maven project configuration
 ```
