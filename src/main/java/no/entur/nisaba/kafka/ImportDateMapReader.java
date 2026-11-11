@@ -20,7 +20,6 @@ import io.confluent.kafka.serializers.KafkaAvroDeserializer;
 import io.confluent.kafka.serializers.KafkaAvroDeserializerConfig;
 import no.entur.nisaba.avro.NetexImportEvent;
 import no.entur.nisaba.pipeline.ImportMdc;
-import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -32,7 +31,6 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
-import java.util.HashMap;
 import java.util.Map;
 
 import static no.entur.nisaba.kafka.IdempotentTopicContract.CLIENT_ID_EVENT_READER;
@@ -78,16 +76,9 @@ public class ImportDateMapReader implements SmartLifecycle {
     }
 
     static Map<String, Object> consumerProperties(Map<String, Object> config) {
-        Map<String, Object> props = new HashMap<>(config);
-        props.put(ConsumerConfig.CLIENT_ID_CONFIG, CLIENT_ID_EVENT_READER);
-        props.remove(ConsumerConfig.GROUP_ID_CONFIG);
-        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, KafkaAvroDeserializer.class.getName());
+        Map<String, Object> props = AssignedTopicPoller.consumerProperties(config, CLIENT_ID_EVENT_READER,
+                StringDeserializer.class, KafkaAvroDeserializer.class);
         props.put(KafkaAvroDeserializerConfig.SPECIFIC_AVRO_READER_CONFIG, "true");
-        props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
-        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-        props.put(ConsumerConfig.ALLOW_AUTO_CREATE_TOPICS_CONFIG, "false");
-        props.putIfAbsent(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, "500");
         return props;
     }
 

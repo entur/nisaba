@@ -45,15 +45,6 @@ public final class IdempotentTopicContract {
     public static final String CLIENT_ID_EVENT_PRODUCER = "nisaba-event";
     public static final String CLIENT_ID_EVENT_READER = "nisaba-event-reader";
 
-    /**
-     * Lower case on purpose: Camel resolves the record value with {@code CacheAction.valueOf(value)}.
-     */
-    public enum CacheAction {
-        add,
-        remove,
-        clear
-    }
-
     private IdempotentTopicContract() {
     }
 
@@ -67,9 +58,5 @@ public final class IdempotentTopicContract {
             return null;
         }
         return new String(header.value(), StandardCharsets.UTF_8);
-    }
-
-    public static byte[] claimIdHeaderValue(String claimId) {
-        return claimId.getBytes(StandardCharsets.UTF_8);
     }
 }

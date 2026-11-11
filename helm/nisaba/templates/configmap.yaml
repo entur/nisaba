@@ -56,7 +56,7 @@ data:
     nisaba.redelivery.max=3
     nisaba.redelivery.delay.millis=5000
     nisaba.redelivery.backoff.multiplier=3
-    # Drain: 10 s subscriber close + this + 4 x 5 s Kafka closes must fit terminationGracePeriodSeconds (90).
+    # Drain: 10 s subscriber close + this + 2 x 5 s Kafka closes must fit terminationGracePeriodSeconds (90).
     nisaba.shutdown.drain.timeout.seconds=45
     spring.lifecycle.timeout-per-shutdown-phase=5s
     # Each Kafka replay must finish well inside the 300 s startup probe.

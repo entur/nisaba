@@ -17,17 +17,19 @@
 package no.entur.nisaba.kafka;
 
 import org.apache.kafka.clients.consumer.Consumer;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.errors.RecordDeserializationException;
 import org.apache.kafka.common.errors.WakeupException;
+import org.apache.kafka.common.serialization.Deserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -56,6 +58,27 @@ public final class AssignedTopicPoller<K, V> {
         void handle(ConsumerRecord<K, V> record);
     }
 
+    /**
+     * The consumer settings of a poller: every partition assigned by hand and read from the beginning, so no
+     * consumer group, no committed offsets and no topic creation.
+     *
+     * @param config the common Kafka client settings (brokers, security, schema registry).
+     */
+    public static Map<String, Object> consumerProperties(Map<String, Object> config, String clientId,
+                                                         Class<? extends Deserializer<?>> keyDeserializer,
+                                                         Class<? extends Deserializer<?>> valueDeserializer) {
+        Map<String, Object> props = new HashMap<>(config);
+        props.put(ConsumerConfig.CLIENT_ID_CONFIG, clientId);
+        props.remove(ConsumerConfig.GROUP_ID_CONFIG);
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, keyDeserializer.getName());
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, valueDeserializer.getName());
+        props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        props.put(ConsumerConfig.ALLOW_AUTO_CREATE_TOPICS_CONFIG, "false");
+        props.putIfAbsent(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, "500");
+        return props;
+    }
+
     private final String name;
     private final String topic;
     private final Supplier<Consumer<K, V>> consumerFactory;
@@ -63,20 +86,8 @@ public final class AssignedTopicPoller<K, V> {
     private final Duration pollTimeout;
     private final Duration replayTimeout;
 
-    /**
-     * A request to be told once the poller has handled everything the topic held when the request was made.
-     * The end offsets are snapshotted on the poller thread, the first time it sees the request.
-     */
-    private static final class Barrier {
-        private final CompletableFuture<Void> done = new CompletableFuture<>();
-        private Map<TopicPartition, Long> endOffsets;
-    }
-
     private final CompletableFuture<Void> replayed = new CompletableFuture<>();
-    private final List<Barrier> barriers = new ArrayList<>();
-    private final Object pauseLock = new Object();
-    private boolean paused;
-    private boolean parked;
+    private final Object stopLock = new Object();
     private volatile boolean running;
     private volatile Thread thread;
     private volatile Consumer<K, V> consumer;
@@ -126,9 +137,8 @@ public final class AssignedTopicPoller<K, V> {
      */
     public void stop(Duration timeout) {
         running = false;
-        synchronized (pauseLock) {
-            paused = false;
-            pauseLock.notifyAll();
+        synchronized (stopLock) {
+            stopLock.notifyAll();
         }
         Consumer<K, V> c = consumer;
         if (c != null) {
@@ -149,48 +159,6 @@ public final class AssignedTopicPoller<K, V> {
         return running && t != null && t.isAlive();
     }
 
-    /**
-     * @return a future completed once every record the topic held at the time of this call has been handled,
-     * so that a caller can conclude that a record it has not seen by then was never written; failed when the
-     * poller stops first. Checked once per poll, so it completes at the earliest one poll timeout later.
-     */
-    public CompletableFuture<Void> caughtUp() {
-        Barrier barrier = new Barrier();
-        synchronized (barriers) {
-            if (!running) {
-                barrier.done.completeExceptionally(new IllegalStateException(name + " is not running"));
-            } else {
-                barriers.add(barrier);
-            }
-        }
-        return barrier.done;
-    }
-
-    /**
-     * Test hook: stop calling poll() until {@link #resume()}. Returns once the poller thread is parked, so a
-     * record produced after this call is not applied before {@link #resume()}.
-     */
-    void pause() {
-        synchronized (pauseLock) {
-            paused = true;
-            while (running && !parked) {
-                try {
-                    pauseLock.wait();
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    return;
-                }
-            }
-        }
-    }
-
-    void resume() {
-        synchronized (pauseLock) {
-            paused = false;
-            pauseLock.notifyAll();
-        }
-    }
-
     private void run() {
         Consumer<K, V> c;
         try {
@@ -208,13 +176,8 @@ public final class AssignedTopicPoller<K, V> {
             replayed.complete(null);
             LOGGER.debug("{}: following topic {}", name, topic);
             while (running) {
-                awaitUnpaused();
-                if (!running) {
-                    break;
-                }
                 try {
                     pollOnce(c);
-                    settleBarriers(c);
                 } catch (WakeupException e) {
                     throw e;
                 } catch (RuntimeException e) {
@@ -233,7 +196,6 @@ public final class AssignedTopicPoller<K, V> {
             if (!replayed.isDone()) {
                 replayed.completeExceptionally(new IllegalStateException(name + ": the poller of topic " + topic + " stopped before the replay completed"));
             }
-            failBarriers();
             try {
                 c.close(CLOSE_TIMEOUT);
             } catch (RuntimeException e) {
@@ -260,43 +222,6 @@ public final class AssignedTopicPoller<K, V> {
             records += pollOnce(c);
         }
         LOGGER.info("{}: replayed {} records of topic {}", name, records, topic);
-    }
-
-    /**
-     * Snapshots the end offsets of a new barrier and completes every barrier whose end offsets are reached.
-     * Runs on the poller thread, between polls, so a barrier is settled only after the records before its
-     * end offsets have been handled.
-     */
-    private void settleBarriers(Consumer<K, V> c) {
-        List<Barrier> pending;
-        synchronized (barriers) {
-            if (barriers.isEmpty()) {
-                return;
-            }
-            pending = new ArrayList<>(barriers);
-        }
-        for (Barrier barrier : pending) {
-            if (barrier.endOffsets == null) {
-                barrier.endOffsets = c.endOffsets(c.assignment());
-            }
-            if (reached(c, barrier.endOffsets)) {
-                synchronized (barriers) {
-                    barriers.remove(barrier);
-                }
-                barrier.done.complete(null);
-            }
-        }
-    }
-
-    private void failBarriers() {
-        List<Barrier> pending;
-        synchronized (barriers) {
-            pending = new ArrayList<>(barriers);
-            barriers.clear();
-        }
-        for (Barrier barrier : pending) {
-            barrier.done.completeExceptionally(new IllegalStateException(name + ": the poller of topic " + topic + " stopped"));
-        }
     }
 
     private static <K, V> boolean reached(Consumer<K, V> c, Map<TopicPartition, Long> endOffsets) {
@@ -330,30 +255,14 @@ public final class AssignedTopicPoller<K, V> {
     }
 
     private void backOff() {
-        synchronized (pauseLock) {
+        synchronized (stopLock) {
             if (running) {
                 try {
-                    pauseLock.wait(pollTimeout.toMillis());
+                    stopLock.wait(pollTimeout.toMillis());
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
             }
-        }
-    }
-
-    private void awaitUnpaused() {
-        synchronized (pauseLock) {
-            while (paused && running) {
-                parked = true;
-                pauseLock.notifyAll();
-                try {
-                    pauseLock.wait();
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    return;
-                }
-            }
-            parked = false;
         }
     }
 }

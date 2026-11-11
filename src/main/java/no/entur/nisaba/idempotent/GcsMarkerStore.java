@@ -140,7 +140,7 @@ public final class GcsMarkerStore implements MarkerStore {
     @Override
     public void checkAccess() {
         try {
-            // objects.list is granted with objects.create and objects.delete by roles/storage.objectAdmin
+            // objects.list is granted with objects.create and objects.delete by roles/storage.objectUser
             storage.list(bucket, Storage.BlobListOption.pageSize(1));
         } catch (StorageException e) {
             throw new IdempotentRepositoryException("The bucket of the idempotent repository gs://" + bucket + " is not accessible: " + e.getMessage(), e);

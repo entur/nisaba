@@ -20,7 +20,6 @@ import no.entur.nisaba.idempotent.MarkerStore;
 import no.entur.nisaba.kafka.AssignedTopicPoller;
 import no.entur.nisaba.kafka.IdempotentTopicContract;
 import no.entur.nisaba.kafka.IdempotentTopicState;
-import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.slf4j.Logger;
@@ -28,7 +27,6 @@ import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -160,15 +158,7 @@ public final class IdempotentRepositoryMigration {
     }
 
     static Map<String, Object> consumerProperties(Map<String, Object> config) {
-        Map<String, Object> props = new HashMap<>(config);
-        props.put(ConsumerConfig.CLIENT_ID_CONFIG, IdempotentTopicContract.CLIENT_ID_REPOSITORY + "-migration");
-        props.remove(ConsumerConfig.GROUP_ID_CONFIG);
-        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-        props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
-        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-        props.put(ConsumerConfig.ALLOW_AUTO_CREATE_TOPICS_CONFIG, "false");
-        props.putIfAbsent(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, "500");
-        return props;
+        return AssignedTopicPoller.consumerProperties(config, IdempotentTopicContract.CLIENT_ID_REPOSITORY + "-migration",
+                StringDeserializer.class, StringDeserializer.class);
     }
 }
