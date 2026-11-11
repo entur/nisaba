@@ -10,6 +10,8 @@ common:
   container:
     labels: {customLogRetention: enabled}
     forceReplicas: 2
+    # 10 s PubSub subscriber close + 45 s drain of the notification in flight + 2 x 5 s Kafka client closes
+    terminationGracePeriodSeconds: 90
     image: <+artifacts.primary.image>
     cpu: 2
     memory: 7000

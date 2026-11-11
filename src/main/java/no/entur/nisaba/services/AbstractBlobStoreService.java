@@ -16,8 +16,6 @@
 
 package no.entur.nisaba.services;
 
-import no.entur.nisaba.Constants;
-import org.apache.camel.Header;
 import org.rutebanken.helper.storage.repository.BlobStoreRepository;
 
 import java.io.InputStream;
@@ -31,8 +29,15 @@ public abstract class AbstractBlobStoreService {
         this.repository.setContainerName(containerName);
     }
 
-    public InputStream getBlob(@Header(value = Constants.FILE_HANDLE) String name) {
+    /**
+     * @return the blob, or null when it does not exist.
+     */
+    public InputStream getBlob(String name) {
         return repository.getBlob(name);
+    }
+
+    public boolean exist(String name) {
+        return repository.exist(name);
     }
 
 }

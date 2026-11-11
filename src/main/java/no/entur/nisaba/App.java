@@ -17,43 +17,25 @@
 package no.entur.nisaba;
 
 import no.entur.nisaba.config.GcsBlobStoreRepositoryConfig;
-import org.apache.camel.builder.RouteBuilder;
 import org.entur.pubsub.base.config.GooglePubSubConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration;
 import org.springframework.context.annotation.Import;
 
 /**
- * A spring-boot application that includes a Camel route builder to setup the Camel routes
+ * Publishes a Kafka event for every new NeTEx dataset import that Marduk exports.
  */
 @SpringBootApplication(exclude = {UserDetailsServiceAutoConfiguration.class})
 @Import({GcsBlobStoreRepositoryConfig.class, GooglePubSubConfig.class})
-public class App extends RouteBuilder {
-
-    @Value("${nisaba.shutdown.timeout:300}")
-    private Long shutdownTimeout;
+public class App {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(App.class);
 
-
-    // must have a main method spring-boot can run
     public static void main(String[] args) {
         LOGGER.info("Starting Nisaba...");
         SpringApplication.run(App.class, args);
     }
-
-    @Override
-    public void configure() {
-
-        getContext().getShutdownStrategy().setTimeout(shutdownTimeout);
-        getContext().setUseMDCLogging(true);
-        getContext().setUseBreadcrumb(true);
-        getContext().setMessageHistory(true);
-    }
-
-
 }
