@@ -39,6 +39,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>
  * A claim whose release failed heals the same way, or sooner on the same pod: the repository remembers it and
  * a retry owns it again.
+ * <p>
+ * The confirm is retried here: the GCS client does not retry a metadata update that carries no metageneration
+ * precondition, and an unconfirmed claim of a published event is taken over and published a second time.
  */
 public final class GcsIdempotentRepository implements IdempotentRepository {
 
@@ -47,19 +50,32 @@ public final class GcsIdempotentRepository implements IdempotentRepository {
     /** Creates and takeovers for one key before giving up on a key that keeps changing under us. */
     private static final int MAX_ATTEMPTS = 3;
 
+    /** Confirms of one claim before giving up; setting the flag on a given generation is idempotent. */
+    static final int CONFIRM_ATTEMPTS = 4;
+    private static final Duration CONFIRM_RETRY_DELAY = Duration.ofMillis(500);
+
     private final MarkerStore store;
     private final String instanceId;
     private final Duration staleAfter;
     private final Clock clock;
+    private final Duration confirmRetryDelay;
 
     /** The claims of this pod whose release failed, by import key: a retry on this pod owns them again. */
     private final Map<String, Claim> unreleased = new ConcurrentHashMap<>();
 
     public GcsIdempotentRepository(MarkerStore store, String instanceId, Duration staleAfter, Clock clock) {
+        this(store, instanceId, staleAfter, clock, CONFIRM_RETRY_DELAY);
+    }
+
+    /**
+     * @param confirmRetryDelay the wait before the first retry of a failed confirm, doubled at each retry.
+     */
+    GcsIdempotentRepository(MarkerStore store, String instanceId, Duration staleAfter, Clock clock, Duration confirmRetryDelay) {
         this.store = store;
         this.instanceId = instanceId;
         this.staleAfter = staleAfter;
         this.clock = clock;
+        this.confirmRetryDelay = confirmRetryDelay;
     }
 
     @Override
@@ -106,14 +122,39 @@ public final class GcsIdempotentRepository implements IdempotentRepository {
 
     @Override
     public void confirm(Claim claim) {
-        try {
-            if (!store.confirm(claim.importKey(), claim.generation())) {
-                LOGGER.warn("Could not confirm claim {} for key {}: the claim was replaced or deleted; "
-                        + "the key may be published again", claim.claimId(), claim.importKey());
+        Duration delay = confirmRetryDelay;
+        for (int attempt = 1; ; attempt++) {
+            try {
+                if (!store.confirm(claim.importKey(), claim.generation())) {
+                    LOGGER.warn("Could not confirm claim {} for key {}: the claim was replaced or deleted; "
+                            + "the key may be published again", claim.claimId(), claim.importKey());
+                } else if (attempt > 1) {
+                    LOGGER.info("Confirmed claim {} for key {} at attempt {}", claim.claimId(), claim.importKey(), attempt);
+                }
+                return;
+            } catch (RuntimeException e) {
+                if (attempt == CONFIRM_ATTEMPTS || !pause(delay)) {
+                    LOGGER.warn("Could not confirm claim {} for key {} in {} attempt(s): {}. The key may be taken over "
+                            + "after {} and the event published twice", claim.claimId(), claim.importKey(), attempt,
+                            e.toString(), staleAfter);
+                    return;
+                }
+                LOGGER.info("Could not confirm claim {} for key {}: {}. Trying again", claim.claimId(), claim.importKey(), e.toString());
+                delay = delay.multipliedBy(2);
             }
-        } catch (RuntimeException e) {
-            LOGGER.warn("Could not confirm claim {} for key {}: {}. The key may be taken over after {} and the event "
-                    + "published twice", claim.claimId(), claim.importKey(), e.toString(), staleAfter);
+        }
+    }
+
+    /**
+     * @return false when interrupted: the caller gives up.
+     */
+    private static boolean pause(Duration delay) {
+        try {
+            Thread.sleep(delay);
+            return true;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
         }
     }
 

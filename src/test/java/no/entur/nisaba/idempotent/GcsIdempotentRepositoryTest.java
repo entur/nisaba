@@ -56,6 +56,8 @@ class GcsIdempotentRepositoryTest {
         boolean loseCreateAnswer;
         boolean failRead;
         boolean failConfirm;
+        int confirmFailures;
+        int confirms;
         boolean failDelete;
         Runnable beforeDelete = () -> { };
 
@@ -83,7 +85,8 @@ class GcsIdempotentRepositoryTest {
 
         @Override
         public boolean confirm(String name, long generation) {
-            if (failConfirm) {
+            confirms++;
+            if (failConfirm || confirmFailures-- > 0) {
                 throw new IdempotentRepositoryException("confirm failed");
             }
             return delegate.confirm(name, generation);
@@ -114,7 +117,7 @@ class GcsIdempotentRepositoryTest {
     private final GcsIdempotentRepository b = repository("b", store);
 
     private static GcsIdempotentRepository repository(String instanceId, MarkerStore store) {
-        return new GcsIdempotentRepository(store, instanceId, STALE_AFTER, Clock.systemUTC());
+        return new GcsIdempotentRepository(store, instanceId, STALE_AFTER, Clock.systemUTC(), Duration.ofMillis(1));
     }
 
     @Test
@@ -281,6 +284,30 @@ class GcsIdempotentRepositoryTest {
         faulty.failConfirm = true;
         pod.confirm(claim);
         assertFalse(store.read(KEY).orElseThrow().confirmed());
+        assertEquals(GcsIdempotentRepository.CONFIRM_ATTEMPTS, faulty.confirms);
+    }
+
+    @Test
+    void confirmIsRetriedUntilItLands() {
+        FaultyStore faulty = new FaultyStore(store);
+        GcsIdempotentRepository pod = repository("a", faulty);
+        Claim claim = pod.claim(KEY).orElseThrow();
+        // the GCS client does not retry the metadata update: one transient failure must not leave the claim unconfirmed
+        faulty.confirmFailures = 2;
+        pod.confirm(claim);
+        assertTrue(store.read(KEY).orElseThrow().confirmed());
+        assertEquals(3, faulty.confirms);
+        assertTrue(b.claim(KEY).isEmpty(), "a duplicate for the other pod, not a claim in progress");
+    }
+
+    @Test
+    void confirmOfAReplacedClaimIsNotRetried() {
+        FaultyStore faulty = new FaultyStore(store);
+        GcsIdempotentRepository pod = repository("a", faulty);
+        Claim claim = pod.claim(KEY).orElseThrow();
+        pod.release(claim);
+        pod.confirm(claim);
+        assertEquals(1, faulty.confirms);
     }
 
     @Test

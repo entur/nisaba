@@ -30,6 +30,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.io.InputStream;
+import java.io.UncheckedIOException;
+import java.time.DateTimeException;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
@@ -95,7 +97,12 @@ public class NetexImportPipeline {
         LOGGER.info("{}NeTEx export file downloaded", prefix);
 
         LOGGER.info("{}Retrieving dataset creation time", prefix);
-        DatasetCreationTimes creationTimes = creationTimeExtractor.extract(dataset);
+        DatasetCreationTimes creationTimes;
+        try {
+            creationTimes = creationTimeExtractor.extract(dataset);
+        } catch (IllegalStateException | UncheckedIOException | DateTimeException e) {
+            throw new InvalidDatasetException("Cannot find the creation time of " + publishedFileName + ": " + e.getMessage(), e);
+        }
         LocalDateTime latest = creationTimes.latest();
         LOGGER.info("{}The dataset was created on {}", prefix, latest);
         String importKey = NetexImportEventKeyFactory.createNetexImportEventKey(codespace, latest);
@@ -116,7 +123,8 @@ public class NetexImportPipeline {
             idempotentRepository.confirm(claim.get());
             LOGGER.info("{}Notified Kafka topic {} of new dataset {}", prefix, eventTopic, event.getImportKey());
         } catch (RuntimeException | Error e) {
-            // mirrors Camel's removeOnFailure: a redelivery can claim the key again
+            // mirrors Camel's removeOnFailure: a redelivery can claim the key again. The publisher reports a
+            // failure only after looking for the event on the topic, so this rarely releases a published key
             idempotentRepository.release(claim.get());
             throw e;
         }

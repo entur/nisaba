@@ -68,7 +68,7 @@ class ImportDateMapReaderTest {
         KAFKA.createTopic(topic, 1);
         Map<String, Object> props = KAFKA.clientProperties();
         props.put("schema.registry.url", REGISTRY);
-        KafkaNetexImportEventPublisher publisher = new KafkaNetexImportEventPublisher(topic, props, Duration.ofSeconds(10));
+        KafkaNetexImportEventPublisher publisher = new KafkaNetexImportEventPublisher(topic, props, Duration.ofSeconds(10), new PublishedImportKeys(), Duration.ZERO);
         publisher.start();
         try {
             publisher.publish(event("opp", LocalDateTime.of(2021, 8, 1, 10, 0, 0, 123_000_000)));
@@ -91,11 +91,15 @@ class ImportDateMapReaderTest {
         }
 
         Map<String, String> importDates = new ConcurrentHashMap<>();
-        ImportDateMapReader reader = new ImportDateMapReader(topic, props, importDates, Duration.ofMillis(100), Duration.ofSeconds(30));
+        PublishedImportKeys publishedImportKeys = new PublishedImportKeys();
+        ImportDateMapReader reader = new ImportDateMapReader(topic, props, importDates, publishedImportKeys, Duration.ofMillis(100), Duration.ofSeconds(30));
         reader.start();
         try {
             assertEquals(Map.of("opp", "2021-08-04T10:00:00", "flt", "2021-08-02T11:00:00", "vyg", "2021-08-03T12:00:00"), importDates);
             assertTrue(reader.isAlive(), "the poison record did not kill the reader");
+            assertEquals(1, publishedImportKeys.lastOffset("flt_2021-08-02T11_00_00"));
+            assertEquals(4, publishedImportKeys.lastOffset("opp_2021-08-04T10_00_00"));
+            assertEquals(PublishedImportKeys.NEVER, publishedImportKeys.lastOffset("opp_2021-08-05T10_00_00"));
         } finally {
             reader.stop();
         }
@@ -108,7 +112,7 @@ class ImportDateMapReaderTest {
         KAFKA.createTopic(topic, 1);
         Map<String, Object> props = KAFKA.clientProperties();
         props.put("schema.registry.url", REGISTRY);
-        KafkaNetexImportEventPublisher publisher = new KafkaNetexImportEventPublisher(topic, props, Duration.ofSeconds(10));
+        KafkaNetexImportEventPublisher publisher = new KafkaNetexImportEventPublisher(topic, props, Duration.ofSeconds(10), new PublishedImportKeys(), Duration.ZERO);
         publisher.start();
         try {
             publisher.publish(event("avi", LocalDateTime.of(2021, 4, 21, 11, 51, 59)));

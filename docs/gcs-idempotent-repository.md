@@ -51,7 +51,9 @@ The pipeline is unchanged: `claim` → publish → `confirm`, or `release` when 
   - carries the claim id of this very call → the create succeeded and its answer was lost (the client
     library retried it and got "already exists"): own it;
   - gone → it was released meanwhile: claim again.
-- **confirm**: set `confirmed=true` on that generation. Never throws: the event is out. If it fails, the key
+- **confirm**: set `confirmed=true` on that generation, up to four attempts (0.5 s, 1 s, 2 s apart): the GCS
+  client retries a metadata update only when it carries a metageneration precondition, so the repository
+  does it. Never throws: the event is out. If it still fails, the key
   is taken over after `stale-after` by the next export of the same dataset and the event is published a
   second time, which is the lesser harm.
 - **release**: delete that generation. Never throws. If it fails, the repository remembers the claim and a
@@ -86,8 +88,8 @@ exists, the claim would simply try the conditional create again.
    provisioning mistake stops the rollout instead of failing the first nightly export.
 6. **The dedup horizon is the bucket's lifecycle rule**, not the topic's retention. See *Provisioning*.
 
-Unchanged: a publish that times out after the broker wrote the event is released and retried, so the event
-can be published twice (*Known open* 3).
+A publish that times out after the broker wrote the event is no longer released blindly: the publisher first
+waits for the event to be read back from the topic (*Known open* 3, narrowed).
 
 ## Configuration
 
@@ -197,7 +199,8 @@ Log lines of the repository (logger `no.entur.nisaba.idempotent.GcsIdempotentRep
 | `Claim {} for key {} could not be released earlier and is still in place; owning it again` | WARN | A retry on the pod whose release failed |
 | `Taking over claim {} for key {}: unconfirmed since {}, {} ago` | WARN | A claimer died or could not release; the dataset is published now |
 | `Released key {} (claim {}) so that it can be claimed again` | WARN | The publish failed; a redelivery will retry |
-| `Could not confirm claim {} ...` | WARN | The event is out but the marker is not confirmed; a second event may follow |
+| `Could not confirm claim {} ... Trying again` | INFO | A confirm failed and is retried |
+| `Could not confirm claim {} ...` | WARN | The event is out but the marker is not confirmed after the retries; a second event may follow |
 | `Could not release key {} ...` | ERROR | GCS failure during a release; heals by a retry on the same pod or by the takeover, or delete the object by hand |
 
 ## Testing it
@@ -205,7 +208,8 @@ Log lines of the repository (logger `no.entur.nisaba.idempotent.GcsIdempotentRep
 - `GcsIdempotentRepositoryTest`: the rules, on the in-memory store, two repositories being two pods. First
   claim wins; confirmed is a duplicate for ever; a fresh foreign claim is left alone and fails the claim; a stale one is taken
   over and the dead claimer's late confirm and release do nothing; sixteen pods taking over at once, one
-  winner; a create whose answer was lost is owned; failed release and failed confirm do not throw and heal;
+  winner; a create whose answer was lost is owned; failed release and failed confirm do not throw and heal; a confirm
+  is retried until it lands;
   store failures are reported; a key that keeps changing gives up after three attempts.
 - `GcsMarkerStoreTest`: the store against `fsouza/fake-gcs-server` (Docker): create-if-absent including
   sixteen concurrent creates, the object's content and metadata, confirm, delete, a missing bucket.

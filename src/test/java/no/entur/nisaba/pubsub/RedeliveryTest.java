@@ -16,6 +16,8 @@
 
 package no.entur.nisaba.pubsub;
 
+import no.entur.nisaba.idempotent.ClaimInProgressException;
+import no.entur.nisaba.pipeline.InvalidDatasetException;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -104,6 +106,39 @@ class RedeliveryTest {
             throw new IllegalStateException("boom");
         }));
         assertEquals(List.of(Duration.ofSeconds(5), Duration.ofSeconds(15), Duration.ofSeconds(45), Duration.ofSeconds(60), Duration.ofSeconds(60)), inFlight.waits);
+    }
+
+    @Test
+    void datasetThatCannotBeReadIsNotRetriedLocally() {
+        AtomicInteger attempts = new AtomicInteger();
+        assertThrows(InvalidDatasetException.class, () -> redelivery.run(() -> {
+            attempts.incrementAndGet();
+            throw new InvalidDatasetException("corrupt", new IllegalStateException("not a zip"));
+        }));
+        assertEquals(1, attempts.get(), "the pod's one callback slot is not held for a minute");
+        assertEquals(List.of(), inFlight.waits);
+    }
+
+    @Test
+    void claimInProgressIsRetriedOnceThenNacked() {
+        AtomicInteger attempts = new AtomicInteger();
+        assertThrows(ClaimInProgressException.class, () -> redelivery.run(() -> {
+            attempts.incrementAndGet();
+            throw new ClaimInProgressException("claimed by another pod");
+        }));
+        assertEquals(2, attempts.get());
+        assertEquals(List.of(Duration.ofSeconds(5)), inFlight.waits);
+    }
+
+    @Test
+    void claimConfirmedMeanwhileSucceedsAtTheRetry() throws Exception {
+        AtomicInteger attempts = new AtomicInteger();
+        redelivery.run(() -> {
+            if (attempts.incrementAndGet() < 2) {
+                throw new ClaimInProgressException("claimed by another pod");
+            }
+        });
+        assertEquals(2, attempts.get());
     }
 
     @Test

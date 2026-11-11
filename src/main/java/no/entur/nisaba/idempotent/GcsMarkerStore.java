@@ -39,9 +39,10 @@ import java.util.OptionalLong;
  * create of a key wins whatever the pod; the confirm and the delete are conditioned on the generation the
  * create returned.
  * <p>
- * The client library retries a failed request on its own; a create whose success was lost on the way back
- * is retried and then reported as "already exists", which the repository tells apart by reading the claim id
- * back.
+ * The client library retries a failed create or delete on its own; a create whose success was lost on the way
+ * back is retried and then reported as "already exists", which the repository tells apart by reading the claim
+ * id back. It does not retry the confirm (a metadata update is retried only with a metageneration
+ * precondition); the repository does.
  */
 public final class GcsMarkerStore implements MarkerStore {
 

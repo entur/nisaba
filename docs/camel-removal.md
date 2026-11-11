@@ -160,7 +160,10 @@ Everything below is a deliberate difference from the Camel implementation.
    miss is logged by the resolver with the same wording.
 5. **Local retries re-run the whole message** (download again) rather than the failing step; the claim is
    released before each retry, or re-owned when the release did not land. A retry's wait is cut short when the
-   context starts closing. The consumer base class sleeps `entur.pubsub.consumer.retry.delay` after a nack;
+   context starts closing. Two failures are not given the full schedule, because each pod has one callback
+   slot and a retry that cannot succeed holds the other notifications back: a dataset that cannot be read
+   (`InvalidDatasetException`: corrupt archive, unparsable XML or `created` value) is nacked at once, and a key
+   claimed by another pod (`ClaimInProgressException`) after one retry. The consumer base class sleeps `entur.pubsub.consumer.retry.delay` after a nack;
    it is set to 1 s instead of the library's 15 s, because PubSub's own backoff (10 s to 600 s) governs
    redelivery anyway and the sleep runs inside the shutdown budget.
 6. **The PubSub body is trimmed; a blank body is discarded** (ERROR line, `outcome=invalid`, acked) instead
@@ -181,13 +184,18 @@ Everything below is a deliberate difference from the Camel implementation.
    `acks=all` (Camel used `acks=1`, which silently disabled idempotence). The protocol reads its own record
    back, so an acknowledged-but-lost `add` would only time the claim out.
 10. **A poison record on the event topic is skipped** (ERROR, seek past it) instead of blocking the reader.
+    Only when the record is at fault: when the schema registry cannot be reached or refuses the request
+    (401, 403, 429, 5xx) the record is read again, and a start-up replay that cannot get past it fails the
+    start after `nisaba.kafka.replay-timeout` instead of reporting ready with an empty import-date map.
 11. **Local retry back-off is capped at 60 s** like Camel's `maximumRedeliveryDelay`; with the default of
     three retries the cap is never reached.
 12. **Client ids are fixed** (`nisaba-idempotent-repo`, `nisaba-event`, `nisaba-event-reader`) and the
     durability settings of the two producers (`acks=all`, `enable.idempotence=true`, delivery timeout = send
     timeout) are forced, whatever `spring.kafka.producer.*` says; an override is logged and ignored. Camel let
-    the producer run for `delivery.timeout.ms` = 120 s while the route waited; now a publish that throws has
-    not written the event, so the retry cannot write a second one.
+    the producer run for `delivery.timeout.ms` = 120 s while the route waited; now the producer has given up
+    when the publish fails. The event may still have been written (see *Known open* 3), so before reporting
+    the failure the publisher waits up to `nisaba.kafka.publish-verification-timeout` for the import-date
+    reader to see the event on the topic, and reports success if it does.
 13. **An `Error` thrown while processing a message is nacked.** The consumer base class catches only
     `Exception` (Camel's receiver did the same), so a `StackOverflowError` from a pathological archive would
     leave the message neither acked nor nacked, leased for up to the ack extension, with this pod's one
@@ -218,7 +226,8 @@ it; if that ever changed, the drain would silently cap at 5 s.
 | `spring.cloud.gcp.pubsub.subscriber.executor-threads` | 4 in the library, 1 in helm | Callback threads per pod |
 | `spring.cloud.gcp.pubsub.subscriber.flow-control.max-outstanding-element-count` | 1000 in gax, 1 in helm | Messages leased per pod |
 | `spring.cloud.gcp.pubsub.subscriber.max-ack-extension-period` | **0 in spring-cloud-gcp, which disables deadline extension**; 3600 in helm | A notification that takes longer than the 60 s ack deadline would otherwise be redelivered mid-processing. `SubscriberPropertiesTest` pins that the value reaches the subscriber factory |
-| `nisaba.redelivery.max` / `.delay.millis` / `.backoff.multiplier` | 3 / 5000 / 3 | Local retries before the nack: 5 s, 15 s, 45 s |
+| `nisaba.redelivery.max` / `.delay.millis` / `.backoff.multiplier` | 3 / 5000 / 3 | Local retries before the nack: 5 s, 15 s, 45 s (none for an unreadable dataset, one for a claim in progress) |
+| `nisaba.kafka.publish-verification-timeout` | 5s | Wait for an event whose send failed to be read back from the topic before the failure is reported |
 | `nisaba.shutdown.drain.timeout.seconds` | 45 | Finish the notification in flight rather than redeliver it |
 | `spring.lifecycle.timeout-per-shutdown-phase` | 30s in Boot, 5s in helm | Bounds the other lifecycle phases, not the drain |
 | `nisaba.kafka.topic.event` / `.idempotent` | | The event topic; the idempotent topic of the previous versions, read by the migration tool only |
@@ -335,7 +344,8 @@ Run with `GOOGLE_APPLICATION_CREDENTIALS=/dev/null`: nothing needs credentials.
 ## Known open
 
 > Items 1, 2 and 4 are closed by the GCS idempotent repository
-> ([gcs-idempotent-repository.md](gcs-idempotent-repository.md), "What changed in behaviour"); item 3 stands.
+> ([gcs-idempotent-repository.md](gcs-idempotent-repository.md), "What changed in behaviour"); item 3 is
+> narrowed.
 
 Ranked by consequence, none blocking:
 
@@ -348,7 +358,9 @@ Ranked by consequence, none blocking:
    longer than the three local retries (65 s) first.
 3. **A `publish()` that times out after the broker durably wrote the event** → release → retry → a second
    event. Same as Camel redelivering `to-kafka-topic-event`; producer idempotence does not cover a new
-   `send()`.
+   `send()`. Narrowed, not closed: the publisher looks for the event on the topic before it reports the
+   failure. What remains is an event that lands after that wait, a reader that is behind, or a callback
+   interrupted during the send.
 4. **`kafkaPoller` is not in the liveness group.** A dead poller thread (only an uncaught `Error` kills it;
    exceptions from `poll()` are logged and the loop goes on, as Camel's did) makes every claim fail at once
    and every notification nack forever; a restart is the fix, but a false DOWN would restart both pods, so

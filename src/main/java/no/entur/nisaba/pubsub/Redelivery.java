@@ -16,7 +16,9 @@
 
 package no.entur.nisaba.pubsub;
 
+import no.entur.nisaba.idempotent.ClaimInProgressException;
 import no.entur.nisaba.pipeline.ImportMdc;
+import no.entur.nisaba.pipeline.InvalidDatasetException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,6 +35,12 @@ import java.time.Duration;
  * Unlike Camel, which redelivered the failing step, the whole message is re-run: every step is idempotent and
  * the download is the only cost. A wait is cut short when the context starts closing, so that a pod being
  * terminated nacks the message instead of sleeping into its grace period.
+ * <p>
+ * Each pod has one callback slot, so a local retry that cannot succeed holds every other notification back:
+ * a dataset that cannot be read ({@link InvalidDatasetException}) is not retried locally, and a key claimed by
+ * another pod ({@link ClaimInProgressException}) is retried once, which is enough for a claimer that is
+ * publishing; if the claimer died the claim stays for minutes. Both are still nacked and redelivered by PubSub
+ * with its own backoff.
  */
 @Component
 public class Redelivery {
@@ -73,11 +81,11 @@ public class Redelivery {
                 work.run();
                 return;
             } catch (Exception e) {
-                if (redelivery > maxRedeliveries) {
+                if (redelivery > maxRedeliveriesFor(e)) {
                     throw e;
                 }
                 LOGGER.warn("{} Exchange failed, redelivering the message locally, attempt {}/{}...",
-                        ImportMdc.prefix(), redelivery, maxRedeliveries, e);
+                        ImportMdc.prefix(), redelivery, maxRedeliveriesFor(e), e);
                 if (inFlightMessages.awaitOrStop(Duration.ofMillis(delay))) {
                     LOGGER.warn("{}The application is shutting down, giving up local redelivery", ImportMdc.prefix());
                     throw e;
@@ -85,5 +93,15 @@ public class Redelivery {
                 delay = Math.min(delay * backOffMultiplier, MAX_DELAY_MILLIS);
             }
         }
+    }
+
+    private int maxRedeliveriesFor(Exception e) {
+        if (e instanceof InvalidDatasetException) {
+            return 0;
+        }
+        if (e instanceof ClaimInProgressException) {
+            return Math.min(1, maxRedeliveries);
+        }
+        return maxRedeliveries;
     }
 }

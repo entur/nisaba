@@ -22,12 +22,15 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.errors.ApiException;
 import org.apache.kafka.common.errors.RecordDeserializationException;
+import org.apache.kafka.common.errors.SerializationException;
 import org.apache.kafka.common.errors.WakeupException;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
@@ -45,6 +48,11 @@ import java.util.function.Supplier;
  * {@code from("kafka:...?seekTo=beginning")} route. Like them it assigns every partition itself and uses no
  * consumer group, so each pod has its own full copy and no group ACL is needed. {@link #start()} blocks until the
  * topic has been replayed up to the end offsets observed at start, and fails fast when the topic does not exist.
+ * <p>
+ * A record that cannot be deserialized is skipped only when the record itself is at fault. When the schema
+ * registry cannot be reached or refuses the request, the record is read again until it can be: skipping would
+ * drop every record of the topic while the registry is down, and a replay that "completes" that way leaves the
+ * pod ready with nothing read.
  * <p>
  * The {@link Consumer} is created, used and closed on the poller thread only, as the Kafka consumer is not
  * thread-safe; {@link Consumer#wakeup()} is the one call made from another thread.
@@ -91,6 +99,7 @@ public final class AssignedTopicPoller<K, V> {
     private volatile boolean running;
     private volatile Thread thread;
     private volatile Consumer<K, V> consumer;
+    private volatile RuntimeException lastReplayFailure;
 
     public AssignedTopicPoller(String name, String topic, Supplier<Consumer<K, V>> consumerFactory,
                                RecordHandler<K, V> handler, Duration pollTimeout, Duration replayTimeout) {
@@ -121,7 +130,9 @@ public final class AssignedTopicPoller<K, V> {
             replayed.get(replayTimeout.toMillis(), TimeUnit.MILLISECONDS);
         } catch (TimeoutException e) {
             stop(CLOSE_TIMEOUT);
-            throw new IllegalStateException("Replay of topic " + topic + " did not complete within " + replayTimeout);
+            RuntimeException failure = lastReplayFailure;
+            throw new IllegalStateException("Replay of topic " + topic + " did not complete within " + replayTimeout
+                    + (failure == null ? "" : ": " + failure.getMessage() + " (" + failure.getCause() + ")"), failure);
         } catch (ExecutionException e) {
             stop(CLOSE_TIMEOUT);
             throw new IllegalStateException("Replay of topic " + topic + " failed: " + e.getCause().getMessage(), e.getCause());
@@ -219,7 +230,15 @@ public final class AssignedTopicPoller<K, V> {
         LOGGER.info("{}: replaying topic {} from the beginning, end offsets {}", name, topic, endOffsets);
         long records = 0;
         while (!reached(c, endOffsets)) {
-            records += pollOnce(c);
+            try {
+                records += pollOnce(c);
+            } catch (RecordDeserializationException e) {
+                // not the record's fault: read it again until the replay timeout fails the start
+                lastReplayFailure = e;
+                LOGGER.warn("{}: cannot deserialize record at [topic:{}, partition:{}, offset:{}]: {}. Trying again.",
+                        name, e.topicPartition().topic(), e.topicPartition().partition(), e.offset(), String.valueOf(e.getCause()));
+                backOff();
+            }
         }
         LOGGER.info("{}: replayed {} records of topic {}", name, records, topic);
     }
@@ -238,6 +257,10 @@ public final class AssignedTopicPoller<K, V> {
         try {
             records = c.poll(pollTimeout);
         } catch (RecordDeserializationException e) {
+            if (!isRecordAtFault(e)) {
+                // the position stays on the record: the next poll reads it again
+                throw e;
+            }
             LOGGER.error("{}: cannot deserialize record at [topic:{}, partition:{}, offset:{}]. Skipping it.",
                     name, e.topicPartition().topic(), e.topicPartition().partition(), e.offset(), e);
             c.seek(e.topicPartition(), e.offset() + 1);
@@ -252,6 +275,22 @@ public final class AssignedTopicPoller<K, V> {
             }
         }
         return records.count();
+    }
+
+    /**
+     * Tells a record that can never be read from a schema registry that cannot answer now. The Confluent
+     * deserializer reports the registry's refusals (401, 403, 429, 5xx) as Kafka {@link ApiException}s and a
+     * connection failure as a {@link SerializationException} "Error retrieving ... schema" caused by an
+     * {@link IOException}; anything else (unknown magic byte, unknown schema id, undecodable payload) is the
+     * record's fault.
+     */
+    static boolean isRecordAtFault(RecordDeserializationException e) {
+        Throwable cause = e.getCause();
+        if (cause instanceof ApiException) {
+            return false;
+        }
+        return !(cause instanceof SerializationException && cause.getCause() instanceof IOException
+                && cause.getMessage() != null && cause.getMessage().startsWith("Error retrieving"));
     }
 
     private void backOff() {

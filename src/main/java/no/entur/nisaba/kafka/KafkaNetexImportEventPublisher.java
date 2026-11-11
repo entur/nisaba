@@ -36,8 +36,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Supplier;
 
 import static no.entur.nisaba.kafka.IdempotentTopicContract.CLIENT_ID_EVENT_PRODUCER;
 
@@ -45,6 +47,12 @@ import static no.entur.nisaba.kafka.IdempotentTopicContract.CLIENT_ID_EVENT_PROD
  * The Kafka producer of NeTEx import events, with the wire format of the Camel route:
  * key = codespace, value = Avro {@link NetexImportEvent} through the Confluent serializer, and exactly one
  * record header, {@code EnturDatasetImportKey}.
+ * <p>
+ * A send that fails may still have written the event: the delivery timeout can expire, or the wait be
+ * interrupted, after the broker appended the record. Before reporting the failure, which makes the caller
+ * release its claim and a retry publish again, the publisher waits for the reader of the topic to see the
+ * event; if it does, the publish succeeded. What remains is an event that lands after that wait, or a reader
+ * that is behind: then the event is published twice, never lost.
  */
 public class KafkaNetexImportEventPublisher implements NetexImportEventPublisher, SmartLifecycle {
 
@@ -52,14 +60,29 @@ public class KafkaNetexImportEventPublisher implements NetexImportEventPublisher
     private static final Duration CLOSE_TIMEOUT = Duration.ofSeconds(5);
 
     private final String topic;
-    private final Map<String, Object> producerConfig;
+    private final Supplier<Producer<String, NetexImportEvent>> producerFactory;
     private final Duration sendTimeout;
+    private final PublishedImportKeys publishedImportKeys;
+    private final Duration verificationTimeout;
     private volatile Producer<String, NetexImportEvent> producer;
 
-    public KafkaNetexImportEventPublisher(String topic, Map<String, Object> producerConfig, Duration sendTimeout) {
+    /**
+     * @param publishedImportKeys what the reader of the event topic has seen.
+     * @param verificationTimeout how long to wait for the reader to see an event whose send failed.
+     */
+    public KafkaNetexImportEventPublisher(String topic, Map<String, Object> producerConfig, Duration sendTimeout,
+                                          PublishedImportKeys publishedImportKeys, Duration verificationTimeout) {
+        this(topic, () -> new KafkaProducer<>(producerProperties(producerConfig, sendTimeout)), sendTimeout,
+                publishedImportKeys, verificationTimeout);
+    }
+
+    KafkaNetexImportEventPublisher(String topic, Supplier<Producer<String, NetexImportEvent>> producerFactory, Duration sendTimeout,
+                                   PublishedImportKeys publishedImportKeys, Duration verificationTimeout) {
         this.topic = topic;
-        this.producerConfig = producerConfig;
+        this.producerFactory = producerFactory;
         this.sendTimeout = sendTimeout;
+        this.publishedImportKeys = publishedImportKeys;
+        this.verificationTimeout = verificationTimeout;
     }
 
     @Override
@@ -68,21 +91,33 @@ public class KafkaNetexImportEventPublisher implements NetexImportEventPublisher
         if (p == null) {
             throw new IllegalStateException("The Kafka event publisher is not running");
         }
+        String importKey = event.getImportKey().toString();
         ProducerRecord<String, NetexImportEvent> record = record(topic, event);
+        long offsetBefore = publishedImportKeys.lastOffset(importKey);
+        // a send that throws here (serialization, no metadata) has not left the producer
+        Future<RecordMetadata> sent = p.send(record);
+        IllegalStateException failure;
         try {
             // the producer's delivery timeout equals the send timeout, so the future completes within it
-            RecordMetadata metadata = p.send(record).get(sendTimeout.plusSeconds(5).toMillis(), TimeUnit.MILLISECONDS);
-            LOGGER.debug("Published event {} to {} partition {} offset {}", event.getImportKey(), topic,
+            RecordMetadata metadata = sent.get(sendTimeout.plusSeconds(5).toMillis(), TimeUnit.MILLISECONDS);
+            LOGGER.debug("Published event {} to {} partition {} offset {}", importKey, topic,
                     metadata.partition(), metadata.offset());
+            return;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new IllegalStateException("Interrupted while publishing event " + event.getImportKey(), e);
+            throw new IllegalStateException("Interrupted while publishing event " + importKey, e);
         } catch (ExecutionException e) {
-            throw new IllegalStateException("Failed to publish event " + event.getImportKey() + " to " + topic, e.getCause());
+            failure = new IllegalStateException("Failed to publish event " + importKey + " to " + topic, e.getCause());
         } catch (TimeoutException e) {
-            throw new IllegalStateException("Publishing event " + event.getImportKey() + " to " + topic
+            failure = new IllegalStateException("Publishing event " + importKey + " to " + topic
                     + " did not complete within " + sendTimeout, e);
         }
+        if (publishedImportKeys.awaitBeyond(importKey, offsetBefore, verificationTimeout)) {
+            LOGGER.warn("The send of event {} to {} failed ({}) but the event was read back from the topic at offset {}: "
+                    + "it is published", importKey, topic, String.valueOf(failure.getCause()), publishedImportKeys.lastOffset(importKey));
+            return;
+        }
+        throw failure;
     }
 
     static ProducerRecord<String, NetexImportEvent> record(String topic, NetexImportEvent event) {
@@ -92,8 +127,8 @@ public class KafkaNetexImportEventPublisher implements NetexImportEventPublisher
     }
 
     /**
-     * The producer gives up on a record within the send timeout: a publish that throws has not written the
-     * event, so the retry that follows cannot produce a second one.
+     * The producer gives up on a record within the send timeout, so that {@link #publish} can tell whether
+     * the event was written before the caller retries.
      */
     static Map<String, Object> producerProperties(Map<String, Object> config, Duration sendTimeout) {
         Map<String, Object> props = new HashMap<>(config);
@@ -126,7 +161,7 @@ public class KafkaNetexImportEventPublisher implements NetexImportEventPublisher
     @Override
     public void start() {
         if (producer == null) {
-            producer = new KafkaProducer<>(producerProperties(producerConfig, sendTimeout));
+            producer = producerFactory.get();
             LOGGER.info("Started the Kafka event publisher for topic {}", topic);
         }
     }

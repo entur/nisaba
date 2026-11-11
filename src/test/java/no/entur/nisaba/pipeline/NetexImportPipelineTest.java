@@ -155,6 +155,13 @@ class NetexImportPipelineTest {
     }
 
     @Test
+    void datasetThatCannotBeReadIsReportedAsInvalidAndNothingIsClaimed() {
+        marduk.uploadBlob("outbound/netex/rb_avi-aggregated-netex.zip", new ByteArrayInputStream("not a zip".getBytes()));
+        assertThrows(InvalidDatasetException.class, () -> pipeline.process(new NetexExportNotification("avi", "corr-1")));
+        assertTrue(claims.calls.isEmpty());
+    }
+
+    @Test
     void originalDatasetUriIsEmptyWhenNoChouetteImportExists() {
         publishedDataset();
         pipeline.process(new NetexExportNotification("avi", "corr-1"));

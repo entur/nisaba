@@ -41,6 +41,8 @@ import static no.entur.nisaba.kafka.IdempotentTopicContract.CLIENT_ID_EVENT_READ
  * Replaces the Camel {@code from("kafka:...?seekTo=beginning")} route: every pod reads the whole topic from the
  * beginning at start-up (the topic is compacted, so that is one event per codespace) and keeps following it,
  * with no consumer group. The map is populated before the application reports ready.
+ * <p>
+ * It also tells {@link PublishedImportKeys} which import keys it has seen, for the publisher.
  */
 public class ImportDateMapReader implements SmartLifecycle {
 
@@ -50,15 +52,17 @@ public class ImportDateMapReader implements SmartLifecycle {
     private final String topic;
     private final Map<String, Object> consumerConfig;
     private final Map<String, String> importDates;
+    private final PublishedImportKeys publishedImportKeys;
     private final Duration pollTimeout;
     private final Duration replayTimeout;
     private volatile AssignedTopicPoller<String, NetexImportEvent> poller;
 
     public ImportDateMapReader(String topic, Map<String, Object> consumerConfig, Map<String, String> importDates,
-                               Duration pollTimeout, Duration replayTimeout) {
+                               PublishedImportKeys publishedImportKeys, Duration pollTimeout, Duration replayTimeout) {
         this.topic = topic;
         this.consumerConfig = consumerConfig;
         this.importDates = importDates;
+        this.publishedImportKeys = publishedImportKeys;
         this.pollTimeout = pollTimeout;
         this.replayTimeout = replayTimeout;
     }
@@ -68,6 +72,7 @@ public class ImportDateMapReader implements SmartLifecycle {
         if (event == null) {
             return;
         }
+        publishedImportKeys.seen(event.getImportKey().toString(), record.offset());
         String codespace = event.getCodespace().toString();
         LOGGER.info("{}Received notification event from {}", ImportMdc.prefix(codespace, null), topic);
         LocalDateTime importDateTime = LocalDateTime.parse(event.getImportDateTime().toString());

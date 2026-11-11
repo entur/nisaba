@@ -27,6 +27,8 @@ import java.time.Duration;
  *
  * @param topic         the event topic, and the idempotent topic of the previous versions (read by the migration only).
  * @param sendTimeout   how long a synchronous produce may take.
+ * @param publishVerificationTimeout how long to wait for an event whose send failed to be read back from the
+ *                      topic before the failure is reported and the dataset published again.
  * @param replayTimeout how long the start-up replay of a topic may take; must stay well inside the start-up probe.
  * @param pollTimeout   the consumer poll duration.
  */
@@ -34,6 +36,7 @@ import java.time.Duration;
 public record NisabaKafkaProperties(
         Topic topic,
         @DefaultValue("30s") Duration sendTimeout,
+        @DefaultValue("5s") Duration publishVerificationTimeout,
         @DefaultValue("2m") Duration replayTimeout,
         @DefaultValue("1s") Duration pollTimeout) {
 

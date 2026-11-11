@@ -36,17 +36,24 @@ import java.util.Map;
 public class NisabaKafkaConfig {
 
     @Bean
+    PublishedImportKeys publishedImportKeys() {
+        return new PublishedImportKeys();
+    }
+
+    @Bean
     @Profile("!test")
-    KafkaNetexImportEventPublisher kafkaNetexImportEventPublisher(KafkaProperties kafkaProperties, NisabaKafkaProperties nisabaKafkaProperties) {
+    KafkaNetexImportEventPublisher kafkaNetexImportEventPublisher(KafkaProperties kafkaProperties, NisabaKafkaProperties nisabaKafkaProperties,
+                                                                  PublishedImportKeys publishedImportKeys) {
         return new KafkaNetexImportEventPublisher(nisabaKafkaProperties.topic().event(),
-                kafkaProperties.buildProducerProperties(), nisabaKafkaProperties.sendTimeout());
+                kafkaProperties.buildProducerProperties(), nisabaKafkaProperties.sendTimeout(),
+                publishedImportKeys, nisabaKafkaProperties.publishVerificationTimeout());
     }
 
     @Bean
     @Profile("!test")
     ImportDateMapReader importDateMapReader(KafkaProperties kafkaProperties, NisabaKafkaProperties nisabaKafkaProperties,
-                                            Map<String, String> importDatesMap) {
+                                            Map<String, String> importDatesMap, PublishedImportKeys publishedImportKeys) {
         return new ImportDateMapReader(nisabaKafkaProperties.topic().event(), kafkaProperties.buildConsumerProperties(),
-                importDatesMap, nisabaKafkaProperties.pollTimeout(), nisabaKafkaProperties.replayTimeout());
+                importDatesMap, publishedImportKeys, nisabaKafkaProperties.pollTimeout(), nisabaKafkaProperties.replayTimeout());
     }
 }
