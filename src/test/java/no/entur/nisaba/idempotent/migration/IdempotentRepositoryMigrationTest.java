@@ -189,16 +189,26 @@ class IdempotentRepositoryMigrationTest {
     void commandLineToolStartsOnlyWhatItNeedsAndReportsTheOutcome(TestInfo info) throws Exception {
         String topic = topic(info, 1);
         writeHistory(topic);
-        // outside the gcs-blobstore profile the tool writes to a marker store of its own, in memory
-        assertEquals(0, IdempotentRepositoryMigrationApp.run(
+        // outside the gcs-blobstore profile the marker store is in memory: accepted here, refused by the tool
+        assertEquals(0, IdempotentRepositoryMigrationApp.run(false,
                 "--spring.kafka.bootstrap-servers=" + KAFKA.bootstrapServers(),
                 "--nisaba.kafka.topic.idempotent=" + topic,
                 "--nisaba.kafka.poll-timeout=200ms",
                 "--nisaba.idempotent.migration.threads=2"));
-        assertThrows(IllegalStateException.class, () -> IdempotentRepositoryMigrationApp.run(
+        assertThrows(IllegalStateException.class, () -> IdempotentRepositoryMigrationApp.run(false,
                 "--spring.kafka.bootstrap-servers=" + KAFKA.bootstrapServers(),
                 "--nisaba.kafka.topic.idempotent=no-such-topic",
                 "--nisaba.kafka.replay-timeout=10s"));
+    }
+
+    @Test
+    void commandLineToolRefusesToMigrateIntoMemory(TestInfo info) throws Exception {
+        String topic = topic(info, 1);
+        writeHistory(topic);
+        assertEquals(1, IdempotentRepositoryMigrationApp.run(
+                "--spring.kafka.bootstrap-servers=" + KAFKA.bootstrapServers(),
+                "--nisaba.kafka.topic.idempotent=" + topic,
+                "--nisaba.kafka.poll-timeout=200ms"));
     }
 
     @Test

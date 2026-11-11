@@ -22,17 +22,23 @@ import org.slf4j.LoggerFactory;
 
 import java.time.Clock;
 import java.time.Duration;
+import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * The idempotent repository on a {@link MarkerStore}: the first create of the key wins, synchronously, on
  * every pod.
  * <p>
  * A claim that is never confirmed (the pod died between the claim and the publish) is taken over once it is
- * older than {@code staleAfter}: the dataset is published late instead of never. A claim whose release
- * failed heals the same way, or sooner on the same pod: a retry finds its own claim id and owns it again.
+ * older than {@code staleAfter}: the dataset is published late instead of never. Until then the key is
+ * neither claimed nor reported as a duplicate: the claim fails with {@link ClaimInProgressException}, so that
+ * the message is redelivered until the claim is confirmed, released or stale.
+ * <p>
+ * A claim whose release failed heals the same way, or sooner on the same pod: the repository remembers it and
+ * a retry owns it again.
  */
 public final class GcsIdempotentRepository implements IdempotentRepository {
 
@@ -45,6 +51,9 @@ public final class GcsIdempotentRepository implements IdempotentRepository {
     private final String instanceId;
     private final Duration staleAfter;
     private final Clock clock;
+
+    /** The claims of this pod whose release failed, by import key: a retry on this pod owns them again. */
+    private final Map<String, Claim> unreleased = new ConcurrentHashMap<>();
 
     public GcsIdempotentRepository(MarkerStore store, String instanceId, Duration staleAfter, Clock clock) {
         this.store = store;
@@ -76,10 +85,16 @@ public final class GcsIdempotentRepository implements IdempotentRepository {
                 LOGGER.debug("Key {} is already present (claim {}), no claim made", importKey, found.claimId());
                 return Optional.empty();
             }
+            Claim own = unreleased.remove(importKey);
+            if (own != null && own.generation() == found.generation()) {
+                LOGGER.warn("Claim {} for key {} could not be released earlier and is still in place; owning it again", own.claimId(), importKey);
+                return Optional.of(own);
+            }
             Duration age = Duration.between(found.createdAt(), clock.instant());
             if (age.compareTo(staleAfter) < 0) {
                 LOGGER.info("Key {} is being published by claim {} since {}; not claiming it", importKey, found.claimId(), found.createdAt());
-                return Optional.empty();
+                throw new ClaimInProgressException("Key " + importKey + " is claimed by " + found.claimId() + " since "
+                        + found.createdAt() + " and neither confirmed nor released; it is taken over after " + staleAfter);
             }
             LOGGER.warn("Taking over claim {} for key {}: unconfirmed since {}, {} ago", found.claimId(), importKey, found.createdAt(), age);
             if (!store.deleteIfGeneration(importKey, found.generation())) {
@@ -111,6 +126,7 @@ public final class GcsIdempotentRepository implements IdempotentRepository {
                 LOGGER.warn("Not releasing key {}: claim {} no longer owns it", claim.importKey(), claim.claimId());
             }
         } catch (RuntimeException e) {
+            unreleased.put(claim.importKey(), claim);
             LOGGER.error("Could not release key {} (claim {}): {}. A retry on this pod owns the claim again, another pod "
                     + "takes it over after {}; or delete {} by hand", claim.importKey(), claim.claimId(), e.toString(),
                     staleAfter, store.location(claim.importKey()));

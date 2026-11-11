@@ -27,7 +27,9 @@ public interface IdempotentRepository {
      * Claim the key for publication.
      *
      * @return the claim when this call owns the key and the caller must publish the event; empty when an
-     * event has already been sent for this key (or another pod is publishing it).
+     * event has already been sent for this key.
+     * @throws ClaimInProgressException      when somebody else holds an unconfirmed claim that is not stale yet:
+     *                                       the event may or may not be published; the caller must retry or nack.
      * @throws IdempotentRepositoryException when the outcome could not be established; the caller must retry or nack.
      */
     Optional<Claim> claim(String importKey);

@@ -27,12 +27,14 @@ import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -137,11 +139,23 @@ class GcsIdempotentRepositoryTest {
     }
 
     @Test
-    void keyBeingPublishedByAnotherPodIsNotClaimed() {
+    void keyBeingPublishedByAnotherPodIsNeitherClaimedNorADuplicate() {
         Claim first = a.claim(KEY).orElseThrow();
         store.backdate(KEY, STALE_AFTER.minusSeconds(30));
-        assertTrue(b.claim(KEY).isEmpty());
+        assertThrows(ClaimInProgressException.class, () -> b.claim(KEY));
         assertEquals(first.generation(), store.read(KEY).orElseThrow().generation());
+
+        // the redelivery is a duplicate once the claimer has confirmed
+        a.confirm(first);
+        assertTrue(b.claim(KEY).isEmpty());
+    }
+
+    @Test
+    void redeliveryOfAKeyWhoseClaimerDiedIsPublishedOnceTheClaimIsStale() {
+        a.claim(KEY).orElseThrow();
+        assertThrows(ClaimInProgressException.class, () -> b.claim(KEY));
+        store.backdate(KEY, STALE_AFTER.plusSeconds(1));
+        assertTrue(b.claim(KEY).orElseThrow().claimId().startsWith("b:"));
     }
 
     @Test
@@ -190,12 +204,20 @@ class GcsIdempotentRepositoryTest {
             }
             go.countDown();
             int winners = 0;
+            int inProgress = 0;
             for (Future<Optional<Claim>> future : futures) {
-                if (future.get().isPresent()) {
-                    winners++;
+                try {
+                    if (future.get().isPresent()) {
+                        winners++;
+                    }
+                } catch (ExecutionException e) {
+                    // the losers find the winner's fresh claim: their message is retried, not acknowledged
+                    assertInstanceOf(ClaimInProgressException.class, e.getCause());
+                    inProgress++;
                 }
             }
             assertEquals(1, winners);
+            assertEquals(pods - 1, inProgress);
         } finally {
             executor.shutdownNow();
         }
@@ -214,18 +236,41 @@ class GcsIdempotentRepositoryTest {
     }
 
     @Test
-    void failedReleaseIsHealedByTheTakeover() {
+    void failedReleaseIsHealedByARetryOnTheSamePod() {
         FaultyStore faulty = new FaultyStore(store);
         GcsIdempotentRepository pod = repository("a", faulty);
         Claim claim = pod.claim(KEY).orElseThrow();
         faulty.failDelete = true;
         pod.release(claim);
         assertTrue(store.contains(KEY), "the release failed without throwing");
+
+        // the retry owns the claim again, and a second failed release is remembered as well
+        assertEquals(claim, pod.claim(KEY).orElseThrow());
+        pod.release(claim);
+        assertEquals(claim, pod.claim(KEY).orElseThrow());
+
+        faulty.failDelete = false;
+        pod.confirm(claim);
+        assertTrue(store.read(KEY).orElseThrow().confirmed());
+        assertTrue(pod.claim(KEY).isEmpty());
+    }
+
+    @Test
+    void failedReleaseIsHealedByTheTakeoverOnAnotherPod() {
+        FaultyStore faulty = new FaultyStore(store);
+        GcsIdempotentRepository pod = repository("a", faulty);
+        Claim claim = pod.claim(KEY).orElseThrow();
+        faulty.failDelete = true;
+        pod.release(claim);
         faulty.failDelete = false;
 
-        assertTrue(pod.claim(KEY).isEmpty(), "not stale yet: the retry is skipped for now");
+        assertThrows(ClaimInProgressException.class, () -> b.claim(KEY), "not stale yet: the message is retried");
         store.backdate(KEY, STALE_AFTER.plusSeconds(1));
-        assertTrue(pod.claim(KEY).isPresent());
+        Claim taken = b.claim(KEY).orElseThrow();
+
+        // the first pod no longer owns the key: its remembered claim is of an older generation
+        assertThrows(ClaimInProgressException.class, () -> pod.claim(KEY));
+        assertEquals(taken.generation(), store.read(KEY).orElseThrow().generation());
     }
 
     @Test

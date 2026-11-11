@@ -41,8 +41,11 @@ The pipeline is unchanged: `claim` → publish → `confirm`, or `release` when 
 - **claim**: create the object if absent. Created → the caller owns the key and publishes. Not created → read
   the object:
   - `confirmed` → duplicate, skip ("An event has already been sent for this dataset. Skipping");
-  - unconfirmed and younger than `nisaba.idempotent.stale-after` (15 min) → another pod is publishing it,
-    skip;
+  - unconfirmed and the claim of this pod whose release failed earlier → own it again;
+  - unconfirmed and younger than `nisaba.idempotent.stale-after` (15 min) → another pod is publishing it, or
+    died doing so: the claim fails (`ClaimInProgressException`) and the notification is retried, then nacked,
+    until the claim is confirmed (duplicate), released (claimed) or stale (taken over). It is never
+    acknowledged as a duplicate, which would lose the dataset if the claimer died;
   - unconfirmed and older → the claimer died or could not release: delete that generation and claim again.
     Of several pods doing this at once, one wins the create;
   - carries the claim id of this very call → the create succeeded and its answer was lost (the client
@@ -51,7 +54,8 @@ The pipeline is unchanged: `claim` → publish → `confirm`, or `release` when 
 - **confirm**: set `confirmed=true` on that generation. Never throws: the event is out. If it fails, the key
   is taken over after `stale-after` by the next export of the same dataset and the event is published a
   second time, which is the lesser harm.
-- **release**: delete that generation. Never throws. If it fails, the claim heals by the takeover.
+- **release**: delete that generation. Never throws. If it fails, the repository remembers the claim and a
+  retry on the same pod owns it again; on another pod it heals by the takeover.
 
 Every write names the generation it applies to, so a late confirm or release of a claim that was taken over
 cannot touch the new claim.
@@ -152,7 +156,8 @@ Migration of topic <topic> dry run: 4312 keys on the topic, 4312 would be create
 
 Run it again without `dry-run`. The exit code is 0 when nothing failed, 1 otherwise (a topic that does not
 exist, a replay longer than `nisaba.kafka.replay-timeout`, or a key that could not be written; the keys that
-failed are logged, and a second run picks them up). Check: `gsutil ls gs://<bucket> | wc -l` equals the
+failed are logged, and a second run picks them up). It is also 1, with nothing migrated, when the
+`gcs-blobstore` profile is not active: the tool refuses to migrate into the in-memory store. Check: `gsutil ls gs://<bucket> | wc -l` equals the
 number of keys on the topic.
 
 ## Deploying it
@@ -188,16 +193,17 @@ Log lines of the repository (logger `no.entur.nisaba.idempotent.GcsIdempotentRep
 | Line | Level | Meaning |
 | --- | --- | --- |
 | `Claimed key {} with claim {}` | INFO | New dataset, about to be published |
-| `Key {} is being published by claim {} since {}; not claiming it` | INFO | Another pod holds a fresh claim |
+| `Key {} is being published by claim {} since {}; not claiming it` | INFO | Another pod holds a fresh claim; the notification fails and is redelivered |
+| `Claim {} for key {} could not be released earlier and is still in place; owning it again` | WARN | A retry on the pod whose release failed |
 | `Taking over claim {} for key {}: unconfirmed since {}, {} ago` | WARN | A claimer died or could not release; the dataset is published now |
 | `Released key {} (claim {}) so that it can be claimed again` | WARN | The publish failed; a redelivery will retry |
 | `Could not confirm claim {} ...` | WARN | The event is out but the marker is not confirmed; a second event may follow |
-| `Could not release key {} ...` | ERROR | GCS failure during a release; heals by the takeover, or delete the object by hand |
+| `Could not release key {} ...` | ERROR | GCS failure during a release; heals by a retry on the same pod or by the takeover, or delete the object by hand |
 
 ## Testing it
 
 - `GcsIdempotentRepositoryTest`: the rules, on the in-memory store, two repositories being two pods. First
-  claim wins; confirmed is a duplicate for ever; a fresh foreign claim is left alone; a stale one is taken
+  claim wins; confirmed is a duplicate for ever; a fresh foreign claim is left alone and fails the claim; a stale one is taken
   over and the dead claimer's late confirm and release do nothing; sixteen pods taking over at once, one
   winner; a create whose answer was lost is owned; failed release and failed confirm do not throw and heal;
   store failures are reported; a key that keeps changing gives up after three attempts.
