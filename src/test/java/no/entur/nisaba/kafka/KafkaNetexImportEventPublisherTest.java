@@ -46,7 +46,7 @@ class KafkaNetexImportEventPublisherTest {
     private static final Serializer<NetexImportEvent> VALUE_SERIALIZER = (topic, event) -> new byte[0];
 
     private final PublishedImportKeys publishedImportKeys = new PublishedImportKeys();
-    private MockProducer<String, NetexImportEvent> producer = new MockProducer<>(false, new StringSerializer(), VALUE_SERIALIZER);
+    private MockProducer<String, NetexImportEvent> producer = new MockProducer<>(false, null, new StringSerializer(), VALUE_SERIALIZER);
     private KafkaNetexImportEventPublisher publisher = publisher(producer, Duration.ofMillis(50));
 
     private KafkaNetexImportEventPublisher publisher(MockProducer<String, NetexImportEvent> mock, Duration verificationTimeout) {
@@ -90,7 +90,7 @@ class KafkaNetexImportEventPublisherTest {
     @Test
     void failedSendWhoseEventIsReadBackIsPublished() throws Exception {
         publisher.stop();
-        producer = new MockProducer<>(false, new StringSerializer(), VALUE_SERIALIZER);
+        producer = new MockProducer<>(false, null, new StringSerializer(), VALUE_SERIALIZER);
         publisher = publisher(producer, Duration.ofSeconds(30));
         CompletableFuture<Void> published = publishAsync();
         // the delivery timeout expired although the broker had appended the record
@@ -112,7 +112,7 @@ class KafkaNetexImportEventPublisherTest {
     @Test
     void sendThatNeverLeftTheProducerIsReportedAtOnce() {
         publisher.stop();
-        MockProducer<String, NetexImportEvent> failing = new MockProducer<>(false, new StringSerializer(), (topic, event) -> {
+        MockProducer<String, NetexImportEvent> failing = new MockProducer<>(false, null, new StringSerializer(), (topic, event) -> {
             throw new SerializationException("schema registry down");
         });
         publisher = publisher(failing, Duration.ofSeconds(30));
