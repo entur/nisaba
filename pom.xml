@@ -23,7 +23,6 @@
         <developerConnection>scm:git:ssh://git@github.com:entur/nisaba.git</developerConnection>
     </scm>
     <properties>
-        <java.version>21</java.version>
         <entur.helpers.version>7.4.0</entur.helpers.version>
         <spring-cloud-gcp-dependencies.version>8.3.1</spring-cloud-gcp-dependencies.version>
         <commons-io.version>2.22.0</commons-io.version>

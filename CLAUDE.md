@@ -19,7 +19,7 @@ Apache Camel was removed in November 2026; see `docs/camel-removal.md` for the d
 
 ## Technology Stack
 
-- **Java 21** with Spring Boot 4.1 (superpom 7.2.0)
+- **Java 25** with Spring Boot 4.1 (superpom 7.2.0)
 - **Google Cloud Platform**
   - Cloud Storage (GCS) for dataset storage (`storage-gcp-gcs` helper)
   - PubSub for notifications (`entur-google-pubsub` helper over spring-cloud-gcp)
@@ -127,7 +127,7 @@ The `camel.*` keys still in the ConfigMap are unused and kept for rollback until
 
 ## Deployment
 
-- Base image: `bellsoft/liberica-openjre-alpine:21.0.13.0.3`, layered jar, `tini`, non-root user
+- Base image: `bellsoft/liberica-openjre-alpine:25.0.5.0.3`, layered jar, `tini`, non-root user
 - Helm charts in `helm/nisaba/`; two replicas, no HPA; `terminationGracePeriodSeconds: 90`
 - No Kubernetes API access is needed any more (`rbac.yaml` is kept only until the follow-up release)
 
