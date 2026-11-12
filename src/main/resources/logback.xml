@@ -16,7 +16,11 @@
   -->
 
 <configuration>
-    <if condition='property("env").contains("dev")'>
+    <!-- The condition element replaces the Janino expression of <if condition="...">, which Logback 1.5.20 deprecated -->
+    <condition class="ch.qos.logback.core.boolex.ExpressionPropertyCondition">
+        <expression>propertyContains("env", "dev")</expression>
+    </condition>
+    <if>
     <then>
         <include resource="org/springframework/boot/logging/logback/base.xml" />
     </then>

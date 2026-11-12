@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.entur.ror</groupId>
         <artifactId>superpom</artifactId>
-        <version>4.10.0</version>
+        <version>7.2.0</version>
     </parent>
 
     <groupId>no.entur.nisaba</groupId>
@@ -23,8 +23,8 @@
         <developerConnection>scm:git:ssh://git@github.com:entur/nisaba.git</developerConnection>
     </scm>
     <properties>
-        <java.version>21</java.version>
-        <entur.helpers.version>5.50.0</entur.helpers.version>
+        <entur.helpers.version>7.4.0</entur.helpers.version>
+        <spring-cloud-gcp-dependencies.version>8.3.1</spring-cloud-gcp-dependencies.version>
         <commons-io.version>2.22.0</commons-io.version>
         <avro.version>1.12.2</avro.version>
         <confluent-kafka-client.version>7.9.10</confluent-kafka-client.version>
@@ -34,6 +34,19 @@
         <!-- empty argLine property, the value is set up by Jacoco during unit tests execution -->
         <argLine/>
     </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- Spring Cloud GCP line built against Spring Boot 4 (the helpers still manage the Spring Boot 3 line) -->
+            <dependency>
+                <groupId>com.google.cloud</groupId>
+                <artifactId>spring-cloud-gcp-dependencies</artifactId>
+                <version>${spring-cloud-gcp-dependencies.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <dependencies>
 
@@ -68,7 +81,7 @@
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
+            <artifactId>spring-boot-starter-webmvc</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -88,8 +101,8 @@
 
         <!-- Kafka (Boot's KafkaProperties auto-configuration; clients are built by hand in NisabaKafkaConfig) -->
         <dependency>
-            <groupId>org.springframework.kafka</groupId>
-            <artifactId>spring-kafka</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-kafka</artifactId>
         </dependency>
         <!-- OpenAPI Generator dependencies -->
         <dependency>
@@ -138,13 +151,6 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!--Janino is required by Logback for conditional processing in logback.xml-->
-        <dependency>
-            <groupId>org.codehaus.janino</groupId>
-            <artifactId>janino</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>jul-to-slf4j</artifactId>
@@ -155,17 +161,22 @@
         <!-- testing -->
         <dependency>
             <groupId>org.testcontainers</groupId>
-            <artifactId>junit-jupiter</artifactId>
+            <artifactId>testcontainers-junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.testcontainers</groupId>
-            <artifactId>gcloud</artifactId>
+            <artifactId>testcontainers-gcloud</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webmvc-test</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
