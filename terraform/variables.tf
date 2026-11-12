@@ -17,7 +17,7 @@ variable "bucket_instance_suffix" {
 variable "idempotent_repository_bucket_prefix" {
   description = "A prefix for the bucket of the idempotent repository"
   type        = string
-  default     = "nisaba-idempotent-repo"
+  default     = "ror-nisaba-idempotent-repo"
 }
 
 variable "idempotent_repository_retention_days" {

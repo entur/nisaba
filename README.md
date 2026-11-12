@@ -26,7 +26,7 @@ When the dataset contains NeTEx data exported from both Chouette and Uttu, the d
 
 # Identifying previously imported datasets
 Marduk publishes a NeTEx export event each time a dataset is exported or re-exported, while Nisaba publishes an event only when the dataset is exported for the first time.  
-Nisaba keeps the history of previous imports, identified by their unique key, in an idempotent repository: one small object per key in a Google Cloud Storage bucket (`nisaba-idempotent-repo-<env>`).  
+Nisaba keeps the history of previous imports, identified by their unique key, in an idempotent repository: one small object per key in a Google Cloud Storage bucket (`ror-nisaba-idempotent-repo-<env>`).  
 Claiming a key creates its object only if it does not exist, which GCS decides atomically, so the first claim wins on every pod and no leader election is needed. A claim that is never confirmed (a pod died while publishing) is taken over after 15 minutes.  
 The history is kept for as long as the bucket's lifecycle rule retains it (365 days). See [docs/gcs-idempotent-repository.md](docs/gcs-idempotent-repository.md) for the design, the provisioning and the migration from the former Kafka topic.
 
