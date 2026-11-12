@@ -165,6 +165,34 @@ failed are logged, and a second run picks them up). It is also 1, with nothing m
 `gcs-blobstore` profile is not active: the tool refuses to migrate into the in-memory store. Check: `gsutil ls gs://<bucket> | wc -l` equals the
 number of keys on the topic.
 
+### Running it in the cluster
+
+The tool can also run as a one-off pod in the `nisaba` namespace, with the image, the service account, the
+`nisaba-application` ConfigMap and the `nisaba-kafka` secret of the deployment: no credential leaves the
+cluster and every property comes from the deployed `application.properties`. The image holds the extracted
+jar, so the main class is given directly:
+
+```yaml
+command: ["java", "-cp", "application.jar",
+          "no.entur.nisaba.idempotent.migration.IdempotentRepositoryMigrationApp",
+          "--nisaba.idempotent.migration.dry-run=true",
+          "--spring.main.sources="]
+env:
+  - name: JDK_JAVA_OPTIONS
+    value: "-Xmx512m -Dspring.config.location=/etc/application-config/application.properties"
+```
+
+Copy the rest of the pod spec from the deployment (`serviceAccountName`, `envFrom`, the `application-config`
+volume, the security contexts; the namespace enforces the "restricted" pod security standard), with
+`restartPolicy: Never`, a small memory request and no `app: nisaba` label, so that the service does not
+select the pod.
+
+`--spring.main.sources=` matters with the ConfigMap of a release that still sets
+`spring.main.sources=no.entur.nisaba`: Spring Boot adds that package to the sources of the context, which
+starts the whole application (PubSub consumer, event publisher, import-date reader) next to the migration,
+as a short-lived third consumer of the subscription. The key has been removed from the ConfigMap; the
+override is harmless without it.
+
 ## Deploying it
 
 1. Provision the bucket and the IAM binding.

@@ -3,7 +3,6 @@ data:
   application.properties: |+
 
     # Spring
-    spring.main.sources=no.entur.nisaba
     spring.profiles.active=gcs-blobstore
     server.port={{ .Values.common.service.internalPort }}
 
