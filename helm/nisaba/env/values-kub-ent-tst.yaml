@@ -21,7 +21,7 @@ gcp:
 
   nisaba:
     exchangeBucketName: ror-nisaba-exchange-test
-    idempotentRepositoryBucketName: nisaba-idempotent-repo-test
+    idempotentRepositoryBucketName: ror-nisaba-idempotent-repo-test
 
 kafka:
   brokers: entur-kafka-test-int-entur-test.aivencloud.com:11877

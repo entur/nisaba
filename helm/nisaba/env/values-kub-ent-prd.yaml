@@ -21,7 +21,7 @@ gcp:
 
   nisaba:
     exchangeBucketName: ror-nisaba-exchange-production
-    idempotentRepositoryBucketName: nisaba-idempotent-repo-production
+    idempotentRepositoryBucketName: ror-nisaba-idempotent-repo-production
 
 
 kafka:

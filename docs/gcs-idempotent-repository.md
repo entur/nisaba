@@ -111,7 +111,7 @@ in memory (`InMemoryMarkerStore`), with the same semantics within one JVM.
 ## Provisioning (outside this repository)
 
 One bucket per environment, named in `helm/nisaba/env/values-kub-ent-*.yaml`:
-`nisaba-idempotent-repo-dev`, `nisaba-idempotent-repo-test`, `nisaba-idempotent-repo-production`.
+`ror-nisaba-idempotent-repo-dev`, `ror-nisaba-idempotent-repo-test`, `ror-nisaba-idempotent-repo-production`.
 
 - Uniform bucket-level access, public access prevention enforced, object versioning off.
 - The pod's Google service account needs `storage.objects.create`, `get`, `list`, `update` and `delete` on
@@ -143,7 +143,7 @@ java -cp nisaba.jar \
   org.springframework.boot.loader.launch.PropertiesLauncher \
   --spring.profiles.active=gcs-blobstore \
   --blobstore.gcs.project.id=<project> \
-  --nisaba.idempotent.gcs.bucket=nisaba-idempotent-repo-<env> \
+  --nisaba.idempotent.gcs.bucket=ror-nisaba-idempotent-repo-<env> \
   --nisaba.kafka.topic.idempotent=rutedata-dataset-import-event-idempotent-repo-<env> \
   --spring.kafka.bootstrap-servers=<brokers> \
   --spring.kafka.security.protocol=SASL_SSL \
