@@ -19,7 +19,7 @@ Apache Camel was removed in November 2026; see `docs/camel-removal.md` for the d
 
 ## Technology Stack
 
-- **Java 21** with Spring Boot 3.4 (superpom 4.10.0)
+- **Java 21** with Spring Boot 4.1 (superpom 7.2.0)
 - **Google Cloud Platform**
   - Cloud Storage (GCS) for dataset storage (`storage-gcp-gcs` helper)
   - PubSub for notifications (`entur-google-pubsub` helper over spring-cloud-gcp)
@@ -146,7 +146,7 @@ Tests: plain unit tests, embedded-Kafka (KRaft) tests for the Kafka classes and 
 
 - `entur-google-pubsub`: consumer base class over spring-cloud-gcp PubSub
 - `storage-gcp-gcs`: GCS blob storage access
-- `spring-kafka`: only for Spring Boot's `spring.kafka.*` properties and the embedded test broker; the clients are plain `KafkaProducer`/`KafkaConsumer`
+- `spring-boot-starter-kafka` (spring-kafka): only for Spring Boot's `spring.kafka.*` properties and the embedded test broker; the clients are plain `KafkaProducer`/`KafkaConsumer`
 - `kafka-avro-serializer`: Confluent Avro serialization
 - `avro`: the generated `NetexImportEvent`
 
