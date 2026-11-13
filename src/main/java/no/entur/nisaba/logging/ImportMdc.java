@@ -14,7 +14,7 @@
  *
  */
 
-package no.entur.nisaba.pipeline;
+package no.entur.nisaba.logging;
 
 import org.slf4j.MDC;
 

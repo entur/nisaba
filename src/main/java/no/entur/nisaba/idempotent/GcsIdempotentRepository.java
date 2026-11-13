@@ -17,6 +17,7 @@
 package no.entur.nisaba.idempotent;
 
 import no.entur.nisaba.idempotent.MarkerStore.Marker;
+import no.entur.nisaba.logging.ImportMdc;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -80,41 +81,42 @@ public final class GcsIdempotentRepository implements IdempotentRepository {
 
     @Override
     public Optional<Claim> claim(String importKey) {
+        String prefix = ImportMdc.prefix();
         String claimId = instanceId + ':' + UUID.randomUUID();
         for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
             OptionalLong generation = store.createIfAbsent(importKey, claimId, false);
             if (generation.isPresent()) {
-                LOGGER.info("Claimed key {} with claim {}", importKey, claimId);
+                LOGGER.info("{}Claimed key {} with claim {}", prefix, importKey, claimId);
                 return Optional.of(new Claim(importKey, claimId, generation.getAsLong()));
             }
             Optional<Marker> existing = store.read(importKey);
             if (existing.isEmpty()) {
-                LOGGER.info("Key {} was released while being claimed; claiming again", importKey);
+                LOGGER.info("{}Key {} was released while being claimed; claiming again", prefix, importKey);
                 continue;
             }
             Marker found = existing.get();
             if (claimId.equals(found.claimId())) {
-                LOGGER.warn("Claim {} for key {} was created although its acknowledgement was lost; owning it", claimId, importKey);
+                LOGGER.warn("{}Claim {} for key {} was created although its acknowledgement was lost; owning it", prefix, claimId, importKey);
                 return Optional.of(new Claim(importKey, claimId, found.generation()));
             }
             if (found.confirmed()) {
-                LOGGER.debug("Key {} is already present (claim {}), no claim made", importKey, found.claimId());
+                LOGGER.debug("{}Key {} is already present (claim {}), no claim made", prefix, importKey, found.claimId());
                 return Optional.empty();
             }
             Claim own = unreleased.remove(importKey);
             if (own != null && own.generation() == found.generation()) {
-                LOGGER.warn("Claim {} for key {} could not be released earlier and is still in place; owning it again", own.claimId(), importKey);
+                LOGGER.warn("{}Claim {} for key {} could not be released earlier and is still in place; owning it again", prefix, own.claimId(), importKey);
                 return Optional.of(own);
             }
             Duration age = Duration.between(found.createdAt(), clock.instant());
             if (age.compareTo(staleAfter) < 0) {
-                LOGGER.info("Key {} is being published by claim {} since {}; not claiming it", importKey, found.claimId(), found.createdAt());
+                LOGGER.info("{}Key {} is being published by claim {} since {}; not claiming it", prefix, importKey, found.claimId(), found.createdAt());
                 throw new ClaimInProgressException("Key " + importKey + " is claimed by " + found.claimId() + " since "
                         + found.createdAt() + " and neither confirmed nor released; it is taken over after " + staleAfter);
             }
-            LOGGER.warn("Taking over claim {} for key {}: unconfirmed since {}, {} ago", found.claimId(), importKey, found.createdAt(), age);
+            LOGGER.warn("{}Taking over claim {} for key {}: unconfirmed since {}, {} ago", prefix, found.claimId(), importKey, found.createdAt(), age);
             if (!store.deleteIfGeneration(importKey, found.generation())) {
-                LOGGER.info("Claim {} for key {} was replaced before it could be taken over", found.claimId(), importKey);
+                LOGGER.info("{}Claim {} for key {} was replaced before it could be taken over", prefix, found.claimId(), importKey);
             }
         }
         throw new IdempotentRepositoryException("Key " + importKey + " could not be claimed in " + MAX_ATTEMPTS + " attempts: it keeps changing");
@@ -122,24 +124,25 @@ public final class GcsIdempotentRepository implements IdempotentRepository {
 
     @Override
     public void confirm(Claim claim) {
+        String prefix = ImportMdc.prefix();
         Duration delay = confirmRetryDelay;
         for (int attempt = 1; ; attempt++) {
             try {
                 if (!store.confirm(claim.importKey(), claim.generation())) {
-                    LOGGER.warn("Could not confirm claim {} for key {}: the claim was replaced or deleted; "
-                            + "the key may be published again", claim.claimId(), claim.importKey());
+                    LOGGER.warn("{}Could not confirm claim {} for key {}: the claim was replaced or deleted; "
+                            + "the key may be published again", prefix, claim.claimId(), claim.importKey());
                 } else if (attempt > 1) {
-                    LOGGER.info("Confirmed claim {} for key {} at attempt {}", claim.claimId(), claim.importKey(), attempt);
+                    LOGGER.info("{}Confirmed claim {} for key {} at attempt {}", prefix, claim.claimId(), claim.importKey(), attempt);
                 }
                 return;
             } catch (RuntimeException e) {
                 if (attempt == CONFIRM_ATTEMPTS || !pause(delay)) {
-                    LOGGER.warn("Could not confirm claim {} for key {} in {} attempt(s): {}. The key may be taken over "
-                            + "after {} and the event published twice", claim.claimId(), claim.importKey(), attempt,
+                    LOGGER.warn("{}Could not confirm claim {} for key {} in {} attempt(s): {}. The key may be taken over "
+                            + "after {} and the event published twice", prefix, claim.claimId(), claim.importKey(), attempt,
                             e.toString(), staleAfter);
                     return;
                 }
-                LOGGER.info("Could not confirm claim {} for key {}: {}. Trying again", claim.claimId(), claim.importKey(), e.toString());
+                LOGGER.info("{}Could not confirm claim {} for key {}: {}. Trying again", prefix, claim.claimId(), claim.importKey(), e.toString());
                 delay = delay.multipliedBy(2);
             }
         }
@@ -160,16 +163,17 @@ public final class GcsIdempotentRepository implements IdempotentRepository {
 
     @Override
     public void release(Claim claim) {
+        String prefix = ImportMdc.prefix();
         try {
             if (store.deleteIfGeneration(claim.importKey(), claim.generation())) {
-                LOGGER.warn("Released key {} (claim {}) so that it can be claimed again", claim.importKey(), claim.claimId());
+                LOGGER.warn("{}Released key {} (claim {}) so that it can be claimed again", prefix, claim.importKey(), claim.claimId());
             } else {
-                LOGGER.warn("Not releasing key {}: claim {} no longer owns it", claim.importKey(), claim.claimId());
+                LOGGER.warn("{}Not releasing key {}: claim {} no longer owns it", prefix, claim.importKey(), claim.claimId());
             }
         } catch (RuntimeException e) {
             unreleased.put(claim.importKey(), claim);
-            LOGGER.error("Could not release key {} (claim {}): {}. A retry on this pod owns the claim again, another pod "
-                    + "takes it over after {}; or delete {} by hand", claim.importKey(), claim.claimId(), e.toString(),
+            LOGGER.error("{}Could not release key {} (claim {}): {}. A retry on this pod owns the claim again, another pod "
+                    + "takes it over after {}; or delete {} by hand", prefix, claim.importKey(), claim.claimId(), e.toString(),
                     staleAfter, store.location(claim.importKey()));
         }
     }
