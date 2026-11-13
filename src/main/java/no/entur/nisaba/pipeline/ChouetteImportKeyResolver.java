@@ -17,6 +17,7 @@
 package no.entur.nisaba.pipeline;
 
 import no.entur.nisaba.event.NetexImportEventKeyFactory;
+import no.entur.nisaba.logging.ImportMdc;
 import no.entur.nisaba.services.NisabaExchangeBlobStoreService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,6 +60,7 @@ public class ChouetteImportKeyResolver {
     }
 
     public Optional<String> resolve(String codespace, SortedSet<LocalDateTime> creationTimes) {
+        String prefix = ImportMdc.prefix();
         String found = null;
         for (LocalDateTime creationTime : creationTimes) {
             String importKey = NetexImportEventKeyFactory.createNetexImportEventKey(codespace, creationTime);
@@ -66,11 +68,11 @@ public class ChouetteImportKeyResolver {
             if (exchangeBlobStoreService.exist(path)) {
                 found = importKey;
             } else {
-                LOGGER.info("File '{}' in bucket '{}' does not exist", path, exchangeBucketName);
+                LOGGER.info("{}File '{}' in bucket '{}' does not exist", prefix, path, exchangeBucketName);
             }
         }
         if (found == null) {
-            LOGGER.warn("{}Chouette import key not found", ImportMdc.prefix());
+            LOGGER.warn("{}Chouette import key not found", prefix);
         }
         return Optional.ofNullable(found);
     }

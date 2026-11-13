@@ -21,6 +21,7 @@ import no.entur.nisaba.avro.NetexImportEvent;
 import no.entur.nisaba.idempotent.InMemoryMarkerStore;
 import no.entur.nisaba.kafka.KafkaTestDoubles;
 import no.entur.nisaba.kafka.RecordingNetexImportEventPublisher;
+import no.entur.nisaba.logging.ImportMdc;
 import no.entur.nisaba.pubsub.NetexExportNotification;
 import org.apache.avro.specific.SpecificData;
 import org.apache.avro.util.ClassSecurityValidator;
