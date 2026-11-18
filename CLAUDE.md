@@ -19,7 +19,7 @@ Apache Camel was removed in November 2026; see `docs/camel-removal.md` for the d
 
 ## Technology Stack
 
-- **Java 21** with Spring Boot 3.4 (superpom 4.10.0)
+- **Java 25** with Spring Boot 4.1 (superpom 7.2.0)
 - **Google Cloud Platform**
   - Cloud Storage (GCS) for dataset storage (`storage-gcp-gcs` helper)
   - PubSub for notifications (`entur-google-pubsub` helper over spring-cloud-gcp)
@@ -127,7 +127,8 @@ The `camel.*` keys still in the ConfigMap are unused and kept for rollback until
 
 ## Deployment
 
-- Base image: `bellsoft/liberica-openjre-alpine:21.0.13.0.3`, layered jar, `tini`, non-root user
+- Multi-stage `Dockerfile`: a `bellsoft/liberica-openjre-alpine:25.0.5.0.3` builder stage extracts the layered jar; the runtime stage is `gcr.io/distroless/java25-debian13:nonroot` (Temurin JRE 25, no shell, no package manager, no `tini`: the JVM is PID 1 and handles SIGTERM)
+- JVM flags go through `JDK_JAVA_OPTIONS`, which the `java` launcher reads itself. To inspect the image, build with the `debug-nonroot` tag of the same base image, or use `kubectl debug` with an ephemeral container
 - Helm charts in `helm/nisaba/`; two replicas, no HPA; `terminationGracePeriodSeconds: 90`
 - No Kubernetes API access is needed any more (`rbac.yaml` is kept only until the follow-up release)
 
@@ -146,7 +147,7 @@ Tests: plain unit tests, embedded-Kafka (KRaft) tests for the Kafka classes and 
 
 - `entur-google-pubsub`: consumer base class over spring-cloud-gcp PubSub
 - `storage-gcp-gcs`: GCS blob storage access
-- `spring-kafka`: only for Spring Boot's `spring.kafka.*` properties and the embedded test broker; the clients are plain `KafkaProducer`/`KafkaConsumer`
+- `spring-boot-starter-kafka` (spring-kafka): only for Spring Boot's `spring.kafka.*` properties and the embedded test broker; the clients are plain `KafkaProducer`/`KafkaConsumer`
 - `kafka-avro-serializer`: Confluent Avro serialization
 - `avro`: the generated `NetexImportEvent`
 
