@@ -17,7 +17,7 @@
 package no.entur.nisaba.pubsub;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
-import no.entur.nisaba.pipeline.ImportMdc;
+import no.entur.nisaba.logging.ImportMdc;
 import no.entur.nisaba.pipeline.NetexImportMetrics;
 import no.entur.nisaba.pipeline.NetexImportPipeline;
 import org.junit.jupiter.api.AfterEach;

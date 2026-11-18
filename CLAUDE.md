@@ -47,8 +47,8 @@ nisaba/
 │   │   ├── NetexImportPipeline.java
 │   │   ├── DatasetCreationTimeExtractor.java / CompositeFrameCreatedParser.java
 │   │   ├── ChouetteImportKeyResolver.java
-│   │   ├── ImportMdc.java
 │   │   └── NetexImportMetrics.java
+│   ├── logging/                          # ImportMdc: MDC and `[codespace=... correlationId=...] ` log prefix
 │   ├── idempotent/                       # Idempotent repository on GCS
 │   │   ├── IdempotentRepository.java / GcsIdempotentRepository.java
 │   │   ├── MarkerStore.java / GcsMarkerStore.java / InMemoryMarkerStore.java

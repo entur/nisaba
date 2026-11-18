@@ -22,6 +22,7 @@ import no.entur.nisaba.event.NetexImportEventKeyFactory;
 import no.entur.nisaba.idempotent.IdempotentRepository;
 import no.entur.nisaba.idempotent.IdempotentRepository.Claim;
 import no.entur.nisaba.kafka.NetexImportEventPublisher;
+import no.entur.nisaba.logging.ImportMdc;
 import no.entur.nisaba.pubsub.NetexExportNotification;
 import no.entur.nisaba.services.MardukBlobStoreService;
 import org.slf4j.Logger;

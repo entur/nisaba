@@ -17,7 +17,7 @@
 package no.entur.nisaba.pubsub;
 
 import com.google.pubsub.v1.ProjectSubscriptionName;
-import no.entur.nisaba.pipeline.ImportMdc;
+import no.entur.nisaba.logging.ImportMdc;
 import no.entur.nisaba.pipeline.NetexImportMetrics;
 import no.entur.nisaba.pipeline.NetexImportPipeline;
 import org.entur.pubsub.base.AbstractEnturGooglePubSubConsumer;

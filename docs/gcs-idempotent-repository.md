@@ -221,7 +221,8 @@ gsutil stat gs://<bucket>/<key>               # metadata: claim-id, confirmed; c
 gsutil rm gs://<bucket>/<key>                 # publish the dataset again at its next export
 ```
 
-Log lines of the repository (logger `no.entur.nisaba.idempotent.GcsIdempotentRepository`):
+Log lines of the repository (logger `no.entur.nisaba.idempotent.GcsIdempotentRepository`), each prefixed with
+`[codespace=<cs> correlationId=<id>] ` like the pipeline's lines:
 
 | Line | Level | Meaning |
 | --- | --- | --- |

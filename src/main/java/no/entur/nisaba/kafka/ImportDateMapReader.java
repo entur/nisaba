@@ -19,7 +19,7 @@ package no.entur.nisaba.kafka;
 import io.confluent.kafka.serializers.KafkaAvroDeserializer;
 import io.confluent.kafka.serializers.KafkaAvroDeserializerConfig;
 import no.entur.nisaba.avro.NetexImportEvent;
-import no.entur.nisaba.pipeline.ImportMdc;
+import no.entur.nisaba.logging.ImportMdc;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.StringDeserializer;

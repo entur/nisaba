@@ -16,8 +16,13 @@
 
 package no.entur.nisaba.idempotent;
 
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import no.entur.nisaba.idempotent.IdempotentRepository.Claim;
+import no.entur.nisaba.logging.ImportMdc;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -382,5 +387,29 @@ class GcsIdempotentRepositoryTest {
         store.createIfAbsent(KEY, "other:claim", false);
         clock.advance(STALE_AFTER.plusSeconds(1));
         assertThrows(IdempotentRepositoryException.class, () -> repository("a", faulty).claim(KEY));
+    }
+
+    @Test
+    void logLinesCarryThePrefixOfTheNotification() {
+        Logger logger = (Logger) LoggerFactory.getLogger(GcsIdempotentRepository.class);
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+        ImportMdc.put("avi", "corr-1");
+        try {
+            FaultyStore faulty = new FaultyStore(store);
+            faulty.confirmFailures = 1;
+            GcsIdempotentRepository repository = repository("a", faulty);
+            // claimed, confirm failed and retried, confirmed at attempt 2
+            repository.confirm(repository.claim(KEY).orElseThrow());
+            // claimed, released
+            repository.release(repository.claim("avi_2021-04-22T11_51_59.123").orElseThrow());
+        } finally {
+            ImportMdc.clear();
+            logger.detachAppender(appender);
+        }
+        List<String> lines = appender.list.stream().map(ILoggingEvent::getFormattedMessage).toList();
+        assertEquals(5, lines.size(), lines::toString);
+        lines.forEach(line -> assertTrue(line.startsWith("[codespace=avi correlationId=corr-1] "), line));
     }
 }

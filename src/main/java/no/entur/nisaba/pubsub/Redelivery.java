@@ -17,7 +17,7 @@
 package no.entur.nisaba.pubsub;
 
 import no.entur.nisaba.idempotent.ClaimInProgressException;
-import no.entur.nisaba.pipeline.ImportMdc;
+import no.entur.nisaba.logging.ImportMdc;
 import no.entur.nisaba.pipeline.InvalidDatasetException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
