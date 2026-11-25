@@ -15,7 +15,7 @@ Nisaba implements an event-driven workflow that:
 5. **Publishes** a Kafka event only for a new dataset (identified by codespace + creation date)
 6. **Serves** the latest import date per codespace over a public REST API, fed by a reader of the event topic
 
-Apache Camel was removed in November 2026; see `docs/gcs-idempotent-repository.md` for the idempotent repository. There is no leader election any more: both pods consume the subscription.
+Apache Camel was removed in November 2026. There is no leader election any more: both pods consume the subscription.
 
 ## Technology Stack
 
@@ -51,8 +51,7 @@ nisaba/
 │   │   └── NetexImportMetrics.java
 │   ├── idempotent/                       # Idempotent repository on GCS
 │   │   ├── IdempotentRepository.java / GcsIdempotentRepository.java
-│   │   ├── MarkerStore.java / GcsMarkerStore.java / InMemoryMarkerStore.java
-│   │   └── migration/                    # One-shot copy of the former Kafka idempotent topic into the bucket (IdempotentTopicState, IdempotentTopicContract)
+│   │   └── MarkerStore.java / GcsMarkerStore.java / InMemoryMarkerStore.java
 │   ├── kafka/                            # Event publisher, import-date reader, topic poller
 │   │   ├── AssignedTopicPoller.java
 │   │   ├── KafkaNetexImportEventPublisher.java / PublishedImportKeys.java
@@ -66,7 +65,6 @@ nisaba/
 ├── src/main/resources/
 │   ├── logback.xml                       # Logging configuration
 │   └── openapi/openapi.yaml              # Public API specification
-├── docs/gcs-idempotent-repository.md     # Idempotent repository: design, provisioning, migration, operations
 ├── helm/nisaba/                          # Kubernetes deployment charts
 ├── terraform/                           # GCS bucket of the idempotent repository and its IAM binding
 ├── Dockerfile                            # Container image definition
@@ -79,7 +77,6 @@ nisaba/
 - **Redelivery**: three in-process retries (5 s, 15 s, 45 s) before the nack, as the Camel error handler did; abortable at shutdown.
 - **NetexImportPipeline**: download, creation-time extraction (StAX, stops at the first CompositeFrame), import key, claim, Chouette key lookup, event, publish, confirm; release of the claim on failure.
 - **GcsIdempotentRepository** over **GcsMarkerStore**: the idempotent repository. A claim creates the object `<import key>` in the bucket with `ifGenerationMatch=0`; confirm sets `confirmed=true`, release deletes, both conditioned on the generation. An unconfirmed claim older than `nisaba.idempotent.stale-after` (15 min) is taken over. No thread, no start-up replay.
-- **IdempotentRepositoryMigrationApp**: command line tool in the jar that replays the former Kafka idempotent topic and creates the missing markers; re-runnable.
 - **ImportDateMapReader**: replays the event topic from the beginning on every start (the topic is compacted) into the map behind the REST API.
 - **InFlightMessages**: `SmartLifecycle` drain that lets a notification finish during shutdown.
 
@@ -115,7 +112,7 @@ Environment-specific values live in `helm/nisaba/env/values-kub-ent-{dev,tst,prd
 Key properties:
 
 - `marduk.pubsub.project.id`: GCP project of the subscription
-- `nisaba.kafka.topic.event`: the event topic; `nisaba.kafka.topic.idempotent`: the former idempotent topic, read by the migration tool only
+- `nisaba.kafka.topic.event`: the event topic
 - `nisaba.idempotent.gcs.bucket`, `nisaba.idempotent.stale-after`: the idempotent repository
 - `spring.kafka.*`: brokers, SASL and schema registry, shared by every Kafka client
 - `nisaba.redelivery.*`: local retry schedule; `nisaba.shutdown.drain.timeout.seconds`: shutdown drain
@@ -138,7 +135,7 @@ mvn clean install
 mvn test
 ```
 
-Tests: plain unit tests, embedded-Kafka (KRaft) tests for the Kafka classes and the migration, Spring tests with in-memory blob store, in-memory marker store and a Kafka test double (`KafkaTestDoubles`), and two tests that need Docker: `PubSubWiringTest` (PubSub emulator) and `GcsMarkerStoreTest` (fake-gcs-server). `WireContractTest` pins the externally visible strings as literals.
+Tests: plain unit tests, embedded-Kafka (KRaft) tests for the Kafka classes, Spring tests with in-memory blob store, in-memory marker store and a Kafka test double (`KafkaTestDoubles`), and two tests that need Docker: `PubSubWiringTest` (PubSub emulator) and `GcsMarkerStoreTest` (fake-gcs-server). `WireContractTest` pins the externally visible strings as literals.
 
 ### Key Dependencies
 

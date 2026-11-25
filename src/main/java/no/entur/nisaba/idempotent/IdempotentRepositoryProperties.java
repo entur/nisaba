@@ -25,21 +25,12 @@ import java.time.Duration;
  * @param gcs        the bucket of the markers (profile {@code gcs-blobstore})
  * @param staleAfter how long an unconfirmed claim is left alone before another claimer takes it over; longer
  *                   than any publish (a few blob lookups and one Kafka send bounded by the send timeout)
- * @param migration  settings of the one-shot migration from the Kafka idempotent topic
  */
 @ConfigurationProperties(prefix = "nisaba.idempotent")
 public record IdempotentRepositoryProperties(
         @DefaultValue Gcs gcs,
-        @DefaultValue("15m") Duration staleAfter,
-        @DefaultValue Migration migration) {
+        @DefaultValue("15m") Duration staleAfter) {
 
     public record Gcs(String bucket) {
-    }
-
-    /**
-     * @param dryRun  list the keys and write nothing
-     * @param threads concurrent creates
-     */
-    public record Migration(@DefaultValue("false") boolean dryRun, @DefaultValue("16") int threads) {
     }
 }

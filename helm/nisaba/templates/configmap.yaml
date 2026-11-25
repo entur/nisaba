@@ -8,8 +8,6 @@ data:
 
     # Kafka topics
     nisaba.kafka.topic.event={{ .Values.kafka.topic.event }}
-    # The former idempotent topic, read only by the migration tool (IdempotentRepositoryMigrationApp)
-    nisaba.kafka.topic.idempotent={{ .Values.kafka.topic.idempotent }}
 
     # PubSub
     nisaba.pubsub.project.id={{ .Values.gcp.nisabaPubsubProjectId }}

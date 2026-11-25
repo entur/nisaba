@@ -25,7 +25,7 @@ import java.time.Duration;
  * nisaba's own Kafka settings. The client settings (brokers, SASL, schema registry) come from Spring Boot's
  * {@code spring.kafka.*}.
  *
- * @param topic         the event topic, and the idempotent topic of the previous versions (read by the migration only).
+ * @param topic         the event topic.
  * @param sendTimeout   how long a synchronous produce may take.
  * @param publishVerificationTimeout how long to wait for an event whose send failed to be read back from the
  *                      topic before the failure is reported and the dataset published again.
@@ -46,6 +46,6 @@ public record NisabaKafkaProperties(
      */
     public static final Duration CLOSE_TIMEOUT = Duration.ofSeconds(5);
 
-    public record Topic(String event, String idempotent) {
+    public record Topic(String event) {
     }
 }
