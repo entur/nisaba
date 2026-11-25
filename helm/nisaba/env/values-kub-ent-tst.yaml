@@ -28,4 +28,3 @@ kafka:
   registry: https://entur-kafka-test-int-entur-test.aivencloud.com:11867
   topic:
     event: rutedata-dataset-import-event-staging
-    idempotent: rutedata-dataset-import-event-idempotent-repo-staging

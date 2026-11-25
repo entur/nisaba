@@ -15,7 +15,7 @@ Nisaba implements an event-driven workflow that:
 5. **Publishes** a Kafka event only for a new dataset (identified by codespace + creation date)
 6. **Serves** the latest import date per codespace over a public REST API, fed by a reader of the event topic
 
-Apache Camel was removed in November 2026; see `docs/camel-removal.md` for the design, the behaviour changes and the operating notes, and `docs/gcs-idempotent-repository.md` for the idempotent repository. There is no leader election any more: both pods consume the subscription.
+Apache Camel was removed in November 2026. There is no leader election any more: both pods consume the subscription.
 
 ## Technology Stack
 
@@ -51,8 +51,7 @@ nisaba/
 │   │   └── NetexImportMetrics.java
 │   ├── idempotent/                       # Idempotent repository on GCS
 │   │   ├── IdempotentRepository.java / GcsIdempotentRepository.java
-│   │   ├── MarkerStore.java / GcsMarkerStore.java / InMemoryMarkerStore.java
-│   │   └── migration/                    # One-shot copy of the former Kafka idempotent topic into the bucket (IdempotentTopicState, IdempotentTopicContract)
+│   │   └── MarkerStore.java / GcsMarkerStore.java / InMemoryMarkerStore.java
 │   ├── kafka/                            # Event publisher, import-date reader, topic poller
 │   │   ├── AssignedTopicPoller.java
 │   │   ├── KafkaNetexImportEventPublisher.java / PublishedImportKeys.java
@@ -66,8 +65,6 @@ nisaba/
 ├── src/main/resources/
 │   ├── logback.xml                       # Logging configuration
 │   └── openapi/openapi.yaml              # Public API specification
-├── docs/camel-removal.md                 # Design and operating notes of the Camel-free version
-├── docs/gcs-idempotent-repository.md     # Idempotent repository: design, provisioning, migration, operations
 ├── helm/nisaba/                          # Kubernetes deployment charts
 ├── terraform/                           # GCS bucket of the idempotent repository and its IAM binding
 ├── Dockerfile                            # Container image definition
@@ -80,7 +77,6 @@ nisaba/
 - **Redelivery**: three in-process retries (5 s, 15 s, 45 s) before the nack, as the Camel error handler did; abortable at shutdown.
 - **NetexImportPipeline**: download, creation-time extraction (StAX, stops at the first CompositeFrame), import key, claim, Chouette key lookup, event, publish, confirm; release of the claim on failure.
 - **GcsIdempotentRepository** over **GcsMarkerStore**: the idempotent repository. A claim creates the object `<import key>` in the bucket with `ifGenerationMatch=0`; confirm sets `confirmed=true`, release deletes, both conditioned on the generation. An unconfirmed claim older than `nisaba.idempotent.stale-after` (15 min) is taken over. No thread, no start-up replay.
-- **IdempotentRepositoryMigrationApp**: command line tool in the jar that replays the former Kafka idempotent topic and creates the missing markers; re-runnable.
 - **ImportDateMapReader**: replays the event topic from the beginning on every start (the topic is compacted) into the map behind the REST API.
 - **InFlightMessages**: `SmartLifecycle` drain that lets a notification finish during shutdown.
 
@@ -113,24 +109,22 @@ The Kafka record key is the codespace; the one record header is `EnturDatasetImp
 
 Environment-specific values live in `helm/nisaba/env/values-kub-ent-{dev,tst,prd}.yaml`; the ConfigMap template in `helm/nisaba/templates/configmap.yaml` renders `application.properties`.
 
-Key properties (see `docs/camel-removal.md`, "Operating it", for the full table):
+Key properties:
 
 - `marduk.pubsub.project.id`: GCP project of the subscription
-- `nisaba.kafka.topic.event`: the event topic; `nisaba.kafka.topic.idempotent`: the former idempotent topic, read by the migration tool only
+- `nisaba.kafka.topic.event`: the event topic
 - `nisaba.idempotent.gcs.bucket`, `nisaba.idempotent.stale-after`: the idempotent repository
 - `spring.kafka.*`: brokers, SASL and schema registry, shared by every Kafka client
 - `nisaba.redelivery.*`: local retry schedule; `nisaba.shutdown.drain.timeout.seconds`: shutdown drain
 - `spring.cloud.gcp.pubsub.subscriber.*`: one message at a time, ack-deadline extension (must not be left at the spring-cloud-gcp default of 0)
 - `entur.pubsub.subscriber.autocreate=false`: destinations are terraformed
 
-The `camel.*` keys still in the ConfigMap are unused and kept for rollback until the follow-up release removes them.
-
 ## Deployment
 
 - Multi-stage `Dockerfile`: a `bellsoft/liberica-openjre-alpine:25.0.5.0.3` builder stage extracts the layered jar; the runtime stage is `gcr.io/distroless/java25-debian13:nonroot` (Temurin JRE 25, no shell, no package manager, no `tini`: the JVM is PID 1 and handles SIGTERM)
 - JVM flags go through `JDK_JAVA_OPTIONS`, which the `java` launcher reads itself. To inspect the image, build with the `debug-nonroot` tag of the same base image, or use `kubectl debug` with an ephemeral container
 - Helm charts in `helm/nisaba/`; two replicas, no HPA; `terminationGracePeriodSeconds: 90`
-- No Kubernetes API access is needed any more (`rbac.yaml` is kept only until the follow-up release)
+- No Kubernetes API access: the chart has no Role or RoleBinding
 
 ## Development
 
@@ -141,7 +135,7 @@ mvn clean install
 mvn test
 ```
 
-Tests: plain unit tests, embedded-Kafka (KRaft) tests for the Kafka classes and the migration, Spring tests with in-memory blob store, in-memory marker store and a Kafka test double (`KafkaTestDoubles`), and two tests that need Docker: `PubSubWiringTest` (PubSub emulator) and `GcsMarkerStoreTest` (fake-gcs-server). `WireContractTest` pins the externally visible strings as literals.
+Tests: plain unit tests, embedded-Kafka (KRaft) tests for the Kafka classes, Spring tests with in-memory blob store, in-memory marker store and a Kafka test double (`KafkaTestDoubles`), and two tests that need Docker: `PubSubWiringTest` (PubSub emulator) and `GcsMarkerStoreTest` (fake-gcs-server). `WireContractTest` pins the externally visible strings as literals.
 
 ### Key Dependencies
 

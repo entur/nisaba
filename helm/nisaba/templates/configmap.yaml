@@ -6,38 +6,13 @@ data:
     spring.profiles.active=gcs-blobstore
     server.port={{ .Values.common.service.internalPort }}
 
-    # Camel-era keys: unused by this version, KEPT for rollback and for old pods that restart mid-rollout
-    # (an old jar booting without camel.cluster.kubernetes.enabled fails with "No cluster service found").
-    # Remove in the follow-up PR once the Camel-free version has been running in production.
-    camel.main.name=Nisaba
-    camel.main.stream-caching-enabled=false
-    camel.main.stream-caching-spool-enabled=true
-    camel.dataformat.jackson.module-refs=jacksonJavaTimeModule
-    camel.cluster.kubernetes.enabled=true
-    camel.cluster.file.enabled=false
-    camel.cluster.kubernetes.cluster-labels[app]=nisaba
-    camel.cluster.kubernetes.config-map-name=nisaba-leaders
-    # the Camel shutdown timeout must be shorter than the Kubernetes terminationGracePeriod
-    nisaba.shutdown.timeout=25
-
     # Kafka topics
     nisaba.kafka.topic.event={{ .Values.kafka.topic.event }}
-    nisaba.kafka.topic.idempotent={{ .Values.kafka.topic.idempotent }}
-    # Camel-era Kafka client keys, kept for rollback (see above)
-    camel.component.kafka.brokers={{ .Values.kafka.brokers }}
-    camel.component.kafka.sasl-mechanism=SCRAM-SHA-512
-    camel.component.kafka.security-protocol=SASL_SSL
-    camel.component.kafka.sasl-jaas-config=org.apache.kafka.common.security.scram.ScramLoginModule required username="${KAFKAUSERNAME}" password="${KAFKAPASSWORD}";
-
-    camel.component.kafka.schema-registry-u-r-l={{ .Values.kafka.registry }}
-    camel.component.kafka.additional-properties[basic.auth.credentials.source]=USER_INFO
-    camel.component.kafka.additional-properties[basic.auth.user.info]=${KAFKAUSERNAME}:${KAFKAPASSWORD}
 
     # PubSub
     nisaba.pubsub.project.id={{ .Values.gcp.nisabaPubsubProjectId }}
     marduk.pubsub.project.id={{ .Values.gcp.mardukPubsubProjectId }}
     spring.cloud.gcp.project-id=${nisaba.pubsub.project.id}
-    camel.component.google-pubsub.synchronous-pull-retryable-codes=DEADLINE_EXCEEDED
 
     # PubSub consumer (replaces the Camel master:/google-pubsub route)
     # The subscription lives in the Marduk project; the consumer subscribes with the fully-qualified name.
