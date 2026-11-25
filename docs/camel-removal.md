@@ -55,7 +55,7 @@ There is no leader and no shared in-memory state. The one thing that has to be d
 
 | Was | Is now | Note |
 | --- | --- | --- |
-| `master:...:google-pubsub:...` route, Kubernetes Lease election | `NetexExportNotificationConsumer` on `AbstractEnturGooglePubSubConsumer` (entur-google-pubsub), every pod | No Kubernetes API access; `rbac.yaml` kept this release, removed in the follow-up |
+| `master:...:google-pubsub:...` route, Kubernetes Lease election | `NetexExportNotificationConsumer` on `AbstractEnturGooglePubSubConsumer` (entur-google-pubsub), every pod | No Kubernetes API access; `rbac.yaml` kept this release, removed in the follow-up (see *Follow-up release*) |
 | `idempotentConsumer` + `KafkaIdempotentRepository` | `KafkaClaimRepository` | Same topic, same record format, plus one header; atomic claim, see below |
 | `BaseRouteBuilder` error handler (3 redeliveries 5/15/45 s) | `Redelivery` | Whole message re-run instead of the failing step; abortable at shutdown |
 | `split(new ZipSplitter())` + camel-xpath DOM | `DatasetCreationTimeExtractor` + `CompositeFrameCreatedParser` (JDK StAX) | Stops at the first CompositeFrame; DTD and external entities refused |
@@ -296,6 +296,25 @@ Follow-up PR once production has run a week on this version: delete `rbac.yaml`,
 `nisaba.shutdown.timeout` and `camel.component.google-pubsub.*`; delete the Lease
 `nisaba-leaders-lock-on-netex-export-notification-queue-route` (and any `nisaba-leaders` ConfigMap) by hand
 in each namespace; decide whether `kafkaPoller` joins the liveness group.
+
+### Follow-up release
+
+Done in November 2026, a week after the last Camel pod stopped in production (its Lease was last renewed on
+2026-11-18). `rbac.yaml`, every `camel.*` key and `nisaba.shutdown.timeout` are gone from the chart, so the
+image-only rollback in the table above no longer works: a Camel jar now fails at start-up with
+`No cluster service found`. `git revert` of the whole range and `helm rollback` to a Camel release still
+restore the ConfigMap and the Role together, at the cost described in
+[gcs-idempotent-repository.md](gcs-idempotent-repository.md#rollback).
+
+By hand, after the deploy, in each namespace:
+
+```bash
+kubectl -n nisaba delete lease nisaba-leaders-lock-on-netex-export-notification-queue-route \
+  nisaba-leaders-lockonnetexexportnotificationqueueroute --ignore-not-found
+kubectl -n nisaba delete configmap nisaba-leaders --ignore-not-found
+```
+
+Whether `kafkaPoller` joins the liveness group is still open; it changes behaviour and gets its own PR.
 
 After the first deploy in each environment: both pods log `Received NeTEx export notification`; one event
 per import key in the event topic; `/timetable-import-info/import_date` populated after a restart; no

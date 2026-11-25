@@ -123,14 +123,12 @@ Key properties (see `docs/camel-removal.md`, "Operating it", for the full table)
 - `spring.cloud.gcp.pubsub.subscriber.*`: one message at a time, ack-deadline extension (must not be left at the spring-cloud-gcp default of 0)
 - `entur.pubsub.subscriber.autocreate=false`: destinations are terraformed
 
-The `camel.*` keys still in the ConfigMap are unused and kept for rollback until the follow-up release removes them.
-
 ## Deployment
 
 - Multi-stage `Dockerfile`: a `bellsoft/liberica-openjre-alpine:25.0.5.0.3` builder stage extracts the layered jar; the runtime stage is `gcr.io/distroless/java25-debian13:nonroot` (Temurin JRE 25, no shell, no package manager, no `tini`: the JVM is PID 1 and handles SIGTERM)
 - JVM flags go through `JDK_JAVA_OPTIONS`, which the `java` launcher reads itself. To inspect the image, build with the `debug-nonroot` tag of the same base image, or use `kubectl debug` with an ephemeral container
 - Helm charts in `helm/nisaba/`; two replicas, no HPA; `terminationGracePeriodSeconds: 90`
-- No Kubernetes API access is needed any more (`rbac.yaml` is kept only until the follow-up release)
+- No Kubernetes API access: the chart has no Role or RoleBinding
 
 ## Development
 
