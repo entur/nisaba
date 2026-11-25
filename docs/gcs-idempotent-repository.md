@@ -4,8 +4,8 @@ Nisaba publishes one event per dataset, however many times Marduk exports it. Th
 repeats is an idempotent receiver, and the store behind it is the idempotent repository: the set of import
 keys (`<codespace>_<creation date>`) an event has been published for.
 
-This document describes the GCS implementation that replaces the Kafka one of
-[camel-removal.md](camel-removal.md), how to provision it, and how to migrate the existing history.
+This document describes the GCS implementation that replaced the former Kafka-topic one, how to provision
+it, and how to migrate the existing history.
 
 ## Why
 

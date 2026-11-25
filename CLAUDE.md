@@ -15,7 +15,7 @@ Nisaba implements an event-driven workflow that:
 5. **Publishes** a Kafka event only for a new dataset (identified by codespace + creation date)
 6. **Serves** the latest import date per codespace over a public REST API, fed by a reader of the event topic
 
-Apache Camel was removed in November 2026; see `docs/camel-removal.md` for the design, the behaviour changes and the operating notes, and `docs/gcs-idempotent-repository.md` for the idempotent repository. There is no leader election any more: both pods consume the subscription.
+Apache Camel was removed in November 2026; see `docs/gcs-idempotent-repository.md` for the idempotent repository. There is no leader election any more: both pods consume the subscription.
 
 ## Technology Stack
 
@@ -66,7 +66,6 @@ nisaba/
 ├── src/main/resources/
 │   ├── logback.xml                       # Logging configuration
 │   └── openapi/openapi.yaml              # Public API specification
-├── docs/camel-removal.md                 # Design and operating notes of the Camel-free version
 ├── docs/gcs-idempotent-repository.md     # Idempotent repository: design, provisioning, migration, operations
 ├── helm/nisaba/                          # Kubernetes deployment charts
 ├── terraform/                           # GCS bucket of the idempotent repository and its IAM binding
@@ -113,7 +112,7 @@ The Kafka record key is the codespace; the one record header is `EnturDatasetImp
 
 Environment-specific values live in `helm/nisaba/env/values-kub-ent-{dev,tst,prd}.yaml`; the ConfigMap template in `helm/nisaba/templates/configmap.yaml` renders `application.properties`.
 
-Key properties (see `docs/camel-removal.md`, "Operating it", for the full table):
+Key properties:
 
 - `marduk.pubsub.project.id`: GCP project of the subscription
 - `nisaba.kafka.topic.event`: the event topic; `nisaba.kafka.topic.idempotent`: the former idempotent topic, read by the migration tool only
