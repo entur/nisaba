@@ -20,6 +20,12 @@ variable "idempotent_repository_bucket_prefix" {
   default     = "ror-nisaba-idempotent-repo"
 }
 
+variable "exchange_bucket_prefix" {
+  description = "A prefix for the bucket in which Chouette's imported archives are looked up"
+  type        = string
+  default     = "ror-nisaba-exchange"
+}
+
 variable "idempotent_repository_retention_days" {
   description = "Age in days after which a marker of the idempotent repository is deleted"
   type        = number

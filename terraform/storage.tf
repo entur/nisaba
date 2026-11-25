@@ -32,3 +32,12 @@ resource "google_storage_bucket_iam_member" "idempotent_repository_object_user" 
   role   = "roles/storage.objectUser"
   member = "serviceAccount:${var.nisaba_service_account}"
 }
+
+# The application only checks whether Chouette's archive exists (ChouetteImportKeyResolver, objects.get).
+# The bucket is not managed here. Until now the read came from the project-wide storage.objectAdmin of the
+# platform defaults, which the self-service manifest is about to drop.
+resource "google_storage_bucket_iam_member" "exchange_bucket_object_viewer" {
+  bucket = "${var.exchange_bucket_prefix}-${var.bucket_instance_suffix}"
+  role   = "roles/storage.objectViewer"
+  member = "serviceAccount:${var.nisaba_service_account}"
+}
