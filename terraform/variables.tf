@@ -21,7 +21,7 @@ variable "idempotent_repository_bucket_prefix" {
 }
 
 variable "exchange_bucket_prefix" {
-  description = "A prefix for the bucket in which Chouette's imported archives are looked up"
+  description = "A prefix for the exchange bucket"
   type        = string
   default     = "ror-nisaba-exchange"
 }
