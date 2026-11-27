@@ -39,3 +39,13 @@ resource "google_storage_bucket_iam_member" "exchange_bucket_object_viewer" {
   role   = "roles/storage.objectViewer"
   member = "serviceAccount:${var.nisaba_service_account}"
 }
+
+# marduk copies the imported datasets into the exchange bucket. A copy may replace an existing object, which
+# needs storage.objects.delete, so roles/storage.objectCreator is not enough. This grant replaces marduk's
+# team-wide folder rule (tf-gcp-iam application_rules/ror-marduk-<env>.yaml), so marduk keeps this access
+# when that rule is removed.
+resource "google_storage_bucket_iam_member" "exchange_bucket_marduk_object_user" {
+  bucket = "${var.exchange_bucket_prefix}-${var.bucket_instance_suffix}"
+  role   = "roles/storage.objectUser"
+  member = "serviceAccount:${var.marduk_service_account}"
+}

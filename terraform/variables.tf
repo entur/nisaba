@@ -37,6 +37,11 @@ variable "nisaba_service_account" {
   type        = string
 }
 
+variable "marduk_service_account" {
+  description = "Email of the marduk runtime service account, which writes to the exchange bucket"
+  type        = string
+}
+
 variable "labels" {
   description = "Labels used in all resources"
   type        = map(string)
